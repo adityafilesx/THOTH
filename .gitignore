@@ -1,0 +1,49 @@
+# Node
+node_modules/
+dist/
+*.local
+.vite/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+htmlcov/
+.coverage
+
+# Rust / Tauri
+apps/desktop/src-tauri/target/
+
+# Databases & logs (runtime artifacts, never committed)
+*.db
+*.db-journal
+*.sqlite3
+logs/
+*.jsonl
+!docs/**/*.jsonl
+
+# Secrets & local config — never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# macOS
+.DS_Store
+
+# Editors
+.idea/
+.vscode/
+*.swp
+
+# Claude local state
+.claude/settings.local.json
+.claude/hooks/command_log.jsonl

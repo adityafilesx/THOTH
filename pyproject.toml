@@ -1,0 +1,33 @@
+[project]
+name = "thoth-workspace"
+version = "0.1.0"
+description = "THOTH monorepo root — tooling configuration only (daemon lives in apps/daemon)"
+requires-python = ">=3.12"
+
+[tool.uv.workspace]
+members = ["apps/daemon"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["apps/daemon/src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC", "S", "RUF"]
+ignore = [
+  "S101", # assert allowed (pytest)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"apps/daemon/tests/**" = ["S", "ASYNC"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = "apps/daemon/src"
+packages = ["thoth_daemon"]
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["apps/daemon/tests"]

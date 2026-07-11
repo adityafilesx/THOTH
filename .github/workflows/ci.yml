@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  daemon:
+    name: Daemon (lint, typecheck, test)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - name: Sync dependencies
+        run: uv sync --project apps/daemon
+      - name: Ruff lint
+        run: uv run --project apps/daemon ruff check apps/daemon
+      - name: Ruff format check
+        run: uv run --project apps/daemon ruff format --check apps/daemon
+      - name: Mypy
+        run: uv run --project apps/daemon mypy apps/daemon/src
+      - name: Pytest
+        run: uv run --project apps/daemon pytest apps/daemon/tests -q
+
+  desktop:
+    name: Desktop (lint, typecheck, test, build)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Enable pnpm
+        run: corepack enable pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: ESLint
+        run: pnpm -C apps/desktop lint
+      - name: Typecheck
+        run: pnpm -C apps/desktop typecheck
+      - name: Vitest
+        run: pnpm -C apps/desktop test -- --run
+      - name: Build frontend
+        run: pnpm -C apps/desktop build
