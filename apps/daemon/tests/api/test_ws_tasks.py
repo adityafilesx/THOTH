@@ -21,6 +21,7 @@ def _drain(ws, limit: int = 80) -> list[dict]:
 
 def test_ws_streams_ordered_task_events(ws_client: TestClient) -> None:
     with ws_client.websocket_connect("/ws") as ws:
+        ws.send_json({"type": "auth", "token": "test-token"})
         assert ws.receive_json()["type"] == "connection.established"
         resp = ws_client.post("/api/tasks", json={"goal": "read my notes"})
         assert resp.json()["state"] == "COMPLETED"
@@ -42,6 +43,7 @@ def test_ws_streams_ordered_task_events(ws_client: TestClient) -> None:
 
 def test_ws_emits_approval_request_event(ws_client: TestClient) -> None:
     with ws_client.websocket_connect("/ws") as ws:
+        ws.send_json({"type": "auth", "token": "test-token"})
         ws.receive_json()  # hello
         ws_client.post("/api/tasks", json={"goal": "send the email"})
         events = _drain(ws)
