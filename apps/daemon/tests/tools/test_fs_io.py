@@ -22,7 +22,7 @@ def test_read_over_cap_is_truncated(tmp_path: Path) -> None:
 def test_read_utf8_multibyte_at_boundary(tmp_path: Path) -> None:
     p = tmp_path / "u.txt"
     p.write_bytes(("a" * 9 + "é").encode("utf-8"))  # 'é' = 2 bytes, straddles a 10-byte cap
-    text, n, truncated = read_text_capped(p, 10)
+    text, _n, truncated = read_text_capped(p, 10)
     assert text == "a" * 9 and truncated is True  # partial char trimmed
 
 

@@ -43,7 +43,7 @@ class FsReadFile(ToolDefinition[FsReadFileIn, FsReadFileOut]):
     verification = VerificationStrategy.NONE_READONLY
     redaction_fields: ClassVar[list[str]] = ["content"]
 
-    def requested_scope(self, args: FsReadFileIn) -> ResourceScope:  # type: ignore[override]
+    def requested_scope(self, args: FsReadFileIn) -> ResourceScope:
         return ResourceScope(paths=[args.path])
 
     async def run(self, args: FsReadFileIn, dry_run: bool) -> FsReadFileOut:
@@ -75,7 +75,7 @@ class FsListDir(ToolDefinition[FsListDirIn, FsListDirOut]):
     default_risk = RiskLevel.R0
     verification = VerificationStrategy.NONE_READONLY
 
-    def requested_scope(self, args: FsListDirIn) -> ResourceScope:  # type: ignore[override]
+    def requested_scope(self, args: FsListDirIn) -> ResourceScope:
         return ResourceScope(paths=[args.path])
 
     async def run(self, args: FsListDirIn, dry_run: bool) -> FsListDirOut:
@@ -112,7 +112,7 @@ class FsStat(ToolDefinition[FsStatIn, FsStatOut]):
     default_risk = RiskLevel.R0
     verification = VerificationStrategy.NONE_READONLY
 
-    def requested_scope(self, args: FsStatIn) -> ResourceScope:  # type: ignore[override]
+    def requested_scope(self, args: FsStatIn) -> ResourceScope:
         return ResourceScope(paths=[args.path])
 
     async def run(self, args: FsStatIn, dry_run: bool) -> FsStatOut:
@@ -146,7 +146,7 @@ class FsWriteFile(ToolDefinition[FsWriteFileIn, FsWriteFileOut]):
     verification = VerificationStrategy.STATE_PROBE
     redaction_fields: ClassVar[list[str]] = ["content"]
 
-    def requested_scope(self, args: FsWriteFileIn) -> ResourceScope:  # type: ignore[override]
+    def requested_scope(self, args: FsWriteFileIn) -> ResourceScope:
         return ResourceScope(paths=[args.path])
 
     async def run(self, args: FsWriteFileIn, dry_run: bool) -> FsWriteFileOut:
