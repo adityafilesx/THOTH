@@ -1,7 +1,8 @@
 from pathlib import Path
+from typing import Annotated
 
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -18,7 +19,7 @@ class Settings(BaseSettings):
     log_dir: Path = Path("./data/logs")
     log_level: str = "INFO"
 
-    trusted_workspaces: list[str] = Field(default_factory=list)
+    trusted_workspaces: Annotated[list[str], NoDecode] = Field(default_factory=list)
     approval_ttl_seconds: int = 120
     max_retries_per_step: int = 2
     max_retries_per_task: int = 5
