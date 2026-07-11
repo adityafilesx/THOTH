@@ -192,3 +192,19 @@ class WorkspaceProfile(StrictModel):
     trusted: bool = False
     approved_domains: list[str] = Field(default_factory=list)
     approved_apps: list[str] = Field(default_factory=list)
+
+
+PermissionKind = Literal["path", "domain", "app"]
+
+
+class PermissionGrant(StrictModel):
+    """A single user-granted widening of scope, bound to a workspace. Grants
+    are created only through the trusted permissions API; untrusted content
+    can never mint one (threats T1/T3)."""
+
+    id: str = Field(default_factory=_new_id)
+    workspace_id: str
+    kind: PermissionKind
+    value: str
+    granted_at: datetime = Field(default_factory=_utcnow)
+    revoked: bool = False

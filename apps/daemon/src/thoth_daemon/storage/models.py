@@ -75,3 +75,26 @@ class SkillRow(Base):
     definition_json: Mapped[dict] = mapped_column(JSON)  # type: ignore[type-arg]
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class WorkspaceRow(Base):
+    __tablename__ = "workspace_profiles"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(String(128))
+    root_path: Mapped[str] = mapped_column(Text)
+    trusted: Mapped[bool] = mapped_column(Boolean, default=False)
+    approved_domains_json: Mapped[list] = mapped_column(JSON, default=list)  # type: ignore[type-arg]
+    approved_apps_json: Mapped[list] = mapped_column(JSON, default=list)  # type: ignore[type-arg]
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class PermissionGrantRow(Base):
+    __tablename__ = "permission_grants"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    workspace_id: Mapped[str] = mapped_column(String(36), index=True)
+    kind: Mapped[str] = mapped_column(String(16))
+    value: Mapped[str] = mapped_column(Text)
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False)
+    granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
