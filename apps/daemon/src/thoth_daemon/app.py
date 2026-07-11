@@ -21,6 +21,7 @@ from thoth_daemon.schemas import ResourceScope, WorkspaceProfile
 from thoth_daemon.security.auth import mint_token, write_token_file
 from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
 from thoth_daemon.storage.permissions import PermissionStore
+from thoth_daemon.tools.fs_tools import register_fs_tools
 from thoth_daemon.tools.mock_tools import build_registry
 
 
@@ -68,8 +69,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         async def scope_provider() -> ResourceScope:
             return await permissions_store.effective_scope(default_ws.id)
 
+        registry = build_registry()
+        register_fs_tools(registry)  # real, scoped filesystem tools (slice 3)
         app.state.orchestrator = Orchestrator(
-            registry=build_registry(),
+            registry=registry,
             policy=PolicyEngine(),
             approvals=ApprovalEngine(ttl_seconds=cfg.approval_ttl_seconds),
             verifier=VerificationEngine(),
