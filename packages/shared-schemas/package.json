@@ -1,0 +1,9 @@
+{
+  "name": "@thoth/shared-schemas",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "description": "JSON Schemas + TS types for THOTH daemon contracts. JSON files under schemas/ are generated from Pydantic (make schemas); TS types in src/ are the hand-maintained mirror used by the desktop."
+}

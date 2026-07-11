@@ -1,0 +1,53 @@
+/**
+ * Typed HTTP client for the THOTH daemon. The desktop is a thin client:
+ * every mutation here maps 1:1 to a daemon endpoint, and no business
+ * logic lives on this side.
+ */
+import type { ApprovalRequest, Task } from "@thoth/shared-schemas";
+
+export const DAEMON_URL =
+  (import.meta.env.VITE_DAEMON_URL as string | undefined) ?? "http://127.0.0.1:7710";
+
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const resp = await fetch(`${DAEMON_URL}${path}`, {
+    headers: { "Content-Type": "application/json" },
+    ...init,
+  });
+  if (!resp.ok) {
+    const body = await resp.text();
+    throw new ApiError(resp.status, body || resp.statusText);
+  }
+  return (await resp.json()) as T;
+}
+
+export interface HealthResponse {
+  status: string;
+  version: string;
+  db: string;
+}
+
+export const api = {
+  health: () => request<HealthResponse>("/api/health"),
+  createTask: (goal: string, source: "text" | "voice" = "text") =>
+    request<Task>("/api/tasks", { method: "POST", body: JSON.stringify({ goal, source }) }),
+  listTasks: () => request<Task[]>("/api/tasks"),
+  getTask: (id: string) => request<Task>(`/api/tasks/${id}`),
+  cancelTask: (id: string) => request<Task>(`/api/tasks/${id}/cancel`, { method: "POST" }),
+  pendingApprovals: () => request<ApprovalRequest[]>("/api/approvals/pending"),
+  decideApproval: (id: string, approved: boolean, modifiedArguments?: Record<string, unknown>) =>
+    request<ApprovalRequest>(`/api/approvals/${id}/decision`, {
+      method: "POST",
+      body: JSON.stringify({ approved, modified_arguments: modifiedArguments ?? null }),
+    }),
+  taskAudit: (id: string) =>
+    request<import("@thoth/shared-schemas").AuditEvent[]>(`/api/tasks/${id}/audit`),
+};

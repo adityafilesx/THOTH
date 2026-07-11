@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+    font-size: 13px;
+  }
+  ::selection {
+    @apply bg-accent-dim text-ink;
+  }
+  *:focus-visible {
+    @apply outline outline-2 outline-accent outline-offset-2;
+  }
+}
+
+@layer components {
+  /* Instrument label: the mono eyebrow used across all views */
+  .eyebrow {
+    @apply font-mono text-[10px] uppercase tracking-[0.18em] text-muted;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
