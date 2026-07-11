@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from thoth_daemon.schemas import ResourceScope, RiskLevel, VerificationStrategy
 from thoth_daemon.security.paths import expand_and_resolve
 from thoth_daemon.tools.base import ToolDefinition
-from thoth_daemon.tools.fs_io import read_text_capped
+from thoth_daemon.tools.fs_io import atomic_write, read_text_capped
 from thoth_daemon.tools.registry import ToolRegistry
 
 
@@ -124,6 +124,42 @@ class FsStat(ToolDefinition[FsStatIn, FsStatOut]):
         )
 
 
+# --- fs_write_file (R1) --------------------------------------------------
+class FsWriteFileIn(_In):
+    path: str
+    content: str
+
+
+class FsWriteFileOut(_Out):
+    path: str
+    written: bool
+    bytes: int
+
+
+class FsWriteFile(ToolDefinition[FsWriteFileIn, FsWriteFileOut]):
+    name = "fs_write_file"
+    description = "Write/overwrite an approved file (scoped, atomic, self-verified)."
+    input_model = FsWriteFileIn
+    output_model = FsWriteFileOut
+    default_risk = RiskLevel.R1
+    supports_dry_run = True
+    verification = VerificationStrategy.STATE_PROBE
+    redaction_fields: ClassVar[list[str]] = ["content"]
+
+    def requested_scope(self, args: FsWriteFileIn) -> ResourceScope:  # type: ignore[override]
+        return ResourceScope(paths=[args.path])
+
+    async def run(self, args: FsWriteFileIn, dry_run: bool) -> FsWriteFileOut:
+        p = expand_and_resolve(args.path)
+        data = args.content.encode("utf-8")
+        if dry_run:
+            return FsWriteFileOut(path=str(p), written=False, bytes=len(data))
+        atomic_write(p, data)
+        if p.read_bytes() != data:  # read-back self-verification (real state probe)
+            raise OSError(f"write verification failed for {p}")
+        return FsWriteFileOut(path=str(p), written=True, bytes=len(data))
+
+
 def register_fs_tools(registry: ToolRegistry) -> None:
-    for tool in (FsReadFile(), FsListDir(), FsStat()):
+    for tool in (FsReadFile(), FsListDir(), FsWriteFile(), FsStat()):
         registry.register(tool)
