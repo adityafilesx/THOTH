@@ -111,7 +111,7 @@ class PermissionStore:
         return PermissionGrant(
             id=row.id,
             workspace_id=row.workspace_id,
-            kind=row.kind,  # type: ignore[arg-type]
+            kind=row.kind,
             value=row.value,
             granted_at=row.granted_at,
             revoked=row.revoked,

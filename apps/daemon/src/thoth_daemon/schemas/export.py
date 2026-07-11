@@ -25,6 +25,7 @@ CONTRACTS: list[type[BaseModel]] = [
     schemas.RecoveryDecision,
     schemas.SkillDefinition,
     schemas.WorkspaceProfile,
+    schemas.PermissionGrant,
     schemas.TaggedContent,
     schemas.ResourceScope,
 ]

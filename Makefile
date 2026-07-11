@@ -40,7 +40,7 @@ build: ## Production build of the frontend
 	pnpm -C $(DESKTOP) build
 
 schemas: ## Regenerate packages/shared-schemas from Pydantic contracts
-	uv run --project $(DAEMON) python -m thoth_daemon.schemas.export ../../packages/shared-schemas/schemas
+	uv run --project $(DAEMON) python -m thoth_daemon.schemas.export packages/shared-schemas/schemas
 
 clean:
 	rm -rf $(DESKTOP)/dist $(DAEMON)/.pytest_cache .ruff_cache .mypy_cache

@@ -1,0 +1,44 @@
+{
+  "additionalProperties": false,
+  "description": "A single user-granted widening of scope, bound to a workspace. Grants\nare created only through the trusted permissions API; untrusted content\ncan never mint one (threats T1/T3).",
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "workspace_id": {
+      "title": "Workspace Id",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "path",
+        "domain",
+        "app"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "value": {
+      "title": "Value",
+      "type": "string"
+    },
+    "granted_at": {
+      "format": "date-time",
+      "title": "Granted At",
+      "type": "string"
+    },
+    "revoked": {
+      "default": false,
+      "title": "Revoked",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "workspace_id",
+    "kind",
+    "value"
+  ],
+  "title": "PermissionGrant",
+  "type": "object"
+}

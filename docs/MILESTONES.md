@@ -38,8 +38,9 @@
 - [x] Frontend wired to real task flow (create, approve, deny, cancel, timeline)
 - [x] Full test matrix green (see TEST_PLAN.md)
 
-## Phase 3 — Real capability (NOT STARTED — deliberately)
+## Phase 3 — Real capability (IN PROGRESS)
 
+- [x] **Slice 1 — Scope enforcement + permission store:** path-safety primitives (symlink-safe resolution + credential/system denylist), central `ScopeEnforcer` (orchestrator pre-EXECUTING gate + registry backstop), persistent `WorkspaceProfile`/`PermissionGrant` store, `/api/permissions` API. No real I/O yet.
 - [ ] macOS adapters: app launch/focus (PyObjC/AX), typed AppleScript/JXA adapters
 - [ ] Filesystem adapter with approved-directory scoping
 - [ ] Restricted shell tool per TOOL_CONTRACTS §4

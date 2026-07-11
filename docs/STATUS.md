@@ -1,6 +1,6 @@
 # THOTH Status
 
-**As of:** 2026-07-11 · **Phases 0, 1, 2 complete.**
+**As of:** 2026-07-12 · **Phases 0, 1, 2 complete. Phase 3 in progress — slice 1 (scope enforcement + permission store) landed.**
 
 ## Where we are
 
@@ -12,7 +12,7 @@
 
 | Gate | Result |
 |---|---|
-| `uv run --project apps/daemon pytest` | **256 passed** |
+| `uv run --project apps/daemon pytest` | **290 passed** |
 | `ruff check apps/daemon` | All checks passed |
 | `ruff format --check apps/daemon` | 54 files formatted |
 | `mypy apps/daemon/src` (strict) | no issues, 35 files |
@@ -23,7 +23,7 @@
 | `cargo check` (src-tauri) | Finished |
 | `alembic upgrade head` | applies; 6 tables |
 
-**Total: 298 automated tests passing.**
+**Total: 332 automated tests passing.**
 
 Also verified end-to-end against a live daemon: R0 task → `COMPLETED`; R3 plan → `FAILED` at policy; R2 task → `WAITING_FOR_APPROVAL` → approve → `COMPLETED`; approval reuse → HTTP 404 (single-use); cancel → `CANCELLED`; audit sequence monotonic; no secrets in JSONL logs.
 
@@ -36,8 +36,8 @@ Also verified end-to-end against a live daemon: R0 task → `COMPLETED`; R3 plan
 - **Tools:** all nine tools are mocks (`apps/daemon/src/thoth_daemon/tools/mock_tools.py`). No real filesystem, app, browser, git, or shell action occurs.
 - **Planner:** `DeterministicMockPlanner` (keyword → fixed plan). The claude-agent-sdk planner is deferred to Phase 3 behind the frozen `PlannerAdapter` interface.
 - **Voice:** none. Push-to-talk, STT, and TTS are Phase 3.
-- **Desktop views:** Permissions, Skills, and Settings render static fixtures (labeled "mock data"); they are not yet wired to daemon state.
-- **Security:** no desktop↔daemon auth token yet (localhost-only); audit store is append-only by API but not cryptographically tamper-evident. Both recorded as residual risks in `docs/THREAT_MODEL.md`.
+- **Desktop views:** Permissions, Skills, and Settings still render static fixtures (labeled "mock data"); wiring to daemon state is slice 9. The daemon-side permissions API + store are now real (see Security).
+- **Security:** tool `resource_scope` is now **enforced** — a central `ScopeEnforcer` gates every step pre-EXECUTING and re-checks in the executor, backed by a persistent permission store + `/api/permissions` (Phase 3 slice 1). Still pending: desktop↔daemon auth token (slice 2; localhost-only for now); audit store is append-only by API but not cryptographically tamper-evident. Both recorded as residual risks in `docs/THREAT_MODEL.md`.
 
 ## How to run
 

@@ -41,3 +41,7 @@ All Phase 2 tools are prefixed `mock_`, operate on in-memory fixtures only, and 
 ## ADR-010: Audit tamper-evidence deferred
 **Date:** 2026-07-11 · **Status:** Accepted
 Audit store is append-only by API (no update/delete surface). Cryptographic hash-chaining considered and deferred to Phase 3 — no adversary in the Phase 0–2 threat surface can write to the DB without owning the process. Recorded as residual risk.
+
+## ADR-011: Central ScopeEnforcer completes "executor enforces resource_scope"
+**Date:** 2026-07-12 · **Status:** Accepted
+`ToolDefinition.requested_scope(args)` declares the concrete paths/domains/apps an invocation will touch. A stateless `ScopeEnforcer` (`core/scope.py`) checks it against the effective allowed scope resolved by `PermissionStore` — first at the orchestrator pre-EXECUTING gate (fail fast: task FAILED, never enters EXECUTING, retry budget untouched), then again in `registry.execute` as a backstop. This implements the previously-unenforced "executor enforces resource_scope" clause of TOOL_CONTRACTS §1. Rejected: per-tool ad-hoc checks (un-auditable, forgettable) and executor-only enforcement (misses fail-fast before EXECUTING). Grants are mutated only through the trusted `/api/permissions` endpoints, so untrusted content can never widen scope. Path safety (`security/paths.py`) resolves symlinks and denies credential/system locations even inside an approved root.
