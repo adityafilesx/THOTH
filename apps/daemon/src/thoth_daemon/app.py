@@ -5,6 +5,7 @@ from typing import Any
 from fastapi import FastAPI
 
 from thoth_daemon.api import health, permissions, tasks, ws
+from thoth_daemon.api.middleware import BearerAuthMiddleware
 from thoth_daemon.audit.store import AuditStore
 from thoth_daemon.config import Settings
 from thoth_daemon.core.approvals import ApprovalEngine
@@ -17,6 +18,7 @@ from thoth_daemon.core.verification import VerificationEngine
 from thoth_daemon.events.bus import EventBus
 from thoth_daemon.logging_setup import configure_logging, get_logger
 from thoth_daemon.schemas import ResourceScope, WorkspaceProfile
+from thoth_daemon.security.auth import mint_token, write_token_file
 from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
 from thoth_daemon.storage.permissions import PermissionStore
 from thoth_daemon.tools.mock_tools import build_registry
@@ -37,6 +39,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.engine = engine
         app.state.session_factory = session_factory
         app.state.bus = bus
+
+        # Per-session auth token: env-provided (dev/tests) or minted, then
+        # written 0600 for the desktop to read (threat T6).
+        token = cfg.session_token or mint_token()
+        app.state.session_token = token
+        write_token_file(cfg.session_token_path, token)
 
         async def publish(event_type: str, payload: dict[str, Any]) -> None:
             await bus.publish(event_type, payload)
@@ -82,6 +90,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         await engine.dispose()
 
     app = FastAPI(title="THOTH Daemon", lifespan=lifespan)
+    app.add_middleware(BearerAuthMiddleware)
     app.include_router(health.router)
     app.include_router(tasks.router)
     app.include_router(ws.router)

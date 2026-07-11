@@ -26,6 +26,9 @@ class Settings(BaseSettings):
 
     planner: str = "mock"
 
+    session_token: str | None = None
+    session_token_path: Path = Path("./data/session.token")
+
     @field_validator("trusted_workspaces", mode="before")
     @classmethod
     def _split_csv(cls, v: object) -> object:

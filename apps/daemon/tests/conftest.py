@@ -17,6 +17,8 @@ def settings(tmp_path: Path) -> Settings:
         log_dir=tmp_path / "logs",
         trusted_workspaces=[str(tmp_path / "trusted")],
         approval_ttl_seconds=60,
+        session_token="test-token",
+        session_token_path=tmp_path / "session.token",
     )
 
 
@@ -31,11 +33,15 @@ async def client(app: FastAPI) -> AsyncIterator[AsyncClient]:
     # lifespan context so startup/shutdown execute.
     with TestClient(app):
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as c:
+        async with AsyncClient(
+            transport=transport,
+            base_url="http://test",
+            headers={"Authorization": "Bearer test-token"},
+        ) as c:
             yield c
 
 
 @pytest.fixture()
 def ws_client(app: FastAPI) -> Iterator[TestClient]:
-    with TestClient(app) as c:
+    with TestClient(app, headers={"Authorization": "Bearer test-token"}) as c:
         yield c
