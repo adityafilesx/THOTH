@@ -5,6 +5,7 @@
 import type { WsEnvelope } from "@thoth/shared-schemas";
 
 import { DAEMON_URL } from "./api";
+import { getSessionToken } from "./auth";
 
 export type WsStatus = "connecting" | "connected" | "disconnected";
 
@@ -28,29 +29,33 @@ export class WsClient {
 
   private open(): void {
     this.options.onStatus("connecting");
-    const url = DAEMON_URL.replace(/^http/, "ws") + "/ws";
-    this.ws = new WebSocket(url);
-    this.ws.onopen = () => {
-      this.retryMs = 500;
-      this.options.onStatus("connected");
-    };
-    this.ws.onmessage = (msg) => {
-      try {
-        this.options.onEvent(JSON.parse(msg.data as string) as WsEnvelope);
-      } catch {
-        // Malformed frame: ignore rather than kill the stream.
-      }
-    };
-    this.ws.onclose = () => {
-      this.options.onStatus("disconnected");
-      if (!this.closedByUser) {
-        this.timer = setTimeout(() => this.open(), this.retryMs);
-        this.retryMs = Math.min(this.retryMs * 2, 8000);
-      }
-    };
-    this.ws.onerror = () => {
-      this.ws?.close();
-    };
+    void getSessionToken().then((token) => {
+      const url = DAEMON_URL.replace(/^http/, "ws") + "/ws";
+      const ws = new WebSocket(url);
+      this.ws = ws;
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: "auth", token }));
+        this.retryMs = 500;
+        this.options.onStatus("connected");
+      };
+      ws.onmessage = (msg) => {
+        try {
+          this.options.onEvent(JSON.parse(msg.data as string) as WsEnvelope);
+        } catch {
+          // Malformed frame: ignore rather than kill the stream.
+        }
+      };
+      ws.onclose = () => {
+        this.options.onStatus("disconnected");
+        if (!this.closedByUser) {
+          this.timer = setTimeout(() => this.open(), this.retryMs);
+          this.retryMs = Math.min(this.retryMs * 2, 8000);
+        }
+      };
+      ws.onerror = () => {
+        ws.close();
+      };
+    });
   }
 
   close(): void {
