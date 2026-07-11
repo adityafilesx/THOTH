@@ -1,6 +1,6 @@
 # THOTH Status
 
-**As of:** 2026-07-12 · **Phases 0, 1, 2 complete. Phase 3 in progress — slices 1–2 (scope enforcement + permission store; desktop↔daemon session auth token) landed.**
+**As of:** 2026-07-12 · **Phases 0, 1, 2 complete. Phase 3 in progress — slices 1–3 (scope enforcement + permission store; session auth token; real scoped filesystem tools) landed.**
 
 ## Where we are
 
@@ -12,10 +12,10 @@
 
 | Gate | Result |
 |---|---|
-| `uv run --project apps/daemon pytest` | **300 passed** |
+| `uv run --project apps/daemon pytest` | **322 passed** |
 | `ruff check apps/daemon` | All checks passed |
 | `ruff format --check apps/daemon` | 54 files formatted |
-| `mypy apps/daemon/src` (strict) | no issues, 41 files |
+| `mypy apps/daemon/src` (strict) | no issues, 43 files |
 | `pnpm -C apps/desktop test` (vitest) | **46 passed** |
 | `pnpm -C apps/desktop lint` (eslint) | clean |
 | `pnpm -C apps/desktop typecheck` (tsc) | clean |
@@ -23,17 +23,17 @@
 | `cargo check` (src-tauri) | Finished |
 | `alembic upgrade head` | applies; 8 tables |
 
-**Total: 346 automated tests passing.**
+**Total: 368 automated tests passing.**
 
 Also verified end-to-end against a live daemon: R0 task → `COMPLETED`; R3 plan → `FAILED` at policy; R2 task → `WAITING_FOR_APPROVAL` → approve → `COMPLETED`; approval reuse → HTTP 404 (single-use); cancel → `CANCELLED`; audit sequence monotonic; no secrets in JSONL logs.
 
 ## Honest capability statement
 
-**THOTH cannot control the computer.** There is no macOS automation, browser control, shell execution, or voice processing. Everything in Phase 2 runs against **mock tools** (`mock_*`, in-memory, no side effects). The safety core is real and tested; the capabilities it gates are not yet built. Real integration is Phase 3 and must be verified before any control claim is made.
+**THOTH cannot yet autonomously control the computer.** Phase 3 has added real, scoped **filesystem** tools (read/list/write/stat), verified against the real OS. But there is still no macOS app automation, browser control, shell execution, or voice — and no real planner wiring a natural-language goal to these tools end to end (the deterministic mock planner drives only mock tools; the claude-agent-sdk planner is slice 8). The safety core (state machine, policy, **scope enforcement**, approvals, **session auth**, audit) is real and tested and gates every tool. No broad control claim until the remaining adapters and the real planner land and are verified.
 
 ## Mocked / not yet implemented
 
-- **Tools:** all nine tools are mocks (`apps/daemon/src/thoth_daemon/tools/mock_tools.py`). No real filesystem, app, browser, git, or shell action occurs.
+- **Tools:** the nine `mock_*` tools remain (safety-core tests + mock planner). **Real, scoped filesystem tools now exist** (`fs_read_file`/`fs_list_dir`/`fs_write_file`/`fs_stat` in `tools/fs_tools.py`), enforced by the scope gate + registry backstop. No real app, browser, git, or shell action yet.
 - **Planner:** `DeterministicMockPlanner` (keyword → fixed plan). The claude-agent-sdk planner is deferred to Phase 3 behind the frozen `PlannerAdapter` interface.
 - **Voice:** none. Push-to-talk, STT, and TTS are Phase 3.
 - **Desktop views:** Permissions, Skills, and Settings still render static fixtures (labeled "mock data"); wiring to daemon state is slice 9. The daemon-side permissions API + store are now real (see Security).
