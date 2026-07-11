@@ -43,9 +43,10 @@
 - [x] **Slice 1 — Scope enforcement + permission store:** path-safety primitives (symlink-safe resolution + credential/system denylist), central `ScopeEnforcer` (orchestrator pre-EXECUTING gate + registry backstop), persistent `WorkspaceProfile`/`PermissionGrant` store, `/api/permissions` API. No real I/O yet.
 - [x] **Slice 2 — Session auth token:** per-session bearer token, pure-ASGI HTTP middleware + WebSocket handshake (health exempt, constant-time compare), desktop attaches it via a Tauri command / dev env. Always-on. Closes threat T6.
 - [x] **Slice 3 — Filesystem adapter (first real capability):** real scoped `fs_read_file`/`fs_list_dir`/`fs_write_file`/`fs_stat` — atomic self-verified writes, content redacted, gated by the slice-1 scope enforcer; verified against the real filesystem. Deletion/move deferred.
+- [x] **Slice 4 — Restricted shell:** `shell_run` — allowlisted bare-name executables, no shell interpretation (metacharacters rejected), `requested_scope` contains cwd + every argument path, R2 approval per command, 32 KiB output cap, minimal env, SIGTERM→SIGKILL cancel; live-OS verified. The only command-string tool.
 - [ ] macOS adapters: app launch/focus (PyObjC/AX), typed AppleScript/JXA adapters
 - [x] Filesystem adapter with approved-directory scoping
-- [ ] Restricted shell tool per TOOL_CONTRACTS §4
+- [x] Restricted shell tool per TOOL_CONTRACTS §4
 - [ ] Git workflow tools
 - [ ] Browser adapter via Playwright MCP + domain allowlist
 - [ ] claude-agent-sdk planner behind PlannerAdapter
