@@ -38,9 +38,7 @@ class TestScan:
         assert not scan_untrusted(content).suspicious
 
     def test_scan_never_mutates_content(self) -> None:
-        content = TaggedContent(
-            content=INJECTION_SAMPLES[0], provenance=Provenance.WEB_UNTRUSTED
-        )
+        content = TaggedContent(content=INJECTION_SAMPLES[0], provenance=Provenance.WEB_UNTRUSTED)
         scan_untrusted(content)
         assert content.content == INJECTION_SAMPLES[0]
 

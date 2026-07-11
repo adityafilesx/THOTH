@@ -41,6 +41,8 @@ def export(out_dir: Path) -> list[Path]:
 
 
 if __name__ == "__main__":
-    target = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("../../packages/shared-schemas/schemas")
+    target = (
+        Path(sys.argv[1]) if len(sys.argv) > 1 else Path("../../packages/shared-schemas/schemas")
+    )
     files = export(target)
     print(f"wrote {len(files)} schemas to {target}")

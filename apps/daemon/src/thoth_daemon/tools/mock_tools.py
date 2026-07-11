@@ -7,10 +7,11 @@ Real adapters (macOS/browser/shell/filesystem) arrive in Phase 3.
 """
 
 import asyncio
+from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict
 
-from thoth_daemon.schemas import ResourceScope, RiskLevel, VerificationStrategy
+from thoth_daemon.schemas import RiskLevel, VerificationStrategy
 from thoth_daemon.tools.base import ToolDefinition
 from thoth_daemon.tools.registry import ToolRegistry
 
@@ -155,7 +156,7 @@ class MockSendEmail(ToolDefinition[SendEmailIn, SendEmailOut]):
     output_model = SendEmailOut
     default_risk = RiskLevel.R2
     verification = VerificationStrategy.OUTPUT_ASSERTION
-    redaction_fields = ["recipient", "body"]
+    redaction_fields: ClassVar[list[str]] = ["recipient", "body"]
 
     async def run(self, args: SendEmailIn, dry_run: bool) -> SendEmailOut:
         return SendEmailOut(

@@ -12,14 +12,13 @@ import asyncio
 import time
 from typing import Any
 
-from thoth_daemon.schemas import ToolInvocation, ToolResult
+from thoth_daemon.schemas import RiskLevel, ToolInvocation, ToolResult
 from thoth_daemon.security.redaction import redact
 from thoth_daemon.tools.base import (
     DuplicateToolError,
     ToolDefinition,
     UnknownToolError,
 )
-from thoth_daemon.schemas import RiskLevel
 
 
 class ToolRegistry:
@@ -73,7 +72,7 @@ class ToolRegistry:
                 duration_ms=(time.perf_counter() - started) * 1000,
                 cancelled=True,
             )
-        except Exception as exc:  # noqa: BLE001 - surfaced as a typed failure
+        except Exception as exc:  # tool errors are surfaced as a typed failure
             return ToolResult(
                 invocation_id=invocation.id,
                 ok=False,

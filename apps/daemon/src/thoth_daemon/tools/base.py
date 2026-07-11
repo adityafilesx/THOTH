@@ -8,7 +8,7 @@ dedicated restricted shell tool in Phase 3).
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from typing import Any, ClassVar, Generic, TypeVar
 
 from pydantic import BaseModel
 
@@ -42,7 +42,7 @@ class ToolDefinition(ABC, Generic[TInput, TOutput]):
     supports_cancellation: bool = True
     verification: VerificationStrategy = VerificationStrategy.OUTPUT_ASSERTION
     resource_scope: ResourceScope
-    redaction_fields: list[str] = []
+    redaction_fields: ClassVar[list[str]] = []
 
     def __init__(self) -> None:
         if not getattr(self, "resource_scope", None):

@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class TaskState(str, Enum):
+class TaskState(StrEnum):
     RECEIVED = "RECEIVED"
     UNDERSTANDING = "UNDERSTANDING"
     PLANNING = "PLANNING"
@@ -18,7 +18,7 @@ class TaskState(str, Enum):
 TERMINAL_STATES = frozenset({TaskState.COMPLETED, TaskState.FAILED, TaskState.CANCELLED})
 
 
-class RiskLevel(str, Enum):
+class RiskLevel(StrEnum):
     """R0 read-only · R1 reversible local · R2 external side effect ·
     R3 destructive/highly sensitive (blocked by default).
 
@@ -34,33 +34,33 @@ class RiskLevel(str, Enum):
     def rank(self) -> int:
         return int(self.value[1])
 
-    def __lt__(self, other: object) -> bool:  # type: ignore[override]
+    def __lt__(self, other: object) -> bool:
         if not isinstance(other, RiskLevel):
             return NotImplemented
         return self.rank < other.rank
 
-    def __le__(self, other: object) -> bool:  # type: ignore[override]
+    def __le__(self, other: object) -> bool:
         if not isinstance(other, RiskLevel):
             return NotImplemented
         return self.rank <= other.rank
 
-    def __gt__(self, other: object) -> bool:  # type: ignore[override]
+    def __gt__(self, other: object) -> bool:
         if not isinstance(other, RiskLevel):
             return NotImplemented
         return self.rank > other.rank
 
-    def __ge__(self, other: object) -> bool:  # type: ignore[override]
+    def __ge__(self, other: object) -> bool:
         if not isinstance(other, RiskLevel):
             return NotImplemented
         return self.rank >= other.rank
 
 
-class TaskSource(str, Enum):
+class TaskSource(StrEnum):
     TEXT = "text"
     VOICE = "voice"
 
 
-class StepStatus(str, Enum):
+class StepStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     VERIFYING = "verifying"
@@ -70,14 +70,14 @@ class StepStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class ApprovalStatus(str, Enum):
+class ApprovalStatus(StrEnum):
     PENDING = "pending"
     APPROVED = "approved"
     DENIED = "denied"
     EXPIRED = "expired"
 
 
-class Provenance(str, Enum):
+class Provenance(StrEnum):
     USER_TRUSTED = "USER_TRUSTED"
     SYSTEM_TRUSTED = "SYSTEM_TRUSTED"
     TOOL_RESULT_UNTRUSTED = "TOOL_RESULT_UNTRUSTED"
@@ -88,7 +88,7 @@ class Provenance(str, Enum):
 TRUSTED_PROVENANCE = frozenset({Provenance.USER_TRUSTED, Provenance.SYSTEM_TRUSTED})
 
 
-class VerificationStrategy(str, Enum):
+class VerificationStrategy(StrEnum):
     OUTPUT_ASSERTION = "output_assertion"
     STATE_PROBE = "state_probe"
     NONE_READONLY = "none_readonly"

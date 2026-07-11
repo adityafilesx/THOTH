@@ -11,10 +11,7 @@ ALL_STATES = list(TaskState)
 
 ALLOWED_PAIRS = [(src, dst) for src, dsts in TRANSITIONS.items() for dst in dsts]
 INVALID_PAIRS = [
-    (src, dst)
-    for src in ALL_STATES
-    for dst in ALL_STATES
-    if dst not in TRANSITIONS[src]
+    (src, dst) for src in ALL_STATES for dst in ALL_STATES if dst not in TRANSITIONS[src]
 ]
 
 
@@ -55,9 +52,7 @@ def test_terminal_states_are_frozen(terminal: TaskState) -> None:
             machine.transition(dst, reason="test")
 
 
-@pytest.mark.parametrize(
-    "src", [s for s in ALL_STATES if s not in TERMINAL_STATES]
-)
+@pytest.mark.parametrize("src", [s for s in ALL_STATES if s not in TERMINAL_STATES])
 def test_cancellation_reachable_from_every_non_terminal_state(src: TaskState) -> None:
     machine = TaskStateMachine(task_id="t1", state=src, emit=Recorder())
     machine.transition(TaskState.CANCELLED, reason="user pressed stop")

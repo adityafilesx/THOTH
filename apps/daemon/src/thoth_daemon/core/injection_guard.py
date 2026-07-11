@@ -23,13 +23,13 @@ from thoth_daemon.schemas import TaggedContent
 DIRECTIVE_PATTERNS: dict[str, str] = {
     "override_instructions": r"\bignore\s+(all\s+)?(previous|prior|above)\s+instructions\b",
     "role_impersonation": r"^\s*(system|assistant|developer)\s*:",
-    "approval_forgery": r"\b(mark|treat|consider)?\s*(this|the)?\s*\w*\s*(as\s+)?approved\b|\bapprove\s+all\b",
+    "approval_forgery": r"\b(mark|treat|consider)?\s*(this|the)?\s*\w*\s*(as\s+)?approved\b|\bapprove\s+all\b",  # noqa: E501
     "authorization_claim": r"\bauthorized\s+to\b",
     "disable_safety": r"\bdisable\s+(verification|safety|the\s+safety\s+engine|policy)\b",
     "privileged_exec": r"\bsudo\b|\brm\s+-rf\s+/",
     "objective_override": r"\bnew\s+(objective|goal|task)\s*:",
     "permission_grant": r"\bgrant\s+(permission|access)\b|\bexpand\s+(approved|allowed)\b",
-    "credential_request": r"\b(send|share|paste|exfiltrate)\b.{0,40}\b(password|credential|\.ssh|id_rsa|api[_ ]?key|token)\b",
+    "credential_request": r"\b(send|share|paste|exfiltrate)\b.{0,40}\b(password|credential|\.ssh|id_rsa|api[_ ]?key|token)\b",  # noqa: E501
 }
 
 _COMPILED = {

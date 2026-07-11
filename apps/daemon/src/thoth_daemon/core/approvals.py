@@ -32,7 +32,7 @@ class UnknownApprovalError(Exception):
 
 
 class _Grant:
-    __slots__ = ("request_id", "invocation_id", "arguments", "expires_at", "consumed")
+    __slots__ = ("arguments", "consumed", "expires_at", "invocation_id", "request_id")
 
     def __init__(
         self,

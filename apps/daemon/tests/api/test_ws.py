@@ -10,7 +10,9 @@ def test_ws_receives_published_events(ws_client: TestClient, app: FastAPI) -> No
         hello = ws.receive_json()
         assert hello["type"] == "connection.established"
 
-        ws_client.portal.call(bus.publish, "task.state_changed", {"task_id": "t1", "to": "PLANNING"})
+        ws_client.portal.call(
+            bus.publish, "task.state_changed", {"task_id": "t1", "to": "PLANNING"}
+        )
         msg = ws.receive_json()
         assert msg["type"] == "task.state_changed"
         assert msg["payload"] == {"task_id": "t1", "to": "PLANNING"}

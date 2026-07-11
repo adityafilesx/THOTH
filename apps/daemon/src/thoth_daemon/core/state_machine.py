@@ -14,15 +14,9 @@ from thoth_daemon.schemas import TaskState
 Emit = Callable[[str, dict[str, Any]], None]
 
 TRANSITIONS: dict[TaskState, frozenset[TaskState]] = {
-    TaskState.RECEIVED: frozenset(
-        {TaskState.UNDERSTANDING, TaskState.CANCELLED, TaskState.FAILED}
-    ),
-    TaskState.UNDERSTANDING: frozenset(
-        {TaskState.PLANNING, TaskState.CANCELLED, TaskState.FAILED}
-    ),
-    TaskState.PLANNING: frozenset(
-        {TaskState.RISK_REVIEW, TaskState.CANCELLED, TaskState.FAILED}
-    ),
+    TaskState.RECEIVED: frozenset({TaskState.UNDERSTANDING, TaskState.CANCELLED, TaskState.FAILED}),
+    TaskState.UNDERSTANDING: frozenset({TaskState.PLANNING, TaskState.CANCELLED, TaskState.FAILED}),
+    TaskState.PLANNING: frozenset({TaskState.RISK_REVIEW, TaskState.CANCELLED, TaskState.FAILED}),
     TaskState.RISK_REVIEW: frozenset(
         {
             TaskState.WAITING_FOR_APPROVAL,
@@ -52,9 +46,7 @@ TRANSITIONS: dict[TaskState, frozenset[TaskState]] = {
             TaskState.FAILED,
         }
     ),
-    TaskState.RECOVERING: frozenset(
-        {TaskState.EXECUTING, TaskState.FAILED, TaskState.CANCELLED}
-    ),
+    TaskState.RECOVERING: frozenset({TaskState.EXECUTING, TaskState.FAILED, TaskState.CANCELLED}),
     TaskState.COMPLETED: frozenset(),
     TaskState.FAILED: frozenset(),
     TaskState.CANCELLED: frozenset(),

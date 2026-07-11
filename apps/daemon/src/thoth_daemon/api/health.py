@@ -14,6 +14,6 @@ async def health(request: Request) -> dict[str, str]:
         async with session_factory() as session:
             await session.execute(text("SELECT 1 FROM tasks LIMIT 1"))
         db_status = "ok"
-    except Exception:  # noqa: BLE001 - health must not raise
+    except Exception:  # health must never raise
         db_status = "error"
     return {"status": "ok", "version": thoth_daemon.__version__, "db": db_status}

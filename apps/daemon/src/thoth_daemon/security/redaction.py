@@ -42,8 +42,7 @@ def redact(value: Any, extra_fields: list[str] | None = None) -> Any:
     def walk(node: Any) -> Any:
         if isinstance(node, dict):
             return {
-                k: (REDACTED if _is_secret_key(str(k), extra) else walk(v))
-                for k, v in node.items()
+                k: (REDACTED if _is_secret_key(str(k), extra) else walk(v)) for k, v in node.items()
             }
         if isinstance(node, (list, tuple)):
             walked = [walk(item) for item in node]

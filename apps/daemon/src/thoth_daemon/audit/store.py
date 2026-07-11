@@ -30,27 +30,26 @@ class AuditStore:
         payload: dict[str, Any],
         redaction_fields: list[str] | None = None,
     ) -> AuditEvent:
-        async with self._locks[task_id]:
-            async with self._session_factory() as session:
-                seq = await self._next_seq(session, task_id)
-                event = AuditEvent(
-                    task_id=task_id,
-                    seq=seq,
-                    event_type=event_type,
-                    payload=redact(payload, extra_fields=redaction_fields),
+        async with self._locks[task_id], self._session_factory() as session:
+            seq = await self._next_seq(session, task_id)
+            event = AuditEvent(
+                task_id=task_id,
+                seq=seq,
+                event_type=event_type,
+                payload=redact(payload, extra_fields=redaction_fields),
+            )
+            session.add(
+                AuditEventRow(
+                    event_id=event.event_id,
+                    task_id=event.task_id,
+                    seq=event.seq,
+                    event_type=event.event_type,
+                    payload_json=event.payload,
+                    created_at=event.created_at,
                 )
-                session.add(
-                    AuditEventRow(
-                        event_id=event.event_id,
-                        task_id=event.task_id,
-                        seq=event.seq,
-                        event_type=event.event_type,
-                        payload_json=event.payload,
-                        created_at=event.created_at,
-                    )
-                )
-                await session.commit()
-                return event
+            )
+            await session.commit()
+            return event
 
     async def for_task(self, task_id: str) -> list[AuditEvent]:
         async with self._session_factory() as session:
