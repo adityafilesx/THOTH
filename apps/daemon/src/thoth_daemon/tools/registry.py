@@ -12,7 +12,8 @@ import asyncio
 import time
 from typing import Any
 
-from thoth_daemon.schemas import RiskLevel, ToolInvocation, ToolResult
+from thoth_daemon.core.scope import ScopeEnforcer, ScopeViolation
+from thoth_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation, ToolResult
 from thoth_daemon.security.redaction import redact
 from thoth_daemon.tools.base import (
     DuplicateToolError,
@@ -24,6 +25,7 @@ from thoth_daemon.tools.base import (
 class ToolRegistry:
     def __init__(self) -> None:
         self._tools: dict[str, ToolDefinition[Any, Any]] = {}
+        self._enforcer = ScopeEnforcer()
 
     def register(self, tool: ToolDefinition[Any, Any]) -> None:
         if tool.name in self._tools:
@@ -46,9 +48,20 @@ class ToolRegistry:
     def all(self) -> list[ToolDefinition[Any, Any]]:
         return list(self._tools.values())
 
-    async def execute(self, invocation: ToolInvocation) -> ToolResult:
+    async def execute(
+        self, invocation: ToolInvocation, allowed_scope: ResourceScope | None = None
+    ) -> ToolResult:
         tool = self.get(invocation.tool_name)  # raises UnknownToolError
         args = tool.parse_arguments(invocation)  # raises ValidationError
+
+        # Backstop scope check — no tool runs against an out-of-scope target,
+        # even via a direct registry call. The orchestrator gate is primary.
+        try:
+            self._enforcer.check(tool.requested_scope(args), allowed_scope or ResourceScope())
+        except ScopeViolation as exc:
+            return ToolResult(
+                invocation_id=invocation.id, ok=False, error=f"scope violation: {exc}"
+            )
 
         started = time.perf_counter()
         try:

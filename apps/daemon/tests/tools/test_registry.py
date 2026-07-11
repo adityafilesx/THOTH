@@ -1,9 +1,10 @@
 import asyncio
+from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError
 
-from thoth_daemon.schemas import RiskLevel, ToolInvocation
+from thoth_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
 from thoth_daemon.tools.base import DuplicateToolError, ToolDefinition, UnknownToolError
 from thoth_daemon.tools.mock_tools import build_registry
 from thoth_daemon.tools.registry import ToolRegistry
@@ -117,3 +118,48 @@ class TestRedaction:
         assert result.output.get("recipient") == "[REDACTED]"
         assert result.output.get("body") == "[REDACTED]"
         assert result.output.get("subject") == "s"
+
+
+class _ScopedIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    path: str
+
+
+class _ScopedOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    ok: bool
+
+
+class _ScopedTool(ToolDefinition[_ScopedIn, _ScopedOut]):
+    name = "scoped_probe"
+    description = "test tool that declares it touches a path"
+    input_model = _ScopedIn
+    output_model = _ScopedOut
+    default_risk = RiskLevel.R1
+
+    def requested_scope(self, args: _ScopedIn) -> ResourceScope:  # type: ignore[override]
+        return ResourceScope(paths=[args.path])
+
+    async def run(self, args: _ScopedIn, dry_run: bool) -> _ScopedOut:
+        return _ScopedOut(ok=True)
+
+
+class TestScopeBackstop:
+    async def test_in_scope_allowed(self) -> None:
+        registry = ToolRegistry()
+        registry.register(_ScopedTool())
+        allowed = ResourceScope(paths=[str(Path.home() / "projects")])
+        inv = invocation("scoped_probe", {"path": str(Path.home() / "projects" / "a.txt")})
+        assert (await registry.execute(inv, allowed)).ok
+
+    async def test_out_of_scope_refused(self) -> None:
+        registry = ToolRegistry()
+        registry.register(_ScopedTool())
+        allowed = ResourceScope(paths=[str(Path.home() / "projects")])
+        inv = invocation("scoped_probe", {"path": str(Path.home() / "secret" / "a.txt")})
+        result = await registry.execute(inv, allowed)
+        assert not result.ok and "scope violation" in (result.error or "")
+
+    async def test_mock_tools_unaffected_without_scope(self) -> None:
+        registry = build_registry()
+        assert (await registry.execute(invocation("mock_read_file", {"path": "/anything"}))).ok

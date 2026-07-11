@@ -52,6 +52,12 @@ class ToolDefinition(ABC, Generic[TInput, TOutput]):
         """Validate raw args against input_model (extra='forbid')."""
         return self.input_model.model_validate(invocation.arguments)
 
+    def requested_scope(self, args: Any) -> ResourceScope:
+        """The concrete paths/domains/apps this invocation will touch. The
+        orchestrator and executor check these against the effective allowed
+        scope. Default: touches nothing (mocks and pure-compute tools)."""
+        return ResourceScope()
+
     @abstractmethod
     async def run(self, args: Any, dry_run: bool) -> BaseModel:
         """Execute the tool. Must cooperate with cancellation and honor
