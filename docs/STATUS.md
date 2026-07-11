@@ -4,7 +4,7 @@
 
 ## Where we are
 
-- Phase 0 in progress: plan + root config + engineering docs committed; Claude Code agents/hooks/rules next.
+- Phase 0 complete: plan, root config, engineering docs, Claude Code agents/hooks/rules/skills (hooks self-tested: 17/17 block/allow cases).
 - Phase 1 not started.
 - Phase 2 not started.
 
