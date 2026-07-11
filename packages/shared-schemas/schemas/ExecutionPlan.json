@@ -1,0 +1,124 @@
+{
+  "$defs": {
+    "PlanStep": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "index": {
+          "minimum": 0,
+          "title": "Index",
+          "type": "integer"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "tool_name": {
+          "title": "Tool Name",
+          "type": "string"
+        },
+        "arguments": {
+          "additionalProperties": true,
+          "title": "Arguments",
+          "type": "object"
+        },
+        "declared_risk": {
+          "$ref": "#/$defs/RiskLevel"
+        },
+        "status": {
+          "$ref": "#/$defs/StepStatus",
+          "default": "pending"
+        },
+        "verification_passed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Verification Passed"
+        },
+        "verification_detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Verification Detail"
+        }
+      },
+      "required": [
+        "index",
+        "title",
+        "tool_name",
+        "declared_risk"
+      ],
+      "title": "PlanStep",
+      "type": "object"
+    },
+    "RiskLevel": {
+      "description": "R0 read-only \u00b7 R1 reversible local \u00b7 R2 external side effect \u00b7\nR3 destructive/highly sensitive (blocked by default).\n\nTotally ordered so that ``max()`` expresses the no-downgrade rule.",
+      "enum": [
+        "R0",
+        "R1",
+        "R2",
+        "R3"
+      ],
+      "title": "RiskLevel",
+      "type": "string"
+    },
+    "StepStatus": {
+      "enum": [
+        "pending",
+        "running",
+        "verifying",
+        "succeeded",
+        "failed",
+        "skipped",
+        "cancelled"
+      ],
+      "title": "StepStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "task_id": {
+      "title": "Task Id",
+      "type": "string"
+    },
+    "summary": {
+      "title": "Summary",
+      "type": "string"
+    },
+    "steps": {
+      "items": {
+        "$ref": "#/$defs/PlanStep"
+      },
+      "minItems": 1,
+      "title": "Steps",
+      "type": "array"
+    }
+  },
+  "required": [
+    "task_id",
+    "summary",
+    "steps"
+  ],
+  "title": "ExecutionPlan",
+  "type": "object"
+}

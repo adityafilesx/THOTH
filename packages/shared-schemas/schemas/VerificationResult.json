@@ -1,0 +1,56 @@
+{
+  "$defs": {
+    "VerificationStrategy": {
+      "enum": [
+        "output_assertion",
+        "state_probe",
+        "none_readonly"
+      ],
+      "title": "VerificationStrategy",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "step_id": {
+      "title": "Step Id",
+      "type": "string"
+    },
+    "invocation_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Invocation Id"
+    },
+    "strategy": {
+      "$ref": "#/$defs/VerificationStrategy"
+    },
+    "passed": {
+      "title": "Passed",
+      "type": "boolean"
+    },
+    "detail": {
+      "title": "Detail",
+      "type": "string"
+    },
+    "checked_at": {
+      "format": "date-time",
+      "title": "Checked At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "step_id",
+    "strategy",
+    "passed",
+    "detail"
+  ],
+  "title": "VerificationResult",
+  "type": "object"
+}

@@ -1,0 +1,43 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "request_id": {
+      "title": "Request Id",
+      "type": "string"
+    },
+    "approved": {
+      "title": "Approved",
+      "type": "boolean"
+    },
+    "scope": {
+      "const": "once",
+      "default": "once",
+      "title": "Scope",
+      "type": "string"
+    },
+    "modified_arguments": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Modified Arguments"
+    },
+    "decided_at": {
+      "format": "date-time",
+      "title": "Decided At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "request_id",
+    "approved"
+  ],
+  "title": "ApprovalDecision",
+  "type": "object"
+}

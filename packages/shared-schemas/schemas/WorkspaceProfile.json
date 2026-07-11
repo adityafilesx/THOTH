@@ -1,0 +1,42 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "root_path": {
+      "title": "Root Path",
+      "type": "string"
+    },
+    "trusted": {
+      "default": false,
+      "title": "Trusted",
+      "type": "boolean"
+    },
+    "approved_domains": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Approved Domains",
+      "type": "array"
+    },
+    "approved_apps": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Approved Apps",
+      "type": "array"
+    }
+  },
+  "required": [
+    "name",
+    "root_path"
+  ],
+  "title": "WorkspaceProfile",
+  "type": "object"
+}

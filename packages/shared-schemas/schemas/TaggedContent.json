@@ -1,0 +1,44 @@
+{
+  "$defs": {
+    "Provenance": {
+      "enum": [
+        "USER_TRUSTED",
+        "SYSTEM_TRUSTED",
+        "TOOL_RESULT_UNTRUSTED",
+        "WEB_UNTRUSTED",
+        "FILE_UNTRUSTED"
+      ],
+      "title": "Provenance",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A piece of context with explicit provenance. Untrusted content can\nnever change objectives, approve actions, or expand permissions \u2014\nenforced by core/injection_guard.py and by the policy engine consuming\nonly trusted, typed fields.",
+  "properties": {
+    "content": {
+      "title": "Content",
+      "type": "string"
+    },
+    "provenance": {
+      "$ref": "#/$defs/Provenance"
+    },
+    "source": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source"
+    }
+  },
+  "required": [
+    "content",
+    "provenance"
+  ],
+  "title": "TaggedContent",
+  "type": "object"
+}

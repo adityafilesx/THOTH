@@ -1,0 +1,29 @@
+{
+  "additionalProperties": false,
+  "description": "What a tool is permitted to touch. Empty lists mean 'nothing of\nthat kind' \u2014 scopes only ever widen through user-granted permissions.",
+  "properties": {
+    "paths": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Paths",
+      "type": "array"
+    },
+    "domains": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Domains",
+      "type": "array"
+    },
+    "apps": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Apps",
+      "type": "array"
+    }
+  },
+  "title": "ResourceScope",
+  "type": "object"
+}

@@ -1,0 +1,39 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "task_id": {
+      "title": "Task Id",
+      "type": "string"
+    },
+    "step_id": {
+      "title": "Step Id",
+      "type": "string"
+    },
+    "action": {
+      "enum": [
+        "retry",
+        "fail"
+      ],
+      "title": "Action",
+      "type": "string"
+    },
+    "attempt": {
+      "minimum": 0,
+      "title": "Attempt",
+      "type": "integer"
+    },
+    "reason": {
+      "title": "Reason",
+      "type": "string"
+    }
+  },
+  "required": [
+    "task_id",
+    "step_id",
+    "action",
+    "attempt",
+    "reason"
+  ],
+  "title": "RecoveryDecision",
+  "type": "object"
+}

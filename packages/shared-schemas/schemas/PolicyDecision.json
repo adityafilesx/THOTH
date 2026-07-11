@@ -1,0 +1,43 @@
+{
+  "$defs": {
+    "RiskLevel": {
+      "description": "R0 read-only \u00b7 R1 reversible local \u00b7 R2 external side effect \u00b7\nR3 destructive/highly sensitive (blocked by default).\n\nTotally ordered so that ``max()`` expresses the no-downgrade rule.",
+      "enum": [
+        "R0",
+        "R1",
+        "R2",
+        "R3"
+      ],
+      "title": "RiskLevel",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "allowed": {
+      "title": "Allowed",
+      "type": "boolean"
+    },
+    "requires_approval": {
+      "title": "Requires Approval",
+      "type": "boolean"
+    },
+    "effective_risk": {
+      "$ref": "#/$defs/RiskLevel"
+    },
+    "reasons": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Reasons",
+      "type": "array"
+    }
+  },
+  "required": [
+    "allowed",
+    "requires_approval",
+    "effective_risk"
+  ],
+  "title": "PolicyDecision",
+  "type": "object"
+}
