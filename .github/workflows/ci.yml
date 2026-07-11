@@ -47,6 +47,6 @@ jobs:
       - name: Typecheck
         run: pnpm -C apps/desktop typecheck
       - name: Vitest
-        run: pnpm -C apps/desktop test -- --run
+        run: pnpm -C apps/desktop test
       - name: Build frontend
         run: pnpm -C apps/desktop build

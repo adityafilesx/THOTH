@@ -25,7 +25,7 @@ test-daemon:
 	uv run --project $(DAEMON) pytest $(DAEMON)/tests
 
 test-desktop:
-	pnpm -C $(DESKTOP) test -- --run
+	pnpm -C $(DESKTOP) test
 
 lint: ## Lint daemon and desktop
 	uv run --project $(DAEMON) ruff check $(DAEMON)
