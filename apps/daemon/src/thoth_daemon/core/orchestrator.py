@@ -21,17 +21,21 @@ import contextlib
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+from pydantic import ValidationError
+
 from thoth_daemon.audit.store import AuditStore
 from thoth_daemon.core.approvals import ApprovalEngine, ApprovalRequiredError
 from thoth_daemon.core.planner import PlannerAdapter
 from thoth_daemon.core.policy import PolicyEngine
 from thoth_daemon.core.recovery import RecoveryController
+from thoth_daemon.core.scope import ScopeEnforcer, ScopeViolation
 from thoth_daemon.core.state_machine import InvalidTransitionError, TaskStateMachine
 from thoth_daemon.core.verification import VerificationEngine
 from thoth_daemon.schemas import (
     TERMINAL_STATES,
     ExecutionPlan,
     PlanStep,
+    ResourceScope,
     StepStatus,
     Task,
     TaskSource,
@@ -43,23 +47,29 @@ from thoth_daemon.schemas import (
 from thoth_daemon.tools.registry import ToolRegistry
 
 Publish = Callable[[str, dict[str, Any]], Awaitable[None]]
+ScopeProvider = Callable[[], Awaitable[ResourceScope]]
 
 
 class ExecutionStateError(Exception):
     """Raised when tool execution is attempted outside the EXECUTING state."""
 
 
+async def _empty_scope() -> ResourceScope:
+    return ResourceScope()
+
+
 async def guarded_execute(
     machine: TaskStateMachine,
     registry: ToolRegistry,
     invocation: ToolInvocation,
+    allowed_scope: ResourceScope | None = None,
 ) -> ToolResult:
     """The ONLY path to a tool. Refuses unless the task is EXECUTING."""
     if machine.state is not TaskState.EXECUTING:
         raise ExecutionStateError(
             f"tool execution requires EXECUTING state, not {machine.state.value}"
         )
-    return await registry.execute(invocation)
+    return await registry.execute(invocation, allowed_scope)
 
 
 class _TaskRunner:
@@ -76,6 +86,8 @@ class _TaskRunner:
         audit: AuditStore,
         publish: Publish,
         workspace: WorkspaceProfile,
+        enforcer: ScopeEnforcer,
+        scope_provider: ScopeProvider,
     ) -> None:
         self.task = task
         self.plan = plan
@@ -87,6 +99,8 @@ class _TaskRunner:
         self._audit = audit
         self._publish = publish
         self._workspace = workspace
+        self._enforcer = enforcer
+        self._scope_provider = scope_provider
 
         self._pending: list[tuple[str, dict[str, Any]]] = []
         self.machine = TaskStateMachine(task.id, task.state, emit=self._collect)
@@ -228,6 +242,12 @@ class _TaskRunner:
             effective_risk=effective_risk,
         )
 
+        # Scope gate — deny out-of-scope targets before any move toward
+        # EXECUTING. Resolved fresh so a revocation mid-task takes effect now.
+        allowed_scope = await self._scope_provider()
+        if not await self._scope_gate(step, invocation, allowed_scope):
+            return False
+
         # Reach EXECUTING, passing through approval if the step needs it.
         if self.machine.state is TaskState.VERIFYING:
             await self._goto(TaskState.EXECUTING, "advance to next step")
@@ -280,7 +300,7 @@ class _TaskRunner:
                     await self._fail(str(exc))
                     return False
 
-            result = await self._run_tool(invocation)
+            result = await self._run_tool(invocation, allowed_scope)
             if self.cancelled or result.cancelled:
                 await self._goto(TaskState.CANCELLED, "cancelled mid-execution")
                 return False
@@ -331,8 +351,43 @@ class _TaskRunner:
             await self._goto(TaskState.RECOVERING, f"retry {rec.attempt}")
             await self._goto(TaskState.EXECUTING, "retrying step")
 
-    async def _run_tool(self, invocation: ToolInvocation) -> ToolResult:
-        exec_task = asyncio.ensure_future(guarded_execute(self.machine, self._registry, invocation))
+    async def _scope_gate(
+        self, step: PlanStep, invocation: ToolInvocation, allowed_scope: ResourceScope
+    ) -> bool:
+        """Primary scope enforcement: refuse out-of-scope or malformed steps
+        before EXECUTING. Fails like a denial — no retry, budget untouched."""
+        tool = self._registry.get(step.tool_name)
+        try:
+            parsed = tool.parse_arguments(invocation)
+            self._enforcer.check(tool.requested_scope(parsed), allowed_scope)
+        except ScopeViolation as exc:
+            await self._audit_only(
+                "scope.denied",
+                {
+                    "step_id": step.id,
+                    "tool": step.tool_name,
+                    "kind": exc.kind,
+                    "value": exc.value,
+                    "reason": exc.reason,
+                },
+            )
+            await self._fail(f"step '{step.title}' blocked by scope: {exc.reason}")
+            return False
+        except ValidationError as exc:
+            await self._audit_only(
+                "scope.denied",
+                {"step_id": step.id, "tool": step.tool_name, "reason": f"invalid arguments: {exc}"},
+            )
+            await self._fail(f"step '{step.title}' has invalid arguments")
+            return False
+        return True
+
+    async def _run_tool(
+        self, invocation: ToolInvocation, allowed_scope: ResourceScope
+    ) -> ToolResult:
+        exec_task = asyncio.ensure_future(
+            guarded_execute(self.machine, self._registry, invocation, allowed_scope)
+        )
         cancel_task = asyncio.ensure_future(self._cancel.wait())
         done, _ = await asyncio.wait({exec_task, cancel_task}, return_when=asyncio.FIRST_COMPLETED)
         if exec_task in done:
@@ -379,6 +434,8 @@ class Orchestrator:
         planner: PlannerAdapter,
         publish: Publish,
         workspace: WorkspaceProfile,
+        enforcer: ScopeEnforcer | None = None,
+        scope_provider: ScopeProvider | None = None,
     ) -> None:
         self._registry = registry
         self._policy = policy
@@ -389,6 +446,8 @@ class Orchestrator:
         self._planner = planner
         self._publish = publish
         self._workspace = workspace
+        self._enforcer = enforcer or ScopeEnforcer()
+        self._scope_provider = scope_provider or _empty_scope
         self._runners: dict[str, _TaskRunner] = {}
         self._tasks: dict[str, Task] = {}
         self._background: set[asyncio.Task[None]] = set()
@@ -411,6 +470,8 @@ class Orchestrator:
             audit=self._audit,
             publish=self._publish,
             workspace=self._workspace,
+            enforcer=self._enforcer,
+            scope_provider=self._scope_provider,
         )
         self._runners[task.id] = runner
         background = asyncio.ensure_future(runner.run())
