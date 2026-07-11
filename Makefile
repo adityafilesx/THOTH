@@ -3,15 +3,19 @@
 DAEMON := apps/daemon
 DESKTOP := apps/desktop
 
+# Shared, non-secret token so the browser dev client authenticates to the
+# daemon in `make dev`. Production mints a random per-session token.
+DEV_TOKEN := thoth-dev-token
+
 setup: ## Install all dependencies
 	uv sync --project $(DAEMON)
 	pnpm install
 
 daemon: ## Run the FastAPI daemon (http://127.0.0.1:7710)
-	uv run --project $(DAEMON) python -m thoth_daemon.main
+	THOTH_SESSION_TOKEN=$(DEV_TOKEN) uv run --project $(DAEMON) python -m thoth_daemon.main
 
 desktop: ## Run the desktop dev server (browser mode)
-	pnpm -C $(DESKTOP) dev
+	VITE_THOTH_TOKEN=$(DEV_TOKEN) pnpm -C $(DESKTOP) dev
 
 dev: ## Run daemon and desktop together
 	$(MAKE) -j2 daemon desktop

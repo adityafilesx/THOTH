@@ -41,13 +41,14 @@
 ## Phase 3 — Real capability (IN PROGRESS)
 
 - [x] **Slice 1 — Scope enforcement + permission store:** path-safety primitives (symlink-safe resolution + credential/system denylist), central `ScopeEnforcer` (orchestrator pre-EXECUTING gate + registry backstop), persistent `WorkspaceProfile`/`PermissionGrant` store, `/api/permissions` API. No real I/O yet.
+- [x] **Slice 2 — Session auth token:** per-session bearer token, pure-ASGI HTTP middleware + WebSocket handshake (health exempt, constant-time compare), desktop attaches it via a Tauri command / dev env. Always-on. Closes threat T6.
 - [ ] macOS adapters: app launch/focus (PyObjC/AX), typed AppleScript/JXA adapters
 - [ ] Filesystem adapter with approved-directory scoping
 - [ ] Restricted shell tool per TOOL_CONTRACTS §4
 - [ ] Git workflow tools
 - [ ] Browser adapter via Playwright MCP + domain allowlist
 - [ ] claude-agent-sdk planner behind PlannerAdapter
-- [ ] Desktop↔daemon session auth token
+- [x] Desktop↔daemon session auth token
 - [ ] Voice: push-to-talk capture, whisper.cpp/faster-whisper STT, `say` TTS
 - [ ] Skill engine + Skills view wiring
 - [ ] Permissions view wired to real grants/revocations

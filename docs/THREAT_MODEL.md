@@ -45,7 +45,7 @@ Malicious or compromised dependencies.
 | T3 | Typed tool contracts with resource scopes; restricted shell (approved cwd, allow/deny lists, no `sudo`, no broad deletion, no credential paths, timeout, output cap); tool-preference order bans coordinate clicking when structured interfaces exist | `tools/`, Phase 3 shell adapter |
 | T4 | Approvals are single-use, bound to one `ToolInvocation.id`, TTL-limited, requested immediately before execution, and display the exact action + data; modified actions re-enter risk review | `core/approvals.py` |
 | T5 | Redaction at every serialization boundary (audit write, log write, WS emit); secrets live in Keychain only; `.env` holds config, not credentials; hooks block credential-file access in development | `security/redaction.py`, `.claude/hooks/` |
-| T6 | Daemon binds `127.0.0.1` only; SQLite/logs under user-owned paths with default macOS permissions; no remote listener. (Planned Phase 3 hardening: per-session auth token between desktop and daemon) | `config.py` |
+| T6 | Daemon binds `127.0.0.1` only; SQLite/logs under user-owned paths with default macOS permissions; no remote listener. **Per-session bearer token (Phase 3 slice 2)**: every HTTP route except `/api/health` requires `Authorization: Bearer <token>` (constant-time compare); the WebSocket requires a first-message auth handshake; the token is minted at startup and handed to the desktop over a 0600 file / dev env. | `config.py`, `security/auth.py`, `api/middleware.py`, `api/ws.py` |
 | T7 | Locked dependencies (uv.lock, pnpm-lock); no publish/deploy from repo tooling; CI runs no untrusted code | repo config |
 | Safety-engine tampering | R3 includes "disabling the safety engine"; no API exists to bypass policy; execution path physically requires policy + approval records | `core/orchestrator.py` |
 
@@ -62,5 +62,5 @@ Malicious or compromised dependencies.
 ## 5. Residual risks (accepted for Phases 0–2)
 
 - Mock tools only — real-world adapter risks (AX misuse, browser sandbox escape, shell smuggling) are designed for but not yet exercised.
-- No desktop↔daemon authentication yet (localhost only); scheduled for Phase 3.
+- ~~No desktop↔daemon authentication yet (localhost only); scheduled for Phase 3.~~ **Resolved (Phase 3 slice 2):** per-session bearer token on HTTP + WebSocket, always-on.
 - Audit store is append-only by API, not cryptographically tamper-evident; hash-chaining is a Phase 3 candidate (see DECISIONS).
