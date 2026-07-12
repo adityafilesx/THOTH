@@ -41,8 +41,57 @@ export interface HealthResponse {
   db: string;
 }
 
+export interface Grant {
+  id: string;
+  workspace_id: string;
+  kind: "path" | "domain" | "app";
+  value: string;
+}
+
+export interface Workspace {
+  id: string;
+  name: string;
+  root_path: string;
+  trusted: boolean;
+}
+
+export interface PermissionsResponse {
+  workspaces: Workspace[];
+  grants: Grant[];
+}
+
+export interface SkillDef {
+  id: string;
+  name: string;
+  description: string;
+  workflow: string[];
+  inputs: string[];
+  enabled: boolean;
+}
+
+export interface SettingsResponse {
+  version: string;
+  planner: string;
+  approval_ttl_seconds: number;
+  max_retries_per_step: number;
+  max_retries_per_task: number;
+  trusted_workspaces: string[];
+}
+
 export const api = {
   health: () => request<HealthResponse>("/api/health"),
+  permissions: () => request<PermissionsResponse>("/api/permissions"),
+  revokeGrant: (id: string) =>
+    request<{ revoked: string }>(`/api/permissions/grants/${id}`, {
+      method: "DELETE",
+    }),
+  skills: () => request<SkillDef[]>("/api/skills"),
+  setSkillEnabled: (id: string, enabled: boolean) =>
+    request<SkillDef>(`/api/skills/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ enabled }),
+    }),
+  settings: () => request<SettingsResponse>("/api/settings"),
   createTask: (goal: string, source: "text" | "voice" = "text") =>
     request<Task>("/api/tasks", {
       method: "POST",
