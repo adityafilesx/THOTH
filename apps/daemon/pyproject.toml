@@ -11,6 +11,9 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.30",
     "aiosqlite>=0.20",
     "alembic>=1.13",
+    # macOS app control (slice 6). macOS-only; imported lazily so non-darwin
+    # (e.g. CI) never touches AppKit.
+    "pyobjc-framework-Cocoa>=10.3; sys_platform == 'darwin'",
 ]
 
 [dependency-groups]
