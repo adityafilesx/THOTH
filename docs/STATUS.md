@@ -1,6 +1,6 @@
 # THOTH Status
 
-**As of:** 2026-07-12 · **Phases 0, 1, 2 complete. Phase 3 in progress — slices 1–6 + 9 landed** (scope enforcement + permission store; session auth token; filesystem tools; restricted shell; git tools; **macOS app launch/focus/list**; Permissions/Skills/Settings views wired). **Slices 7–8 (browser, planner) still deferred** — they need a Playwright MCP server / an Anthropic API key to verify against; and app control's AX *element* interaction needs Accessibility TCC grants.
+**As of:** 2026-07-12 · **Phases 0, 1, 2 complete. Phase 3 in progress — slices 1–7 + 9 landed** (scope enforcement + permission store; session auth token; filesystem tools; restricted shell; git tools; macOS app launch/focus/list; **scoped browser read**; Permissions/Skills/Settings views wired). **Slice 8 (claude-agent-sdk planner) still deferred** — needs an Anthropic API key to verify; app control's AX *element* interaction needs Accessibility TCC; git `push` needs a network remote.
 
 ## Where we are
 
@@ -12,10 +12,10 @@
 
 | Gate | Result |
 |---|---|
-| `uv run --project apps/daemon pytest` | **386 passed** |
+| `uv run --project apps/daemon pytest` | **393 passed** |
 | `ruff check apps/daemon` | All checks passed |
-| `ruff format --check apps/daemon` | 89 files formatted |
-| `mypy apps/daemon/src` (strict) | no issues, 53 files |
+| `ruff format --check apps/daemon` | 98 files formatted |
+| `mypy apps/daemon/src` (strict) | no issues, 56 files |
 | `pnpm -C apps/desktop test` (vitest) | **51 passed** |
 | `pnpm -C apps/desktop lint` (eslint) | clean |
 | `pnpm -C apps/desktop typecheck` (tsc) | clean |
@@ -23,17 +23,17 @@
 | `cargo check` (src-tauri) | Finished |
 | `alembic upgrade head` | applies; 8 tables |
 
-**Total: 437 automated tests passing.**
+**Total: 444 automated tests passing.**
 
 Also verified end-to-end against a live daemon: R0 task → `COMPLETED`; R3 plan → `FAILED` at policy; R2 task → `WAITING_FOR_APPROVAL` → approve → `COMPLETED`; approval reuse → HTTP 404 (single-use); cancel → `CANCELLED`; audit sequence monotonic; no secrets in JSONL logs.
 
 ## Honest capability statement
 
-**THOTH cannot yet autonomously control the computer.** Phase 3 has added real, scoped **filesystem** tools (read/list/write/stat), a **restricted shell** (`shell_run`: allowlisted commands, no shell interpretation, R2 approval per command, argument paths scope-contained), **git workflow tools** (`git_status`/`log`/`diff` R0; `git_add`/`commit` R1, self-verified; push deferred), and **macOS app control** (`app_list` R0; `app_launch`/`app_focus` R1 via PyObjC `NSWorkspace`, scoped by `approved_apps`) — all verified against the real OS (real app launch/focus exercised non-intrusively; AX element interaction deferred to a TCC-gated follow-up). But there is still no browser control or voice — and, crucially, **no real planner** wiring a natural-language goal to these tools end to end (the deterministic mock planner drives only mock tools; the claude-agent-sdk planner is slice 8). The safety core (state machine, policy, **scope enforcement**, approvals, **session auth**, audit) is real and tested and gates every tool. No broad control claim until the remaining adapters and the real planner land and are verified.
+**THOTH cannot yet autonomously control the computer.** Phase 3 has added real, scoped **filesystem** tools (read/list/write/stat), a **restricted shell** (`shell_run`: allowlisted commands, no shell interpretation, R2 approval per command, argument paths scope-contained), **git workflow tools** (`git_status`/`log`/`diff` R0; `git_add`/`commit` R1, self-verified; push deferred), and **macOS app control** (`app_list` R0; `app_launch`/`app_focus` R1 via PyObjC `NSWorkspace`, scoped by `approved_apps`) — and a **scoped browser** (`browser_read` R1 via headless Chromium/Playwright, domain-allowlisted through `approved_domains`, web text `WEB_UNTRUSTED` + redacted) — all verified against the real OS (real app launch/focus non-intrusive; real navigation to `example.com`, off-list domains refused; AX element interaction deferred to a TCC follow-up). But there is still no voice — and, crucially, **no real planner** wiring a natural-language goal to these tools end to end (the deterministic mock planner drives only mock tools; the claude-agent-sdk planner is slice 8, blocked on an API key). The safety core (state machine, policy, **scope enforcement**, approvals, **session auth**, audit) is real and tested and gates every tool. No broad control claim until the remaining adapters and the real planner land and are verified.
 
 ## Mocked / not yet implemented
 
-- **Tools:** the nine `mock_*` tools remain (safety-core tests + mock planner). **Real, scoped filesystem tools** (`fs_read_file`/`fs_list_dir`/`fs_write_file`/`fs_stat`), a **restricted shell** (`shell_run` — allowlisted argv, R2 approval, scope-contained), **git tools** (`git_status`/`git_log`/`git_diff`/`git_add`/`git_commit`; push deferred), and **macOS app tools** (`app_list`/`app_launch`/`app_focus` via NSWorkspace; AX element interaction deferred) now exist, all enforced by the scope gate + registry backstop. No browser tooling yet.
+- **Tools:** the nine `mock_*` tools remain (safety-core tests + mock planner). **Real, scoped filesystem tools** (`fs_read_file`/`fs_list_dir`/`fs_write_file`/`fs_stat`), a **restricted shell** (`shell_run` — allowlisted argv, R2 approval, scope-contained), **git tools** (`git_status`/`git_log`/`git_diff`/`git_add`/`git_commit`; push deferred), **macOS app tools** (`app_list`/`app_launch`/`app_focus` via NSWorkspace; AX element interaction deferred), and a **browser tool** (`browser_read` via Playwright, domain-allowlisted; clicking/forms deferred) now exist, all enforced by the scope gate + registry backstop.
 - **Planner:** `DeterministicMockPlanner` (keyword → fixed plan). The claude-agent-sdk planner is deferred to Phase 3 behind the frozen `PlannerAdapter` interface.
 - **Voice:** none. Push-to-talk, STT, and TTS are Phase 3.
 - **Desktop views:** Permissions, Skills, and Settings are now **wired to real daemon state** (TanStack Query over `/api/permissions`, `/api/skills`, `/api/settings`; live revoke + skill-toggle mutations). The Skills list is intentionally **empty** — no skill engine yet, so no fixtures. Command/Plan/Timeline already ran on the live task flow.
@@ -50,4 +50,4 @@ make dev                         # daemon on :7710 + Vite dev server
 
 ## Next
 
-Remaining Phase 3 (deferred — need a Playwright MCP server / an Anthropic API key to verify): app control's **AX element interaction** (Accessibility TCC), **slice 7** browser (Playwright MCP + domain allowlist), **slice 8** claude-agent-sdk planner behind the frozen `PlannerAdapter`. Then voice. Each must be verified against the real OS before any control claim. See `docs/MILESTONES.md`.
+Remaining Phase 3: **slice 8** claude-agent-sdk planner behind the frozen `PlannerAdapter` (deferred — needs an Anthropic API key to verify a real plan call); app control's **AX element interaction** (Accessibility TCC); git `push` (network remote). Then voice. Each must be verified against the real OS before any control claim. See `docs/MILESTONES.md`.
