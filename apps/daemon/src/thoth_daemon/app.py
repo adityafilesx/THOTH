@@ -10,8 +10,9 @@ from thoth_daemon.api.middleware import BearerAuthMiddleware
 from thoth_daemon.audit.store import AuditStore
 from thoth_daemon.config import Settings
 from thoth_daemon.core.approvals import ApprovalEngine
+from thoth_daemon.core.claude_planner import AnthropicPlannerClient, ClaudePlanner
 from thoth_daemon.core.orchestrator import Orchestrator
-from thoth_daemon.core.planner import DeterministicMockPlanner
+from thoth_daemon.core.planner import DeterministicMockPlanner, PlannerAdapter
 from thoth_daemon.core.policy import PolicyEngine
 from thoth_daemon.core.recovery import RecoveryController
 from thoth_daemon.core.scope import ScopeEnforcer
@@ -82,6 +83,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         register_git_tools(registry)  # git workflow tools (slice 5)
         register_app_tools(registry)  # macOS app launch/focus/list (slice 6)
         register_browser_tools(registry)  # scoped browser read (slice 7)
+
+        # Planner selection (slice 8). Default "mock"; "claude" uses a
+        # planning-only Anthropic call (needs ANTHROPIC_API_KEY). Plan output is
+        # untrusted and validated by the same schema/registry/policy/scope gates.
+        planner: PlannerAdapter
+        if cfg.planner == "claude":
+            planner = ClaudePlanner(registry, AnthropicPlannerClient())
+        else:
+            planner = DeterministicMockPlanner()
         app.state.orchestrator = Orchestrator(
             registry=registry,
             policy=PolicyEngine(),
@@ -92,7 +102,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 max_retries_per_task=cfg.max_retries_per_task,
             ),
             audit=audit_store,
-            planner=DeterministicMockPlanner(),
+            planner=planner,
             publish=publish,
             workspace=default_ws,
             enforcer=ScopeEnforcer(),

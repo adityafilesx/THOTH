@@ -458,7 +458,17 @@ class Orchestrator:
         await self._audit.append(task.id, "task.created", {"goal": goal, "source": source.value})
         await self._publish("task.created", {"task": task.model_dump(mode="json")})
 
-        plan = self._planner.plan(task.id, goal)
+        # The planner is untrusted and (for the real planner) can raise on a
+        # network/parse/validation error — fail the task cleanly, never crash.
+        try:
+            plan = self._planner.plan(task.id, goal)
+        except Exception as exc:
+            task.state = TaskState.FAILED
+            task.error = f"planning failed: {exc}"
+            await self._audit.append(task.id, "planner.error", {"error": str(exc)})
+            await self._audit.append(task.id, "task.failed", {"error": task.error})
+            await self._publish("task.state_changed", {"task": task.model_dump(mode="json")})
+            return task
         runner = _TaskRunner(
             task,
             plan,

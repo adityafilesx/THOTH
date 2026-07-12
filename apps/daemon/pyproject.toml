@@ -17,6 +17,9 @@ dependencies = [
     # Browser adapter (slice 7). Browser binaries install separately via
     # `playwright install chromium`; imported lazily.
     "playwright>=1.47",
+    # Real planner (slice 8) — Anthropic Messages API for a planning-only call.
+    # Imported lazily; needs ANTHROPIC_API_KEY only when planner="claude".
+    "anthropic>=0.40",
 ]
 
 [dependency-groups]
