@@ -22,6 +22,7 @@ from thoth_daemon.schemas.enums import (
     TaskSource,
     TaskState,
     VerificationStrategy,
+    VerifierKind,
 )
 
 
@@ -52,6 +53,20 @@ class TaggedContent(StrictModel):
         return self.provenance in TRUSTED_PROVENANCE
 
 
+class VerificationCheck(StrictModel):
+    """A single independent postcondition probe. ``params`` are
+    verifier-specific (see core/verifiers). For COMPOSITE, ``children`` are
+    combined per ``require`` (all|any) and ``params`` is ignored. The
+    planner may PROPOSE checks but can never remove the system-enforced
+    minimum verification — plans with fewer checks only get stricter."""
+
+    kind: VerifierKind
+    params: dict[str, Any] = Field(default_factory=dict)
+    description: str = ""
+    require: Literal["all", "any"] = "all"
+    children: list["VerificationCheck"] = Field(default_factory=list)
+
+
 class PlanStep(StrictModel):
     id: str = Field(default_factory=_new_id)
     correlation_id: str = Field(default_factory=_new_id)
@@ -61,6 +76,7 @@ class PlanStep(StrictModel):
     arguments: dict[str, Any] = Field(default_factory=dict)
     declared_risk: RiskLevel
     status: StepStatus = StepStatus.PENDING
+    verification_checks: list[VerificationCheck] = Field(default_factory=list)
     verification_passed: bool | None = None
     verification_detail: str | None = None
 

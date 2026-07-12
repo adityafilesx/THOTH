@@ -92,3 +92,22 @@ class VerificationStrategy(StrEnum):
     OUTPUT_ASSERTION = "output_assertion"
     STATE_PROBE = "state_probe"
     NONE_READONLY = "none_readonly"
+
+
+class VerifierKind(StrEnum):
+    """Independent state probes (Phase 4 slice 7). Each confirms a real
+    postcondition after a tool runs — never trusting the tool's own
+    success flag. COMPOSITE combines children with all/any semantics."""
+
+    FILE_EXISTS = "file_exists"
+    FILE_CONTENT = "file_content"
+    PROCESS_RUNNING = "process_running"
+    PORT_LISTENING = "port_listening"
+    HTTP_HEALTH = "http_health"
+    GIT_STATE = "git_state"
+    APPLICATION_RUNNING = "application_running"
+    ACCESSIBILITY_VALUE = "accessibility_value"
+    BROWSER_URL = "browser_url"
+    BROWSER_ELEMENT = "browser_element"
+    EXIT_CODE = "exit_code"
+    COMPOSITE = "composite"

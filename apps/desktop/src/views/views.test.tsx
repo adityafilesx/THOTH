@@ -91,6 +91,17 @@ describe("PlanView", () => {
     render(<PlanView />);
     expect(screen.getByText(/corr mock-cor/i)).toBeInTheDocument();
   });
+
+  it("lists the independent verifier probes declared for each step", () => {
+    render(<PlanView />);
+    const probeRows = screen.getAllByTestId("verifier-checks");
+    expect(probeRows).toHaveLength(3);
+    expect(within(probeRows[0]).getByText("file_exists")).toBeInTheDocument();
+    expect(
+      within(probeRows[1]).getByText("application_running"),
+    ).toBeInTheDocument();
+    expect(within(probeRows[2]).getByText("git_state")).toBeInTheDocument();
+  });
 });
 
 describe("Timeline", () => {

@@ -72,6 +72,13 @@
           "$ref": "#/$defs/StepStatus",
           "default": "pending"
         },
+        "verification_checks": {
+          "items": {
+            "$ref": "#/$defs/VerificationCheck"
+          },
+          "title": "Verification Checks",
+          "type": "array"
+        },
         "verification_passed": {
           "anyOf": [
             {
@@ -153,6 +160,65 @@
         "CANCELLED"
       ],
       "title": "TaskState",
+      "type": "string"
+    },
+    "VerificationCheck": {
+      "additionalProperties": false,
+      "description": "A single independent postcondition probe. ``params`` are\nverifier-specific (see core/verifiers). For COMPOSITE, ``children`` are\ncombined per ``require`` (all|any) and ``params`` is ignored. The\nplanner may PROPOSE checks but can never remove the system-enforced\nminimum verification \u2014 plans with fewer checks only get stricter.",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/VerifierKind"
+        },
+        "params": {
+          "additionalProperties": true,
+          "title": "Params",
+          "type": "object"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "require": {
+          "default": "all",
+          "enum": [
+            "all",
+            "any"
+          ],
+          "title": "Require",
+          "type": "string"
+        },
+        "children": {
+          "items": {
+            "$ref": "#/$defs/VerificationCheck"
+          },
+          "title": "Children",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "VerificationCheck",
+      "type": "object"
+    },
+    "VerifierKind": {
+      "description": "Independent state probes (Phase 4 slice 7). Each confirms a real\npostcondition after a tool runs \u2014 never trusting the tool's own\nsuccess flag. COMPOSITE combines children with all/any semantics.",
+      "enum": [
+        "file_exists",
+        "file_content",
+        "process_running",
+        "port_listening",
+        "http_health",
+        "git_state",
+        "application_running",
+        "accessibility_value",
+        "browser_url",
+        "browser_element",
+        "exit_code",
+        "composite"
+      ],
+      "title": "VerifierKind",
       "type": "string"
     }
   },

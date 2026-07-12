@@ -134,6 +134,24 @@ export function PlanView() {
                   </span>
                 </div>
                 <Lifecycle step={step} />
+                {step.verification_checks.length > 0 && (
+                  <div
+                    className="mt-1 flex flex-wrap items-center gap-1"
+                    data-testid="verifier-checks"
+                  >
+                    <span className="font-mono text-[9px] uppercase tracking-wide text-faint">
+                      probes
+                    </span>
+                    {step.verification_checks.map((vc, i) => (
+                      <code
+                        key={`${step.id}-vc-${i}`}
+                        className="rounded bg-line/60 px-1 font-mono text-[9px] text-muted"
+                      >
+                        {vc.kind}
+                      </code>
+                    ))}
+                  </div>
+                )}
               </div>
               <RiskBadge risk={step.declared_risk} compact />
             </li>

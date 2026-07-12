@@ -23,6 +23,15 @@ export const MOCK_PLAN: ExecutionPlan = {
       arguments: { path: "~/projects/thoth/README.md" },
       declared_risk: "R0",
       status: "succeeded",
+      verification_checks: [
+        {
+          kind: "file_exists",
+          params: { path: "~/projects/thoth/README.md" },
+          description: "",
+          require: "all",
+          children: [],
+        },
+      ],
       verification_passed: true,
       verification_detail: "Read 214 lines",
     },
@@ -35,6 +44,15 @@ export const MOCK_PLAN: ExecutionPlan = {
       arguments: { app: "Visual Studio Code" },
       declared_risk: "R1",
       status: "running",
+      verification_checks: [
+        {
+          kind: "application_running",
+          params: { name: "Visual Studio Code" },
+          description: "",
+          require: "all",
+          children: [],
+        },
+      ],
       verification_passed: null,
       verification_detail: null,
     },
@@ -47,6 +65,15 @@ export const MOCK_PLAN: ExecutionPlan = {
       arguments: { remote: "origin", branch: "release/0.1" },
       declared_risk: "R2",
       status: "pending",
+      verification_checks: [
+        {
+          kind: "git_state",
+          params: { repo: "~/projects/thoth", branch: "release/0.1" },
+          description: "",
+          require: "all",
+          children: [],
+        },
+      ],
       verification_passed: null,
       verification_detail: null,
     },

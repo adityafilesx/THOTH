@@ -15,6 +15,7 @@ from thoth_daemon.schemas.contracts import (
     Task,
     ToolInvocation,
     ToolResult,
+    VerificationCheck,
     VerificationResult,
     WorkspaceProfile,
 )
@@ -28,6 +29,7 @@ from thoth_daemon.schemas.enums import (
     TaskSource,
     TaskState,
     VerificationStrategy,
+    VerifierKind,
 )
 
 __all__ = [
@@ -55,7 +57,9 @@ __all__ = [
     "TaskState",
     "ToolInvocation",
     "ToolResult",
+    "VerificationCheck",
     "VerificationResult",
     "VerificationStrategy",
+    "VerifierKind",
     "WorkspaceProfile",
 ]

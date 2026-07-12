@@ -45,6 +45,28 @@ export type StepStatus =
   | "skipped"
   | "cancelled";
 
+export type VerifierKind =
+  | "file_exists"
+  | "file_content"
+  | "process_running"
+  | "port_listening"
+  | "http_health"
+  | "git_state"
+  | "application_running"
+  | "accessibility_value"
+  | "browser_url"
+  | "browser_element"
+  | "exit_code"
+  | "composite";
+
+export interface VerificationCheck {
+  kind: VerifierKind;
+  params: Record<string, unknown>;
+  description: string;
+  require: "all" | "any";
+  children: VerificationCheck[];
+}
+
 export interface PlanStep {
   id: string;
   correlation_id: string;
@@ -54,6 +76,7 @@ export interface PlanStep {
   arguments: Record<string, unknown>;
   declared_risk: RiskLevel;
   status: StepStatus;
+  verification_checks: VerificationCheck[];
   verification_passed: boolean | null;
   verification_detail: string | null;
 }
