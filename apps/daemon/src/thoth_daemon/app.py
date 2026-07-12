@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi import FastAPI
 
-from thoth_daemon.api import health, permissions, tasks, ws
+from thoth_daemon.api import health, permissions, settings as settings_api, skills, tasks, ws
 from thoth_daemon.api.middleware import BearerAuthMiddleware
 from thoth_daemon.audit.store import AuditStore
 from thoth_daemon.config import Settings
@@ -21,6 +21,7 @@ from thoth_daemon.schemas import ResourceScope, WorkspaceProfile
 from thoth_daemon.security.auth import mint_token, write_token_file
 from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
 from thoth_daemon.storage.permissions import PermissionStore
+from thoth_daemon.storage.skills import SkillStore
 from thoth_daemon.tools.fs_tools import register_fs_tools
 from thoth_daemon.tools.git_tools import register_git_tools
 from thoth_daemon.tools.mock_tools import build_registry
@@ -64,6 +65,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
             await permissions_store.upsert_workspace(default_ws)
         app.state.permissions = permissions_store
+        app.state.skills = SkillStore(session_factory)
 
         audit_store = AuditStore(session_factory)
         app.state.audit = audit_store
@@ -102,4 +104,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(tasks.router)
     app.include_router(ws.router)
     app.include_router(permissions.router)
+    app.include_router(skills.router)
+    app.include_router(settings_api.router)
     return app
