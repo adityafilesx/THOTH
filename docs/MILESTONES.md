@@ -51,7 +51,7 @@
 - [x] Restricted shell tool per TOOL_CONTRACTS §4
 - [x] Git workflow tools (local ops; push deferred)
 - [x] **Slice 7 — Browser adapter:** `browser_read` (R1) via headless Chromium/Playwright behind a swappable `BrowserAdapter`; domain allowlist enforced by the slice-1 scope enforcer (`requested_scope(domains=[host])`); web text `WEB_UNTRUSTED` + redacted; live-OS verified (real `example.com`, off-list refused). Playwright-Python in-daemon (MCP-swappable, see ADR-018); clicking/forms deferred.
-- [ ] claude-agent-sdk planner behind PlannerAdapter
+- [x] **Slice 8 — Real planner behind the frozen PlannerAdapter:** `ClaudePlanner` — planning-only Anthropic Messages call (`claude-opus-4-8`, structured output), untrusted plan validated by schema/registry/policy/scope, never executes tools (ADR-019); injected client fully unit-tested. Default planner stays `mock`. **Live Anthropic call pending real-key verification.**
 - [x] Desktop↔daemon session auth token
 - [x] **Slice 9 — Views wired to real daemon state:** Permissions (live grants + revoke), Skills (live list + enable toggle; no seeds — empty until the engine ships), Settings (read-only real config) over `GET/PATCH /api/skills` + `GET /api/settings`.
 - [ ] Voice: push-to-talk capture, whisper.cpp/faster-whisper STT, `say` TTS
