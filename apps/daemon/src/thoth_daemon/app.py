@@ -22,6 +22,7 @@ from thoth_daemon.security.auth import mint_token, write_token_file
 from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
 from thoth_daemon.storage.permissions import PermissionStore
 from thoth_daemon.tools.fs_tools import register_fs_tools
+from thoth_daemon.tools.git_tools import register_git_tools
 from thoth_daemon.tools.mock_tools import build_registry
 from thoth_daemon.tools.shell_tool import register_shell_tool
 
@@ -73,6 +74,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         registry = build_registry()
         register_fs_tools(registry)  # real, scoped filesystem tools (slice 3)
         register_shell_tool(registry)  # restricted shell (slice 4)
+        register_git_tools(registry)  # git workflow tools (slice 5)
         app.state.orchestrator = Orchestrator(
             registry=registry,
             policy=PolicyEngine(),

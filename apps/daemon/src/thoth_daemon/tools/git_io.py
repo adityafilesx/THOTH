@@ -43,7 +43,7 @@ async def _terminate(proc: asyncio.subprocess.Process) -> None:
             await proc.wait()
 
 
-async def run_git(cwd: Path, args: list[str], timeout: float = 30.0) -> GitResult:
+async def run_git(cwd: Path, args: list[str], timeout: float = 30.0) -> GitResult:  # noqa: ASYNC109
     proc = await asyncio.create_subprocess_exec(
         "git",
         *args,

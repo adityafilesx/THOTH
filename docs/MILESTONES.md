@@ -44,10 +44,11 @@
 - [x] **Slice 2 — Session auth token:** per-session bearer token, pure-ASGI HTTP middleware + WebSocket handshake (health exempt, constant-time compare), desktop attaches it via a Tauri command / dev env. Always-on. Closes threat T6.
 - [x] **Slice 3 — Filesystem adapter (first real capability):** real scoped `fs_read_file`/`fs_list_dir`/`fs_write_file`/`fs_stat` — atomic self-verified writes, content redacted, gated by the slice-1 scope enforcer; verified against the real filesystem. Deletion/move deferred.
 - [x] **Slice 4 — Restricted shell:** `shell_run` — allowlisted bare-name executables, no shell interpretation (metacharacters rejected), `requested_scope` contains cwd + every argument path, R2 approval per command, 32 KiB output cap, minimal env, SIGTERM→SIGKILL cancel; live-OS verified. The only command-string tool.
+- [x] **Slice 5 — Git workflow tools:** `git_status`/`git_log`/`git_diff` (R0, structured) + `git_add`/`git_commit` (R1, self-verified via rev-parse), scoped repo cwd + add path args; `diff` redacted; live-OS verified in a real repo. Push/history ops deferred.
 - [ ] macOS adapters: app launch/focus (PyObjC/AX), typed AppleScript/JXA adapters
 - [x] Filesystem adapter with approved-directory scoping
 - [x] Restricted shell tool per TOOL_CONTRACTS §4
-- [ ] Git workflow tools
+- [x] Git workflow tools (local ops; push deferred)
 - [ ] Browser adapter via Playwright MCP + domain allowlist
 - [ ] claude-agent-sdk planner behind PlannerAdapter
 - [x] Desktop↔daemon session auth token
