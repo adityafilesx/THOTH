@@ -52,8 +52,9 @@
 - [ ] Browser adapter via Playwright MCP + domain allowlist
 - [ ] claude-agent-sdk planner behind PlannerAdapter
 - [x] Desktop↔daemon session auth token
+- [x] **Slice 9 — Views wired to real daemon state:** Permissions (live grants + revoke), Skills (live list + enable toggle; no seeds — empty until the engine ships), Settings (read-only real config) over `GET/PATCH /api/skills` + `GET /api/settings`.
 - [ ] Voice: push-to-talk capture, whisper.cpp/faster-whisper STT, `say` TTS
-- [ ] Skill engine + Skills view wiring
-- [ ] Permissions view wired to real grants/revocations
+- [~] Skill engine + Skills view wiring — **Skills view wired**; skill *engine* (execution) deferred
+- [x] Permissions view wired to real grants/revocations
 
 **THOTH cannot control the computer until Phase 3 lands and is verified.**

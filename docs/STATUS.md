@@ -1,6 +1,6 @@
 # THOTH Status
 
-**As of:** 2026-07-12 · **Phases 0, 1, 2 complete. Phase 3 in progress — slices 1–5 (scope enforcement + permission store; session auth token; real scoped filesystem tools; restricted shell; git workflow tools) landed.**
+**As of:** 2026-07-12 · **Phases 0, 1, 2 complete. Phase 3 in progress — slices 1–5 + 9 landed** (scope enforcement + permission store; session auth token; real filesystem tools; restricted shell; git tools; Permissions/Skills/Settings views wired to real daemon state). **Slices 6–8 (app control, browser, planner) deferred** — they need an environment with macOS TCC grants / a Playwright MCP server / an Anthropic API key to verify against, unavailable this session.
 
 ## Where we are
 
@@ -12,18 +12,18 @@
 
 | Gate | Result |
 |---|---|
-| `uv run --project apps/daemon pytest` | **365 passed** |
+| `uv run --project apps/daemon pytest` | **372 passed** |
 | `ruff check apps/daemon` | All checks passed |
-| `ruff format --check apps/daemon` | 54 files formatted |
-| `mypy apps/daemon/src` (strict) | no issues, 47 files |
-| `pnpm -C apps/desktop test` (vitest) | **46 passed** |
+| `ruff format --check apps/daemon` | 89 files formatted |
+| `mypy apps/daemon/src` (strict) | no issues, 50 files |
+| `pnpm -C apps/desktop test` (vitest) | **51 passed** |
 | `pnpm -C apps/desktop lint` (eslint) | clean |
 | `pnpm -C apps/desktop typecheck` (tsc) | clean |
 | `pnpm -C apps/desktop build` (vite) | built |
 | `cargo check` (src-tauri) | Finished |
 | `alembic upgrade head` | applies; 8 tables |
 
-**Total: 411 automated tests passing.**
+**Total: 423 automated tests passing.**
 
 Also verified end-to-end against a live daemon: R0 task → `COMPLETED`; R3 plan → `FAILED` at policy; R2 task → `WAITING_FOR_APPROVAL` → approve → `COMPLETED`; approval reuse → HTTP 404 (single-use); cancel → `CANCELLED`; audit sequence monotonic; no secrets in JSONL logs.
 
@@ -36,7 +36,7 @@ Also verified end-to-end against a live daemon: R0 task → `COMPLETED`; R3 plan
 - **Tools:** the nine `mock_*` tools remain (safety-core tests + mock planner). **Real, scoped filesystem tools** (`fs_read_file`/`fs_list_dir`/`fs_write_file`/`fs_stat`), a **restricted shell** (`shell_run` — allowlisted argv, R2 approval, scope-contained), and **git tools** (`git_status`/`git_log`/`git_diff`/`git_add`/`git_commit`; push deferred) now exist, all enforced by the scope gate + registry backstop. No real app or browser tooling yet.
 - **Planner:** `DeterministicMockPlanner` (keyword → fixed plan). The claude-agent-sdk planner is deferred to Phase 3 behind the frozen `PlannerAdapter` interface.
 - **Voice:** none. Push-to-talk, STT, and TTS are Phase 3.
-- **Desktop views:** Permissions, Skills, and Settings still render static fixtures (labeled "mock data"); wiring to daemon state is slice 9. The daemon-side permissions API + store are now real (see Security).
+- **Desktop views:** Permissions, Skills, and Settings are now **wired to real daemon state** (TanStack Query over `/api/permissions`, `/api/skills`, `/api/settings`; live revoke + skill-toggle mutations). The Skills list is intentionally **empty** — no skill engine yet, so no fixtures. Command/Plan/Timeline already ran on the live task flow.
 - **Security:** tool `resource_scope` is now **enforced** — a central `ScopeEnforcer` gates every step pre-EXECUTING and re-checks in the executor, backed by a persistent permission store + `/api/permissions` (slice 1). The daemon now **requires a per-session bearer token** on every endpoint except `/api/health`, plus a WebSocket auth handshake; the desktop attaches it (Tauri command / dev env), always-on (slice 2). Still pending: audit store is append-only by API but not cryptographically tamper-evident (residual risk in `docs/THREAT_MODEL.md`).
 
 ## How to run
@@ -50,4 +50,4 @@ make dev                         # daemon on :7710 + Vite dev server
 
 ## Next
 
-Phase 3: real macOS/browser/shell/filesystem adapters behind the existing tool contracts, the claude-agent-sdk planner, voice, and the desktop↔daemon auth token. See `docs/MILESTONES.md`.
+Remaining Phase 3 (deferred — need TCC grants / a Playwright MCP server / an Anthropic API key to verify): **slice 6** macOS app control (PyObjC/AX), **slice 7** browser (Playwright MCP + domain allowlist), **slice 8** claude-agent-sdk planner behind the frozen `PlannerAdapter`. Then voice. Each must be verified against the real OS before any control claim. See `docs/MILESTONES.md`.

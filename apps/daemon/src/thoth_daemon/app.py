@@ -4,7 +4,8 @@ from typing import Any
 
 from fastapi import FastAPI
 
-from thoth_daemon.api import health, permissions, settings as settings_api, skills, tasks, ws
+from thoth_daemon.api import health, permissions, skills, tasks, ws
+from thoth_daemon.api import settings as settings_api
 from thoth_daemon.api.middleware import BearerAuthMiddleware
 from thoth_daemon.audit.store import AuditStore
 from thoth_daemon.config import Settings
