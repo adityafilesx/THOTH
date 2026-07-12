@@ -7,6 +7,10 @@
           "title": "Id",
           "type": "string"
         },
+        "correlation_id": {
+          "title": "Correlation Id",
+          "type": "string"
+        },
         "index": {
           "minimum": 0,
           "title": "Index",
@@ -95,6 +99,10 @@
   "properties": {
     "id": {
       "title": "Id",
+      "type": "string"
+    },
+    "correlation_id": {
+      "title": "Correlation Id",
       "type": "string"
     },
     "task_id": {

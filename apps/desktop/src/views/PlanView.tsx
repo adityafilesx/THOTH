@@ -1,5 +1,11 @@
 import type { ExecutionPlan, PlanStep } from "@thoth/shared-schemas";
-import { CheckCircle2, Circle, CircleDashed, Loader2, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  Circle,
+  CircleDashed,
+  Loader2,
+  XCircle,
+} from "lucide-react";
 
 import { RiskBadge } from "@/components/RiskBadge";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +38,41 @@ function verificationLabel(step: PlanStep): string {
   return "not verified";
 }
 
+const LIFECYCLE = ["proposed", "approved", "executed", "verified"] as const;
+
+function Lifecycle({ step }: { step: PlanStep }) {
+  const executed = [
+    "verifying",
+    "succeeded",
+    "failed",
+    "skipped",
+    "cancelled",
+  ].includes(step.status);
+  const reached: Record<(typeof LIFECYCLE)[number], boolean> = {
+    proposed: true,
+    approved: step.status !== "pending",
+    executed,
+    verified: step.verification_passed === true,
+  };
+  return (
+    <div className="mt-1.5 flex items-center gap-1" data-testid="lifecycle">
+      {LIFECYCLE.map((stage, i) => (
+        <span key={stage} className="flex items-center gap-1">
+          {i > 0 && <span className="text-faint">·</span>}
+          <span
+            className={cn(
+              "font-mono text-[9px] uppercase tracking-wide",
+              reached[stage] ? "text-accent" : "text-faint",
+            )}
+          >
+            {stage}
+          </span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function PlanView() {
   const tasks = useTasksStore((s) => s.tasks);
   const activeTaskId = useTasksStore((s) => s.activeTaskId);
@@ -50,6 +91,11 @@ export function PlanView() {
         <div>
           <div className="eyebrow mb-1">execution plan</div>
           <CardTitle>{plan.summary}</CardTitle>
+          {plan.correlation_id && (
+            <code className="mt-1 block font-mono text-[10px] text-faint">
+              corr {plan.correlation_id.slice(0, 8)}
+            </code>
+          )}
         </div>
         {isMock && <Badge variant="amber">mock data</Badge>}
       </CardHeader>
@@ -60,7 +106,8 @@ export function PlanView() {
               key={step.id}
               className={cn(
                 "flex items-start gap-3 border-b border-line px-4 py-3 last:border-b-0",
-                (step.status === "running" || step.status === "verifying") && "bg-accent/5",
+                (step.status === "running" || step.status === "verifying") &&
+                  "bg-accent/5",
               )}
             >
               <span className="mt-0.5 shrink-0">
@@ -71,15 +118,22 @@ export function PlanView() {
                   <span className="font-mono text-[10px] text-faint">
                     {String(step.index + 1).padStart(2, "0")}
                   </span>
-                  <span className="truncate text-sm text-ink">{step.title}</span>
-                </div>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <code className="font-mono text-[11px] text-muted">{step.tool_name}</code>
-                  <span className="font-mono text-[10px] text-faint">
-                    {verificationLabel(step)}
-                    {step.verification_detail ? ` — ${step.verification_detail}` : ""}
+                  <span className="truncate text-sm text-ink">
+                    {step.title}
                   </span>
                 </div>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <code className="font-mono text-[11px] text-muted">
+                    {step.tool_name}
+                  </code>
+                  <span className="font-mono text-[10px] text-faint">
+                    {verificationLabel(step)}
+                    {step.verification_detail
+                      ? ` — ${step.verification_detail}`
+                      : ""}
+                  </span>
+                </div>
+                <Lifecycle step={step} />
               </div>
               <RiskBadge risk={step.declared_risk} compact />
             </li>

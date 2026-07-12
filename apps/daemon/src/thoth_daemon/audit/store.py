@@ -29,10 +29,12 @@ class AuditStore:
         event_type: str,
         payload: dict[str, Any],
         redaction_fields: list[str] | None = None,
+        correlation_id: str = "",
     ) -> AuditEvent:
         async with self._locks[task_id], self._session_factory() as session:
             seq = await self._next_seq(session, task_id)
             event = AuditEvent(
+                correlation_id=correlation_id,
                 task_id=task_id,
                 seq=seq,
                 event_type=event_type,
@@ -41,6 +43,7 @@ class AuditStore:
             session.add(
                 AuditEventRow(
                     event_id=event.event_id,
+                    correlation_id=event.correlation_id,
                     task_id=event.task_id,
                     seq=event.seq,
                     event_type=event.event_type,
@@ -81,6 +84,7 @@ class AuditStore:
     def _to_event(row: AuditEventRow) -> AuditEvent:
         return AuditEvent(
             event_id=row.event_id,
+            correlation_id=row.correlation_id or "",
             task_id=row.task_id,
             seq=row.seq,
             event_type=row.event_type,

@@ -91,6 +91,7 @@ class _TaskRunner:
     ) -> None:
         self.task = task
         self.plan = plan
+        self._corr = task.correlation_id
         self._registry = registry
         self._policy = policy
         self._approvals = approvals
@@ -117,7 +118,9 @@ class _TaskRunner:
     async def _drain(self) -> None:
         while self._pending:
             event_type, payload = self._pending.pop(0)
-            event = await self._audit.append(self.task.id, event_type, payload)
+            event = await self._audit.append(
+                self.task.id, event_type, payload, correlation_id=self._corr
+            )
             await self._publish("audit.appended", {"event": event.model_dump(mode="json")})
             if event_type == "state.transition":
                 await self._publish(
@@ -132,7 +135,9 @@ class _TaskRunner:
             await self._drain()
 
     async def _audit_only(self, event_type: str, payload: dict[str, Any]) -> None:
-        event = await self._audit.append(self.task.id, event_type, payload)
+        event = await self._audit.append(
+            self.task.id, event_type, payload, correlation_id=self._corr
+        )
         await self._publish("audit.appended", {"event": event.model_dump(mode="json")})
 
     # -- cancellation ----------------------------------------------------
@@ -180,6 +185,9 @@ class _TaskRunner:
             return
 
         await self._goto(TaskState.PLANNING, "building execution plan")
+        self.plan.correlation_id = self._corr
+        for step in self.plan.steps:
+            step.correlation_id = self._corr
         self.task.plan = self.plan
         # Validate the plan against the tool registry BEFORE risk review.
         for step in self.plan.steps:
@@ -235,6 +243,7 @@ class _TaskRunner:
         self, step: PlanStep, requires_approval: bool, effective_risk: Any
     ) -> bool:
         invocation = ToolInvocation(
+            correlation_id=self._corr,
             task_id=self.task.id,
             step_id=step.id,
             tool_name=step.tool_name,
@@ -263,6 +272,7 @@ class _TaskRunner:
                 reason=f"{effective_risk.value} action requires explicit approval before execution",
                 target=self._target_of(step),
             )
+            request.correlation_id = self._corr
             await self._goto(TaskState.WAITING_FOR_APPROVAL, "awaiting approval")
             await self._publish("approval.requested", {"approval": request.model_dump(mode="json")})
             approved = await self._await_approval(invocation.id)
@@ -301,6 +311,7 @@ class _TaskRunner:
                     return False
 
             result = await self._run_tool(invocation, allowed_scope)
+            result.correlation_id = self._corr
             if self.cancelled or result.cancelled:
                 await self._goto(TaskState.CANCELLED, "cancelled mid-execution")
                 return False
@@ -321,6 +332,7 @@ class _TaskRunner:
             await self._goto(TaskState.VERIFYING, "verifying step result")
             tool = self._registry.get(step.tool_name)
             verification = self._verifier.verify(step, result, tool.verification)
+            verification.correlation_id = self._corr
             step.verification_passed = verification.passed
             step.verification_detail = verification.detail
             await self._audit_only("verification.result", verification.model_dump(mode="json"))
@@ -455,7 +467,10 @@ class Orchestrator:
     async def submit(self, goal: str, source: TaskSource = TaskSource.TEXT) -> Task:
         task = Task(goal=goal, source=source, state=TaskState.RECEIVED)
         self._tasks[task.id] = task
-        await self._audit.append(task.id, "task.created", {"goal": goal, "source": source.value})
+        corr = task.correlation_id
+        await self._audit.append(
+            task.id, "task.created", {"goal": goal, "source": source.value}, correlation_id=corr
+        )
         await self._publish("task.created", {"task": task.model_dump(mode="json")})
 
         # The planner is untrusted and (for the real planner) can raise on a
@@ -465,8 +480,12 @@ class Orchestrator:
         except Exception as exc:
             task.state = TaskState.FAILED
             task.error = f"planning failed: {exc}"
-            await self._audit.append(task.id, "planner.error", {"error": str(exc)})
-            await self._audit.append(task.id, "task.failed", {"error": task.error})
+            await self._audit.append(
+                task.id, "planner.error", {"error": str(exc)}, correlation_id=corr
+            )
+            await self._audit.append(
+                task.id, "task.failed", {"error": task.error}, correlation_id=corr
+            )
             await self._publish("task.state_changed", {"task": task.model_dump(mode="json")})
             return task
         runner = _TaskRunner(

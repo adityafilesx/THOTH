@@ -54,6 +54,7 @@ class TaggedContent(StrictModel):
 
 class PlanStep(StrictModel):
     id: str = Field(default_factory=_new_id)
+    correlation_id: str = Field(default_factory=_new_id)
     index: int = Field(ge=0)
     title: str
     tool_name: str
@@ -66,6 +67,7 @@ class PlanStep(StrictModel):
 
 class ExecutionPlan(StrictModel):
     id: str = Field(default_factory=_new_id)
+    correlation_id: str = Field(default_factory=_new_id)
     task_id: str
     summary: str
     steps: list[PlanStep] = Field(min_length=1)
@@ -80,6 +82,7 @@ class ExecutionPlan(StrictModel):
 
 class Task(StrictModel):
     id: str = Field(default_factory=_new_id)
+    correlation_id: str = Field(default_factory=_new_id)
     goal: str
     source: TaskSource
     state: TaskState = TaskState.RECEIVED
@@ -101,6 +104,7 @@ class ResourceScope(StrictModel):
 
 class ToolInvocation(StrictModel):
     id: str = Field(default_factory=_new_id)
+    correlation_id: str = Field(default_factory=_new_id)
     task_id: str
     step_id: str
     tool_name: str
@@ -112,6 +116,7 @@ class ToolInvocation(StrictModel):
 
 class ToolResult(StrictModel):
     invocation_id: str
+    correlation_id: str = Field(default_factory=_new_id)
     ok: bool
     output: dict[str, Any] | None = None
     error: str | None = None
@@ -122,6 +127,7 @@ class ToolResult(StrictModel):
 
 class VerificationResult(StrictModel):
     step_id: str
+    correlation_id: str = Field(default_factory=_new_id)
     invocation_id: str | None = None
     strategy: VerificationStrategy
     passed: bool
@@ -131,6 +137,7 @@ class VerificationResult(StrictModel):
 
 class ApprovalRequest(StrictModel):
     id: str = Field(default_factory=_new_id)
+    correlation_id: str = Field(default_factory=_new_id)
     task_id: str
     invocation_id: str
     step_id: str
@@ -154,6 +161,7 @@ class ApprovalDecision(StrictModel):
 
 class AuditEvent(StrictModel):
     event_id: str = Field(default_factory=_new_id)
+    correlation_id: str = Field(default_factory=_new_id)
     task_id: str
     seq: int = Field(ge=0)
     event_type: str

@@ -5,6 +5,10 @@
       "title": "Event Id",
       "type": "string"
     },
+    "correlation_id": {
+      "title": "Correlation Id",
+      "type": "string"
+    },
     "task_id": {
       "title": "Task Id",
       "type": "string"

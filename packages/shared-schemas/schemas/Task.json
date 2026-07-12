@@ -7,6 +7,10 @@
           "title": "Id",
           "type": "string"
         },
+        "correlation_id": {
+          "title": "Correlation Id",
+          "type": "string"
+        },
         "task_id": {
           "title": "Task Id",
           "type": "string"
@@ -37,6 +41,10 @@
       "properties": {
         "id": {
           "title": "Id",
+          "type": "string"
+        },
+        "correlation_id": {
+          "title": "Correlation Id",
           "type": "string"
         },
         "index": {
@@ -152,6 +160,10 @@
   "properties": {
     "id": {
       "title": "Id",
+      "type": "string"
+    },
+    "correlation_id": {
+      "title": "Correlation Id",
       "type": "string"
     },
     "goal": {

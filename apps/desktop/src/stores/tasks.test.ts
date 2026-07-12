@@ -20,6 +20,7 @@ function reset() {
 function task(overrides: Partial<Task> = {}): Task {
   return {
     id: "t-1",
+    correlation_id: "t-1",
     goal: "read notes",
     source: "text",
     state: "PLANNING",
@@ -41,6 +42,7 @@ function envelope(
 
 const APPROVAL: ApprovalRequest = {
   id: "ap-1",
+  correlation_id: "t-1",
   task_id: "t-1",
   invocation_id: "inv-1",
   step_id: "s-1",
@@ -110,6 +112,7 @@ describe("applyEvent", () => {
     const apply = useTasksStore.getState().applyEvent;
     const ev = (seq: number, id: string): AuditEvent => ({
       event_id: id,
+      correlation_id: "t-1",
       task_id: "t-1",
       seq,
       event_type: "state.transition",

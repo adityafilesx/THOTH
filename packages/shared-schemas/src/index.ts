@@ -47,6 +47,7 @@ export type StepStatus =
 
 export interface PlanStep {
   id: string;
+  correlation_id: string;
   index: number;
   title: string;
   tool_name: string;
@@ -59,6 +60,7 @@ export interface PlanStep {
 
 export interface ExecutionPlan {
   id: string;
+  correlation_id: string;
   task_id: string;
   summary: string;
   steps: PlanStep[];
@@ -66,6 +68,7 @@ export interface ExecutionPlan {
 
 export interface Task {
   id: string;
+  correlation_id: string;
   goal: string;
   source: TaskSource;
   state: TaskState;
@@ -80,6 +83,7 @@ export type ApprovalStatus = "pending" | "approved" | "denied" | "expired";
 
 export interface ApprovalRequest {
   id: string;
+  correlation_id: string;
   task_id: string;
   invocation_id: string;
   step_id: string;
@@ -95,6 +99,7 @@ export interface ApprovalRequest {
 
 export interface AuditEvent {
   event_id: string;
+  correlation_id: string;
   task_id: string;
   seq: number;
   event_type: string;

@@ -16,6 +16,10 @@
       "title": "Step Id",
       "type": "string"
     },
+    "correlation_id": {
+      "title": "Correlation Id",
+      "type": "string"
+    },
     "invocation_id": {
       "anyOf": [
         {

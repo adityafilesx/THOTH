@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import type { ApprovalRequest } from "@thoth/shared-schemas";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -12,6 +12,7 @@ import { Timeline } from "./Timeline";
 
 const APPROVAL: ApprovalRequest = {
   id: "ap-1",
+  correlation_id: "t-1",
   task_id: "t-1",
   invocation_id: "inv-1",
   step_id: "s-1",
@@ -44,7 +45,12 @@ describe("PlanView", () => {
 
   it("renders a live plan without the mock badge", () => {
     useTasksStore.setState({
-      tasks: { [MOCK_TASK.id]: { ...MOCK_TASK, plan: { ...MOCK_TASK.plan!, summary: "Live plan" } } },
+      tasks: {
+        [MOCK_TASK.id]: {
+          ...MOCK_TASK,
+          plan: { ...MOCK_TASK.plan!, summary: "Live plan" },
+        },
+      },
       activeTaskId: MOCK_TASK.id,
     });
     render(<PlanView />);
@@ -57,6 +63,33 @@ describe("PlanView", () => {
     expect(screen.getByTestId("risk-R0")).toBeInTheDocument();
     expect(screen.getByTestId("risk-R1")).toBeInTheDocument();
     expect(screen.getByTestId("risk-R2")).toBeInTheDocument();
+  });
+
+  it("distinguishes proposed, approved, executed and verified per step", () => {
+    render(<PlanView />);
+    const lifecycles = screen.getAllByTestId("lifecycle");
+    expect(lifecycles).toHaveLength(3);
+    // Each step renders all four lifecycle labels; reached stages are
+    // accent-toned, unreached are faint (both present as text).
+    for (const stage of ["proposed", "approved", "executed", "verified"]) {
+      expect(within(lifecycles[0]).getByText(stage)).toBeInTheDocument();
+    }
+    // Step 1 is succeeded+verified → all four reached.
+    const verifiedStep = lifecycles[0];
+    expect(within(verifiedStep).getByText("verified")).toHaveClass(
+      "text-accent",
+    );
+    // Step 3 is pending → only "proposed" reached.
+    const pendingStep = lifecycles[2];
+    expect(within(pendingStep).getByText("proposed")).toHaveClass(
+      "text-accent",
+    );
+    expect(within(pendingStep).getByText("approved")).toHaveClass("text-faint");
+  });
+
+  it("surfaces the correlation id for the active plan", () => {
+    render(<PlanView />);
+    expect(screen.getByText(/corr mock-cor/i)).toBeInTheDocument();
   });
 });
 
@@ -77,7 +110,9 @@ describe("ApprovalDrawer", () => {
     expect(screen.getByText("a@b.c")).toBeInTheDocument();
     expect(screen.getByText(/requires explicit approval/i)).toBeInTheDocument();
     expect(screen.getByText(/"subject": "Hello"/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /approve once/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /approve once/i }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /deny/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /modify/i })).toBeInTheDocument();
   });

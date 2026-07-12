@@ -5,6 +5,10 @@
       "title": "Invocation Id",
       "type": "string"
     },
+    "correlation_id": {
+      "title": "Correlation Id",
+      "type": "string"
+    },
     "ok": {
       "title": "Ok",
       "type": "boolean"

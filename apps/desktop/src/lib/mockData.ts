@@ -5,13 +5,18 @@
  */
 import type { AuditEvent, ExecutionPlan, Task } from "@thoth/shared-schemas";
 
+const MOCK_CORR = "mock-corr-0001";
+
 export const MOCK_PLAN: ExecutionPlan = {
   id: "mock-plan-1",
+  correlation_id: MOCK_CORR,
   task_id: "mock-task-1",
-  summary: "Continue the THOTH project: restore workspace and start dev services",
+  summary:
+    "Continue the THOTH project: restore workspace and start dev services",
   steps: [
     {
       id: "mock-step-1",
+      correlation_id: MOCK_CORR,
       index: 0,
       title: "Inspect repository status",
       tool_name: "mock_read_file",
@@ -23,6 +28,7 @@ export const MOCK_PLAN: ExecutionPlan = {
     },
     {
       id: "mock-step-2",
+      correlation_id: MOCK_CORR,
       index: 1,
       title: "Open the editor workspace",
       tool_name: "mock_open_app",
@@ -34,6 +40,7 @@ export const MOCK_PLAN: ExecutionPlan = {
     },
     {
       id: "mock-step-3",
+      correlation_id: MOCK_CORR,
       index: 2,
       title: "Push release branch",
       tool_name: "mock_git_push",
@@ -48,6 +55,7 @@ export const MOCK_PLAN: ExecutionPlan = {
 
 export const MOCK_TASK: Task = {
   id: "mock-task-1",
+  correlation_id: MOCK_CORR,
   goal: "Continue the THOTH project",
   source: "text",
   state: "EXECUTING",
@@ -61,6 +69,7 @@ export const MOCK_TASK: Task = {
 export const MOCK_AUDIT: AuditEvent[] = [
   {
     event_id: "mock-ev-1",
+    correlation_id: MOCK_CORR,
     task_id: "mock-task-1",
     seq: 1,
     event_type: "task.created",
@@ -69,6 +78,7 @@ export const MOCK_AUDIT: AuditEvent[] = [
   },
   {
     event_id: "mock-ev-2",
+    correlation_id: MOCK_CORR,
     task_id: "mock-task-1",
     seq: 2,
     event_type: "state.transition",
@@ -77,6 +87,7 @@ export const MOCK_AUDIT: AuditEvent[] = [
   },
   {
     event_id: "mock-ev-3",
+    correlation_id: MOCK_CORR,
     task_id: "mock-task-1",
     seq: 3,
     event_type: "state.transition",
@@ -85,6 +96,7 @@ export const MOCK_AUDIT: AuditEvent[] = [
   },
   {
     event_id: "mock-ev-4",
+    correlation_id: MOCK_CORR,
     task_id: "mock-task-1",
     seq: 4,
     event_type: "policy.decision",
@@ -93,6 +105,7 @@ export const MOCK_AUDIT: AuditEvent[] = [
   },
   {
     event_id: "mock-ev-5",
+    correlation_id: MOCK_CORR,
     task_id: "mock-task-1",
     seq: 5,
     event_type: "tool.result",

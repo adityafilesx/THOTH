@@ -37,6 +37,7 @@ class AuditEventRow(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     event_id: Mapped[str] = mapped_column(String(36), unique=True)
+    correlation_id: Mapped[str] = mapped_column(String(36), index=True, default="")
     task_id: Mapped[str] = mapped_column(String(36), index=True)
     seq: Mapped[int] = mapped_column(Integer)
     event_type: Mapped[str] = mapped_column(String(64))
