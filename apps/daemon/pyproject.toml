@@ -14,6 +14,9 @@ dependencies = [
     # macOS app control (slice 6). macOS-only; imported lazily so non-darwin
     # (e.g. CI) never touches AppKit.
     "pyobjc-framework-Cocoa>=10.3; sys_platform == 'darwin'",
+    # Browser adapter (slice 7). Browser binaries install separately via
+    # `playwright install chromium`; imported lazily.
+    "playwright>=1.47",
 ]
 
 [dependency-groups]
