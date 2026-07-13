@@ -197,8 +197,14 @@ def _exit_code(
     output = result.output or {}
     actual = output.get("exit_code")
     if actual is None:
-        # No explicit code: fall back to the tool's own ok flag.
-        actual = 0 if result.ok else 1
+        # NEVER fall back to result.ok — that would let a tool self-certify.
+        # A result carrying no explicit exit_code cannot be independently
+        # verified by this probe.
+        return VerifierOutcome(
+            passed=False,
+            detail="tool emitted no exit_code; cannot verify independently",
+            available=False,
+        )
     passed = int(actual) == expected
     return VerifierOutcome(passed=passed, detail=f"exit_code={actual} (want {expected})")
 
@@ -237,7 +243,7 @@ _REGISTRY: dict[VerifierKind, Verifier] = {
 def evaluate_check(
     check: VerificationCheck, ctx: VerifierContext, result: ToolResult
 ) -> VerifierOutcome:
-    """Dispatch a check to its verifier. A missing required param fails
+    """Dispatch a check to its verifier. A missing or malformed param fails
     closed with a clear detail rather than raising into the caller."""
     verifier = _REGISTRY.get(check.kind)
     if verifier is None:  # pragma: no cover - registry is exhaustive
@@ -246,3 +252,5 @@ def evaluate_check(
         return verifier(check, ctx, result)
     except KeyError as exc:
         return VerifierOutcome(passed=False, detail=f"{check.kind.value}: missing param {exc}")
+    except (ValueError, TypeError, re.error) as exc:
+        return VerifierOutcome(passed=False, detail=f"{check.kind.value}: malformed check ({exc})")

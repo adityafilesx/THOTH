@@ -290,6 +290,94 @@ def test_composite_all_and_any(tmp_path: Path) -> None:
     assert evaluate_check(any_check, ctx, _ok()).passed
 
 
+# ----------------------------------------------- fail-closed hardening (review)
+
+
+def test_run_checks_composite_any_with_unwired_child_fails(tmp_path: Path) -> None:
+    """A COMPOSITE(any) containing an un-wired probe must NOT verify, even
+    if a sibling child passes: available=False can never be part of a
+    verified success (fail-closed)."""
+    from thoth_daemon.core.verification import VerificationEngine
+    from thoth_daemon.schemas import PlanStep, RiskLevel
+
+    f = tmp_path / "present.txt"
+    f.write_text("here")
+    composite = VerificationCheck(
+        kind=VerifierKind.COMPOSITE,
+        require="any",
+        children=[
+            check(VerifierKind.BROWSER_URL, contains="/thanks"),  # un-wired
+            check(VerifierKind.FILE_EXISTS, path=str(f)),  # passes
+        ],
+    )
+    step = PlanStep(
+        index=0,
+        title="s",
+        tool_name="t",
+        declared_risk=RiskLevel.R1,
+        verification_checks=[composite],
+    )
+    ctx = VerifierContext(path_exists=lambda p: Path(p).exists())  # no browser probe
+    engine = VerificationEngine(context=ctx)
+    res = engine.run_checks(step, _ok(), step.verification_checks)
+    assert not res.passed
+    assert "not wired" in res.detail
+
+
+def test_exit_code_without_explicit_code_is_unavailable() -> None:
+    """EXIT_CODE may never fall back to the tool's own ok flag — that would
+    let a tool self-certify. No explicit exit_code => unavailable."""
+    ctx = VerifierContext()
+    for output in (None, {}, {"stdout": "done"}):
+        out = evaluate_check(check(VerifierKind.EXIT_CODE, expected=0), ctx, _ok(output=output))
+        assert not out.passed
+        assert not out.available
+
+
+def test_malformed_params_fail_closed() -> None:
+    """Bad param values (non-numeric port, invalid regex) must fail closed
+    with a detail, never raise into the orchestrator loop."""
+    ctx = VerifierContext.with_real_probes()
+    bad_port = evaluate_check(check(VerifierKind.PORT_LISTENING, port="not-a-port"), ctx, _ok())
+    assert not bad_port.passed
+    assert "malformed" in bad_port.detail
+
+    bad_regex = evaluate_check(
+        check(VerifierKind.FILE_CONTENT, path="/etc/hosts", regex="["), ctx, _ok()
+    )
+    assert not bad_regex.passed
+    assert "malformed" in bad_regex.detail
+
+
+def test_engine_verify_step_enforces_baseline_minimum(tmp_path: Path) -> None:
+    """Declared checks AUGMENT the tool's own verification strategy — they
+    never replace it. The baseline is the system-enforced minimum."""
+    from thoth_daemon.core.verification import VerificationEngine
+    from thoth_daemon.schemas import PlanStep, RiskLevel, VerificationStrategy
+
+    f = tmp_path / "present.txt"
+    f.write_text("here")
+    step = PlanStep(
+        index=0,
+        title="s",
+        tool_name="t",
+        declared_risk=RiskLevel.R1,
+        verification_checks=[check(VerifierKind.FILE_EXISTS, path=str(f))],
+    )
+    engine = VerificationEngine(context=VerifierContext.with_real_probes())
+
+    # Check passes, but the tool's OUTPUT_ASSERTION baseline fails (no output)
+    # => overall verification must fail.
+    no_output = ToolResult(invocation_id="i", ok=True, output=None)
+    res = engine.verify_step(step, no_output, VerificationStrategy.OUTPUT_ASSERTION)
+    assert not res.passed
+
+    # Baseline passes AND the check passes => verified.
+    with_output = ToolResult(invocation_id="i", ok=True, output={"content": "x"})
+    res2 = engine.verify_step(step, with_output, VerificationStrategy.OUTPUT_ASSERTION)
+    assert res2.passed
+
+
 # ----------------------------------------------------------- engine integration
 
 

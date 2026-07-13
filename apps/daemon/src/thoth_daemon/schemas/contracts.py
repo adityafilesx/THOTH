@@ -56,9 +56,13 @@ class TaggedContent(StrictModel):
 class VerificationCheck(StrictModel):
     """A single independent postcondition probe. ``params`` are
     verifier-specific (see core/verifiers). For COMPOSITE, ``children`` are
-    combined per ``require`` (all|any) and ``params`` is ignored. The
-    planner may PROPOSE checks but can never remove the system-enforced
-    minimum verification — plans with fewer checks only get stricter."""
+    combined per ``require`` (all|any) and ``params`` is ignored.
+
+    Checks AUGMENT the tool's own verification strategy, never replace it:
+    ``VerificationEngine.verify_step`` always runs the tool-declared
+    baseline first and ANDs it with these checks, so the planner can only
+    make verification stricter — removing checks falls back to the
+    system-enforced baseline, it never disables verification."""
 
     kind: VerifierKind
     params: dict[str, Any] = Field(default_factory=dict)

@@ -1,29 +1,29 @@
 # THOTH Status
 
-**As of:** 2026-07-12 · **Phases 0, 1, 2 complete. All nine Phase 3 slices built (1–9)** — scope enforcement + permission store; session auth token; filesystem tools; restricted shell; git tools; macOS app launch/focus/list; scoped browser read; **real planner behind the frozen PlannerAdapter**; Permissions/Skills/Settings views wired. **Three live-verification gaps remain, each needing an environment this session lacked:** the planner's live Anthropic call (an API key), app control's AX *element* interaction (Accessibility TCC), and git `push` (a network remote).
+**As of:** 2026-07-13 · **Phases 0, 1, 2 complete. All nine Phase 3 slices built (1–9). Phase 4 in progress** — slice 2 (end-to-end correlation IDs) and slice 7 (independent verification framework, 12 verifiers) are merged; see `docs/PHASE_4_GAP_REPORT.md` for the full plan. **Live-verification gaps remain, each needing an environment this session lacked:** the planner's live Anthropic call (an API key), AX *element* interaction (Accessibility TCC), and git `push` (a network remote).
 
 ## Where we are
 
 - **Phase 0 — complete.** Plan, repo configuration, all engineering docs, and Claude Code agents/hooks/rules/skill. Hooks self-tested (17/17 block/allow cases).
 - **Phase 1 — complete.** FastAPI daemon (health, WebSocket event stream, SQLite + Alembic, JSONL logging with redaction); Tauri 2 + React desktop shell with all seven views; typed API client + reconnecting WebSocket.
 - **Phase 2 — complete.** Full safety core against **mock tools only**: 15 Pydantic contracts, deterministic state machine, risk/policy engine, injection guard, single-use approvals, tool registry, verification, bounded recovery, append-only audit store, orchestrator, task API + WebSocket events, frontend wired to the live flow.
+- **Phase 4 — in progress** (plan: `docs/PHASE_4_GAP_REPORT.md`). Done so far: **slice 2** — one `correlation_id` threaded from Task through plan/steps/invocations/results/verifications/approvals and every audit event (indexed column, migration 0003); PlanView shows per-step proposed→approved→executed→verified. **Slice 7** — independent verification framework: 12 verifiers (file/process/port/http/git/app/AX/browser/exit-code/composite) probing real state via injected `VerifierContext`; the tool's declared strategy is the enforced baseline and structured checks only add strictness; un-wired probes (AX without TCC, browser) report `available=False` and **fail closed** — they can never appear as a verified success (adversarially reviewed; composite-any fail-open and EXIT_CODE self-certification fixed pre-merge).
 
 ## Verification (all green)
 
 | Gate | Result |
 |---|---|
-| `uv run --project apps/daemon pytest` | **400 passed** |
+| `uv run --project apps/daemon pytest` | **431 passed** |
 | `ruff check apps/daemon` | All checks passed |
-| `ruff format --check apps/daemon` | 98 files formatted |
-| `mypy apps/daemon/src` (strict) | no issues, 57 files |
-| `pnpm -C apps/desktop test` (vitest) | **51 passed** |
+| `mypy apps/daemon/src` (strict) | no issues, 60 files |
+| `pnpm -C apps/desktop test` (vitest) | **54 passed** |
 | `pnpm -C apps/desktop lint` (eslint) | clean |
 | `pnpm -C apps/desktop typecheck` (tsc) | clean |
 | `pnpm -C apps/desktop build` (vite) | built |
 | `cargo check` (src-tauri) | Finished |
 | `alembic upgrade head` | applies; 8 tables |
 
-**Total: 451 automated tests passing.**
+**Total: 485 automated tests passing.**
 
 Also verified end-to-end against a live daemon: R0 task → `COMPLETED`; R3 plan → `FAILED` at policy; R2 task → `WAITING_FOR_APPROVAL` → approve → `COMPLETED`; approval reuse → HTTP 404 (single-use); cancel → `CANCELLED`; audit sequence monotonic; no secrets in JSONL logs.
 

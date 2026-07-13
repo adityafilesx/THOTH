@@ -31,8 +31,10 @@ class VerificationEngine:
         """Independent verification: a tool's success flag is a precondition,
         never proof. If the tool failed, verification fails immediately.
         Otherwise every declared check must independently confirm the real
-        postcondition. An un-wired probe (available=False) is a failure, so
-        a missing capability can never masquerade as a verified success."""
+        postcondition AND have actually been able to run: an un-wired probe
+        (available=False) fails the step even inside a COMPOSITE(any) whose
+        sibling passed — a missing capability can never be part of a
+        verified success."""
         if not result.ok:
             return VerificationResult(
                 step_id=step.id,
@@ -50,9 +52,10 @@ class VerificationEngine:
                 detail="no independent checks declared; tool succeeded",
             )
         outcomes = [evaluate_check(check, self._context, result) for check in checks]
-        passed = all(o.passed for o in outcomes)
+        # Fail-closed on availability: passed requires the probe to have run.
+        passed = all(o.passed and o.available for o in outcomes)
         detail = "; ".join(
-            f"{check.kind.value}={'ok' if o.passed else 'fail'}: {o.detail}"
+            f"{check.kind.value}={'ok' if (o.passed and o.available) else 'fail'}: {o.detail}"
             for check, o in zip(checks, outcomes, strict=True)
         )
         return VerificationResult(
@@ -61,6 +64,32 @@ class VerificationEngine:
             strategy=VerificationStrategy.STATE_PROBE,
             passed=passed,
             detail=detail,
+        )
+
+    def verify_step(
+        self,
+        step: PlanStep,
+        result: ToolResult,
+        strategy: VerificationStrategy,
+    ) -> VerificationResult:
+        """Single verification entry point: the tool's declared strategy is
+        the system-enforced MINIMUM (baseline); declared checks can only add
+        strictness on top, never replace it. Overall pass requires baseline
+        AND every independent check."""
+        baseline = self.verify(step, result, strategy)
+        if not step.verification_checks:
+            return baseline
+        checks = self.run_checks(step, result, step.verification_checks)
+        if not baseline.passed:
+            return baseline
+        if not checks.passed:
+            return checks
+        return VerificationResult(
+            step_id=step.id,
+            invocation_id=result.invocation_id,
+            strategy=VerificationStrategy.STATE_PROBE,
+            passed=True,
+            detail=f"baseline[{strategy.value}]: {baseline.detail}; checks: {checks.detail}",
         )
 
     def verify(

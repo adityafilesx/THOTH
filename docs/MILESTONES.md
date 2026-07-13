@@ -59,3 +59,20 @@
 - [x] Permissions view wired to real grants/revocations
 
 **THOTH cannot control the computer until Phase 3 lands and is verified.**
+
+## Phase 4 — Operational capstone, skills and voice (IN PROGRESS)
+
+Plan and per-slice audit: `docs/PHASE_4_GAP_REPORT.md`. Build order: foundations (2, 7, 8, 9) → adapters (3, 4, 5, 6) → live (1, 10) → hardening/gate (11, 12). Slices needing an API key, Accessibility TCC, or a microphone are built and unit-tested now, **labelled "pending live verification"** until that environment exists.
+
+- [x] **Slice 2 — End-to-end correlation:** one `correlation_id` minted per task and threaded through plan, steps, tool invocations/results, verifications, approvals, and every audit event (indexed `audit_events.correlation_id`, migration 0003); desktop PlanView distinguishes proposed → approved → executed → verified per step and shows the correlation id.
+- [x] **Slice 7 — Independent verification framework:** 12 verifiers (`FILE_EXISTS`, `FILE_CONTENT`, `PROCESS_RUNNING`, `PORT_LISTENING`, `HTTP_HEALTH`, `GIT_STATE`, `APPLICATION_RUNNING`, `ACCESSIBILITY_VALUE`, `BROWSER_URL`, `BROWSER_ELEMENT`, `EXIT_CODE`, `COMPOSITE`) probing real post-execution state via an injected `VerifierContext`; `verify_step` enforces the tool's declared strategy as the un-removable baseline and ANDs planner-declared checks on top; un-wired probes (AX without TCC, browser) report `available=False` and fail closed. AX/app/browser probe *wiring* lands with slices 3/4.
+- [ ] Slice 8 — Bounded recovery: replan/escalate actions, ≤25 steps/task, ≤2 retries/step, ≤2 replans, depth ≤3, `FAILED_REQUIRES_USER`
+- [ ] Slice 9 — Tamper-evident audit hash chain + verification manifest
+- [ ] Slice 3 — macOS AX test app + accessibility adapter/tools *(element interaction pending TCC)*
+- [ ] Slice 4 — Browser interaction + safe form submission (submit separate + R2)
+- [ ] Slice 5 — Skill engine (5 skills)
+- [ ] Slice 6 — Push-to-talk voice + interruptible TTS *(pending mic)*
+- [ ] Slice 1 — Live planner evaluation framework *(pending API key)*
+- [ ] Slice 10 — Five capstone workflows *(pending API key)*
+- [ ] Slice 11 — Hardening pass
+- [ ] Slice 12 — Final gate + docs + CAPSTONE_REPORT

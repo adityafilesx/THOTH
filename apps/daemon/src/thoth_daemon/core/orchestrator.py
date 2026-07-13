@@ -331,13 +331,10 @@ class _TaskRunner:
 
             await self._goto(TaskState.VERIFYING, "verifying step result")
             tool = self._registry.get(step.tool_name)
-            # Independent verification: when the step declares structured
-            # checks, probe real state; otherwise fall back to the tool's
-            # declared strategy. "Exited 0" is never sufficient on its own.
-            if step.verification_checks:
-                verification = self._verifier.run_checks(step, result, step.verification_checks)
-            else:
-                verification = self._verifier.verify(step, result, tool.verification)
+            # Independent verification: the tool's declared strategy is the
+            # system-enforced minimum; structured checks only ADD strictness.
+            # "Exited 0" is never sufficient on its own.
+            verification = self._verifier.verify_step(step, result, tool.verification)
             verification.correlation_id = self._corr
             step.verification_passed = verification.passed
             step.verification_detail = verification.detail

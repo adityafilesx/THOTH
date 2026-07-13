@@ -103,7 +103,7 @@
     },
     "VerificationCheck": {
       "additionalProperties": false,
-      "description": "A single independent postcondition probe. ``params`` are\nverifier-specific (see core/verifiers). For COMPOSITE, ``children`` are\ncombined per ``require`` (all|any) and ``params`` is ignored. The\nplanner may PROPOSE checks but can never remove the system-enforced\nminimum verification \u2014 plans with fewer checks only get stricter.",
+      "description": "A single independent postcondition probe. ``params`` are\nverifier-specific (see core/verifiers). For COMPOSITE, ``children`` are\ncombined per ``require`` (all|any) and ``params`` is ignored.\n\nChecks AUGMENT the tool's own verification strategy, never replace it:\n``VerificationEngine.verify_step`` always runs the tool-declared\nbaseline first and ANDs it with these checks, so the planner can only\nmake verification stricter \u2014 removing checks falls back to the\nsystem-enforced baseline, it never disables verification.",
       "properties": {
         "kind": {
           "$ref": "#/$defs/VerifierKind"
