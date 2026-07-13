@@ -72,7 +72,7 @@ Plan and per-slice audit: `docs/PHASE_4_GAP_REPORT.md`. Build order: foundations
 - [ ] Slice 4 — Browser interaction + safe form submission (submit separate + R2)
 - [ ] Slice 5 — Skill engine (5 skills)
 - [ ] Slice 6 — Push-to-talk voice + interruptible TTS *(pending mic)*
-- [ ] Slice 1 — Live planner evaluation framework *(pending API key)*
+- [x] **Slice 1 — Planner evaluation framework:** declarative eval harness (`evals/planner_eval.py`) scoring any PlannerAdapter against allowed-tool sets, step caps, risk ceilings and required tools; reports are redacted **by construction** (tool names + risk levels only, step inputs excluded) and written to `docs/evaluations/`. Proven offline: mock suite 5/5 PASS (`2026-07-13-planner-eval-mock.md`). LIVE_CASES against the real tool catalog via `--planner claude` are **pending live verification (needs ANTHROPIC_API_KEY)** — the CLI refuses cleanly without the key.
 - [ ] Slice 10 — Five capstone workflows *(pending API key)*
 - [ ] Slice 11 — Hardening pass
 - [ ] Slice 12 — Final gate + docs + CAPSTONE_REPORT
