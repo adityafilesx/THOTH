@@ -48,3 +48,20 @@ metadata. Unsupported raw values are also omitted. Contracts contain no frame,
 coordinate, screenshot, hidden-system-data, or reasoning fields. References
 carry capture and expiry times and must be re-resolved after expiry; no full AX
 tree retention store is introduced.
+
+## Semantic resolution
+
+The resolver accepts only a capability-authorized query and a bounded current
+snapshot. Priority is stable identifier, exact role/label, normalized
+role/label, trusted application-profile alias, exact parent path, then a fuzzy
+comparison limited to 50 same-role candidates. Fuzzy matches require a score
+of at least 0.88 and a clear separation from the runner-up.
+
+Duplicate or near-tied candidates return ambiguity and require clarification.
+Hidden observations are re-resolved, observations older than two seconds are
+stale, and disabled controls cannot be selected for activation. A missing or
+expired object reference may only recover through the original semantic query;
+it never becomes a live authority. Cross-application references, undeclared
+aliases, denied capabilities, and snapshots above 500 elements fail closed.
+Labels remain inert untrusted strings and cannot define aliases or selector
+rules. No visual coordinate or window size participates in identity.
