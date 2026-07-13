@@ -47,3 +47,4 @@ id_ed25519*
 # Claude local state
 .claude/settings.local.json
 .claude/hooks/command_log.jsonl
+.claude/worktrees/
