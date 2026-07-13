@@ -28,3 +28,23 @@ ApplicationServices framework was available, but this daemon process did not
 have Accessibility trust. No Settings window was opened because the user had
 not requested that side effect. This is expected fail-closed evidence, not an
 AX capability failure or a permission grant.
+
+## Snapshot contracts and privacy budget
+
+AX observations cross daemon/API boundaries only through strict typed
+application, window, element, query, reference, action, verification, and
+permission contracts. Every snapshot is fixed as
+`TOOL_RESULT_UNTRUSTED`; application text cannot become authorization,
+capability, selector policy, or approval.
+
+Collection has hard ceilings of 12 levels, 500 elements, 4,096 UTF-8 bytes per
+string, 32 actions per element, and 20 windows per application snapshot.
+Truncation is explicit. Cyclic nodes are visited once. The collector does not
+perform a second unbounded scan after reaching a ceiling.
+
+Secure text fields and fields semantically marked as password, passcode,
+one-time code, verification code, OTP, or token expose only redacted value
+metadata. Unsupported raw values are also omitted. Contracts contain no frame,
+coordinate, screenshot, hidden-system-data, or reasoning fields. References
+carry capture and expiry times and must be re-resolved after expiry; no full AX
+tree retention store is introduced.

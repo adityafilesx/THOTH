@@ -12,6 +12,16 @@ from pydantic import BaseModel
 from thoth_daemon import schemas
 
 CONTRACTS: list[type[BaseModel]] = [
+    schemas.AXApplicationSnapshot,
+    schemas.AXWindowSnapshot,
+    schemas.AXElementSnapshot,
+    schemas.AXElementQuery,
+    schemas.AXElementReference,
+    schemas.AXActionRequest,
+    schemas.AXActionResult,
+    schemas.AXVerificationRequest,
+    schemas.AXVerificationResult,
+    schemas.AXPermissionState,
     schemas.Task,
     schemas.ExecutionPlan,
     schemas.PlanStep,

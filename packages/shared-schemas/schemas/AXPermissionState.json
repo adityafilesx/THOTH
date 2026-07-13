@@ -1,0 +1,43 @@
+{
+  "$defs": {
+    "AXPermissionStatus": {
+      "enum": [
+        "not_determined",
+        "denied",
+        "granted",
+        "revoked",
+        "unavailable"
+      ],
+      "title": "AXPermissionStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "status": {
+      "$ref": "#/$defs/AXPermissionStatus"
+    },
+    "checked_at": {
+      "format": "date-time",
+      "title": "Checked At",
+      "type": "string"
+    },
+    "stale_after": {
+      "format": "date-time",
+      "title": "Stale After",
+      "type": "string"
+    },
+    "detail": {
+      "title": "Detail",
+      "type": "string"
+    }
+  },
+  "required": [
+    "status",
+    "checked_at",
+    "stale_after",
+    "detail"
+  ],
+  "title": "AXPermissionState",
+  "type": "object"
+}

@@ -1,0 +1,77 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "application_bundle_id": {
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Application Bundle Id",
+      "type": "string"
+    },
+    "window_identifier": {
+      "anyOf": [
+        {
+          "maxLength": 4096,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Window Identifier"
+    },
+    "reference_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Reference Id",
+      "type": "string"
+    },
+    "identifier": {
+      "anyOf": [
+        {
+          "maxLength": 4096,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Identifier"
+    },
+    "role": {
+      "maxLength": 4096,
+      "minLength": 1,
+      "title": "Role",
+      "type": "string"
+    },
+    "parent_path": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 12,
+      "title": "Parent Path",
+      "type": "array"
+    },
+    "captured_at": {
+      "format": "date-time",
+      "title": "Captured At",
+      "type": "string"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "application_bundle_id",
+    "reference_id",
+    "role",
+    "captured_at",
+    "expires_at"
+  ],
+  "title": "AXElementReference",
+  "type": "object"
+}

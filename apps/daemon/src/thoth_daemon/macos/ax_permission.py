@@ -4,30 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from thoth_daemon.schemas.ax import AXPermissionState, AXPermissionStatus
 
-
-class AXPermissionStatus(StrEnum):
-    NOT_DETERMINED = "not_determined"
-    DENIED = "denied"
-    GRANTED = "granted"
-    REVOKED = "revoked"
-    UNAVAILABLE = "unavailable"
-
-
-class AXPermissionSnapshot(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    status: AXPermissionStatus
-    checked_at: datetime
-    stale_after: datetime
-    detail: str
-
-    def is_stale(self, now: datetime) -> bool:
-        return now >= self.stale_after
+AXPermissionSnapshot = AXPermissionState
 
 
 class AXPermissionError(RuntimeError):

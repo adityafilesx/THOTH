@@ -26,8 +26,8 @@ from typing import Any, Protocol
 from thoth_daemon.macos.ax_permission import (
     AXPermissionError,
     AXPermissionService,
-    AXPermissionStatus,
 )
+from thoth_daemon.schemas.ax import AXPermissionStatus
 
 __all__ = ["AXPermissionError"]
 

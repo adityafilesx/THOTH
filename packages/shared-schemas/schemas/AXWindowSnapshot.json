@@ -1,0 +1,366 @@
+{
+  "$defs": {
+    "AXElementSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "reference_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Reference Id",
+          "type": "string"
+        },
+        "application_bundle_id": {
+          "maxLength": 255,
+          "minLength": 1,
+          "title": "Application Bundle Id",
+          "type": "string"
+        },
+        "window_identifier": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Window Identifier"
+        },
+        "window_title": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Window Title"
+        },
+        "role": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "title": "Role",
+          "type": "string"
+        },
+        "subrole": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subrole"
+        },
+        "identifier": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Identifier"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "value_metadata": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AXValueMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enabled"
+        },
+        "focused": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Focused"
+        },
+        "selected": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Selected"
+        },
+        "visible": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Visible"
+        },
+        "child_count": {
+          "minimum": 0,
+          "title": "Child Count",
+          "type": "integer"
+        },
+        "supported_actions": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Supported Actions",
+          "type": "array"
+        },
+        "parent_path": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "title": "Parent Path",
+          "type": "array"
+        },
+        "captured_at": {
+          "format": "date-time",
+          "title": "Captured At",
+          "type": "string"
+        },
+        "truncated": {
+          "default": false,
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "provenance": {
+          "const": "TOOL_RESULT_UNTRUSTED",
+          "default": "TOOL_RESULT_UNTRUSTED",
+          "title": "Provenance",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reference_id",
+        "application_bundle_id",
+        "role",
+        "child_count",
+        "captured_at"
+      ],
+      "title": "AXElementSnapshot",
+      "type": "object"
+    },
+    "AXValueKind": {
+      "enum": [
+        "string",
+        "boolean",
+        "integer",
+        "number",
+        "none",
+        "unsupported"
+      ],
+      "title": "AXValueKind",
+      "type": "string"
+    },
+    "AXValueMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/AXValueKind"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        },
+        "redacted": {
+          "default": false,
+          "title": "Redacted",
+          "type": "boolean"
+        },
+        "length": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Length"
+        },
+        "truncated": {
+          "default": false,
+          "title": "Truncated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "AXValueMetadata",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "application_bundle_id": {
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Application Bundle Id",
+      "type": "string"
+    },
+    "identifier": {
+      "anyOf": [
+        {
+          "maxLength": 4096,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Identifier"
+    },
+    "title": {
+      "anyOf": [
+        {
+          "maxLength": 4096,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Title"
+    },
+    "focused": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Focused"
+    },
+    "element_count": {
+      "default": 0,
+      "maximum": 500,
+      "minimum": 0,
+      "title": "Element Count",
+      "type": "integer"
+    },
+    "elements": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/AXElementSnapshot"
+      },
+      "maxItems": 500,
+      "title": "Elements",
+      "type": "array"
+    },
+    "captured_at": {
+      "format": "date-time",
+      "title": "Captured At",
+      "type": "string"
+    },
+    "truncated": {
+      "default": false,
+      "title": "Truncated",
+      "type": "boolean"
+    },
+    "provenance": {
+      "const": "TOOL_RESULT_UNTRUSTED",
+      "default": "TOOL_RESULT_UNTRUSTED",
+      "title": "Provenance",
+      "type": "string"
+    }
+  },
+  "required": [
+    "application_bundle_id",
+    "captured_at"
+  ],
+  "title": "AXWindowSnapshot",
+  "type": "object"
+}

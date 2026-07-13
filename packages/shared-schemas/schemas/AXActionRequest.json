@@ -1,0 +1,324 @@
+{
+  "$defs": {
+    "AXActionKind": {
+      "enum": [
+        "set_value",
+        "perform_action",
+        "select_option"
+      ],
+      "title": "AXActionKind",
+      "type": "string"
+    },
+    "AXElementQuery": {
+      "additionalProperties": false,
+      "properties": {
+        "application_bundle_id": {
+          "maxLength": 255,
+          "minLength": 1,
+          "title": "Application Bundle Id",
+          "type": "string"
+        },
+        "window_identifier": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Window Identifier"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "subrole": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subrole"
+        },
+        "identifier": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Identifier"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "semantic_alias": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Semantic Alias"
+        },
+        "parent_path": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "title": "Parent Path",
+          "type": "array"
+        }
+      },
+      "required": [
+        "application_bundle_id"
+      ],
+      "title": "AXElementQuery",
+      "type": "object"
+    },
+    "AXVerificationExpectation": {
+      "enum": [
+        "exists",
+        "value_equals",
+        "enabled",
+        "focused",
+        "selected",
+        "window_exists",
+        "application_frontmost"
+      ],
+      "title": "AXVerificationExpectation",
+      "type": "string"
+    },
+    "AXVerificationRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "application_bundle_id": {
+          "maxLength": 255,
+          "minLength": 1,
+          "title": "Application Bundle Id",
+          "type": "string"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AXElementQuery"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "window_identifier": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Window Identifier"
+        },
+        "expectation": {
+          "$ref": "#/$defs/AXVerificationExpectation"
+        },
+        "expected_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Value"
+        },
+        "timeout_s": {
+          "default": 5,
+          "exclusiveMinimum": 0,
+          "maximum": 30,
+          "title": "Timeout S",
+          "type": "number"
+        }
+      },
+      "required": [
+        "application_bundle_id",
+        "expectation"
+      ],
+      "title": "AXVerificationRequest",
+      "type": "object"
+    },
+    "FocusPolicy": {
+      "description": "Authoritative final-focus behaviour declared by registered tools.",
+      "enum": [
+        "keep_new_focus",
+        "restore_previous_focus",
+        "do_not_steal_focus",
+        "ask_if_ambiguous"
+      ],
+      "title": "FocusPolicy",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "application_bundle_id": {
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Application Bundle Id",
+      "type": "string"
+    },
+    "capability": {
+      "maxLength": 255,
+      "minLength": 1,
+      "title": "Capability",
+      "type": "string"
+    },
+    "target": {
+      "$ref": "#/$defs/AXElementQuery"
+    },
+    "action": {
+      "$ref": "#/$defs/AXActionKind"
+    },
+    "action_name": {
+      "anyOf": [
+        {
+          "maxLength": 255,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Action Name"
+    },
+    "value": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Value"
+    },
+    "expected_current_value": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expected Current Value"
+    },
+    "expected_result": {
+      "maxLength": 4096,
+      "minLength": 1,
+      "title": "Expected Result",
+      "type": "string"
+    },
+    "verifier": {
+      "$ref": "#/$defs/AXVerificationRequest"
+    },
+    "timeout_s": {
+      "exclusiveMinimum": 0,
+      "maximum": 30,
+      "title": "Timeout S",
+      "type": "number"
+    },
+    "focus_policy": {
+      "$ref": "#/$defs/FocusPolicy"
+    },
+    "requested_at": {
+      "format": "date-time",
+      "title": "Requested At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "application_bundle_id",
+    "capability",
+    "target",
+    "action",
+    "expected_result",
+    "verifier",
+    "timeout_s",
+    "focus_policy",
+    "requested_at"
+  ],
+  "title": "AXActionRequest",
+  "type": "object"
+}
