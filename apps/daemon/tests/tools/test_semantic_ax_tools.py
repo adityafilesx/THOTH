@@ -1,6 +1,8 @@
 """Typed semantic AX tools over the full safety contract."""
 
+import asyncio
 from datetime import UTC, date, datetime
+from threading import Event
 
 import pytest
 from pydantic import ValidationError
@@ -20,6 +22,7 @@ from thoth_daemon.macos.ax_permission import AXPermissionError, AXPermissionServ
 from thoth_daemon.macos.semantic_ax import MockSemanticAXAdapter
 from thoth_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
 from thoth_daemon.schemas.ax import (
+    AXApplicationSnapshot,
     AXElementSnapshot,
     AXValueKind,
     AXValueMetadata,
@@ -219,6 +222,7 @@ class TestContracts:
         tool = registry.get("ax.read_value")
         args = tool.input_model.model_validate({**_base_args("ax_read_value"), "query": _query()})
         assert tool.requested_scope(args) == ResourceScope(apps=[BUNDLE])
+        assert tool.focus_target(args) == BUNDLE
         with pytest.raises(ValidationError):
             tool.input_model.model_validate(
                 {**_base_args("ax_read_value"), "query": _query(), "screen_x": 20}
@@ -324,6 +328,46 @@ class TestReads:
 
 
 class TestMutations:
+    async def test_cancellation_during_resolution_prevents_later_mutation(self) -> None:
+        entered = Event()
+        release = Event()
+
+        class BlockingAdapter(MockSemanticAXAdapter):
+            def inspect_application(self, bundle_id: str) -> AXApplicationSnapshot:
+                entered.set()
+                release.wait(timeout=2)
+                return super().inspect_application(bundle_id)
+
+        base = _adapter(_element())
+        adapter = BlockingAdapter([base.inspect_application(BUNDLE)])
+        registry, _ = _registry(adapter)
+        tool = registry.get("ax.set_value")
+        args = tool.input_model.model_validate(
+            {
+                **_base_args("ax_set_value"),
+                "query": _query(),
+                "value": "cancelled",
+                "expected_current_value": "",
+                "expected_result": "field equals cancelled",
+                "verifier": {
+                    "application_bundle_id": BUNDLE,
+                    "target": _query(),
+                    "expectation": "value_equals",
+                    "expected_value": "cancelled",
+                },
+                "timeout_s": 3,
+            }
+        )
+
+        running = asyncio.create_task(tool.run(args, False))
+        assert await asyncio.to_thread(entered.wait, 1)
+        running.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await running
+        release.set()
+        await asyncio.sleep(0.01)
+        assert adapter.mutations == []
+
     async def test_profile_rejects_unlisted_target_action_and_verifier(self) -> None:
         registry, adapter = _registry(
             _adapter(

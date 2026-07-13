@@ -19,6 +19,7 @@ Enforcement wired here, not by convention:
 import asyncio
 import contextlib
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
@@ -31,7 +32,12 @@ from thoth_daemon.core.dialogue import (
     constraints_from_text,
     enforce_constraints,
 )
-from thoth_daemon.core.focus import FocusManager, FocusPolicy, FocusRestorationResult
+from thoth_daemon.core.focus import (
+    FocusManager,
+    FocusPolicy,
+    FocusRestorationResult,
+    FocusSnapshot,
+)
 from thoth_daemon.core.planner import PlannerAdapter
 from thoth_daemon.core.policy import PolicyEngine
 from thoth_daemon.core.recovery import RecoveryController
@@ -67,6 +73,13 @@ MAX_EXECUTIONS_PER_TASK = 25
 
 class ExecutionStateError(Exception):
     """Raised when tool execution is attempted outside the EXECUTING state."""
+
+
+@dataclass(frozen=True)
+class _PendingFocus:
+    before: FocusSnapshot
+    target_app: str
+    policy: FocusPolicy
 
 
 async def _empty_scope() -> ResourceScope:
@@ -126,6 +139,7 @@ class _TaskRunner:
         self._focus_manager = focus_manager
         self._focus_result_sink = focus_result_sink
         self._focus_result: FocusRestorationResult | None = None
+        self._pending_focus: _PendingFocus | None = None
         self._hard_constraints = constraints_from_text(task.goal)
         self._constraint_checker = constraint_checker
 
@@ -445,6 +459,7 @@ class _TaskRunner:
             result = await self._run_tool(invocation, allowed_scope)
             result.correlation_id = self._corr
             if self.cancelled or result.cancelled:
+                await self._finalize_pending_focus(cancelled=True)
                 await self._goto(TaskState.CANCELLED, "cancelled mid-execution")
                 return "stop"
 
@@ -470,7 +485,30 @@ class _TaskRunner:
             if result.ok:
                 try:
                     parsed = tool.parse_arguments(invocation)
-                    independent = tool.verify_independently(parsed)
+                    verify_task = asyncio.ensure_future(
+                        asyncio.to_thread(tool.verify_independently, parsed)
+                    )
+                    cancel_task = asyncio.ensure_future(self._cancel.wait())
+                    done, _ = await asyncio.wait(
+                        {verify_task, cancel_task},
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                    if cancel_task in done and self.cancelled:
+                        verify_task.cancel()
+                        await self._audit_only(
+                            "tool.independent_verification",
+                            {
+                                "step_id": step.id,
+                                "tool": step.tool_name,
+                                "registered": True,
+                                "cancelled": True,
+                            },
+                        )
+                        await self._finalize_pending_focus(cancelled=True)
+                        await self._goto(TaskState.CANCELLED, "cancelled during verification")
+                        return "stop"
+                    cancel_task.cancel()
+                    independent = verify_task.result()
                 except Exception as exc:
                     independent = IndependentToolVerification(
                         passed=False,
@@ -480,6 +518,24 @@ class _TaskRunner:
                             f"{type(exc).__name__}"
                         ),
                     )
+            await self._audit_only(
+                "tool.independent_verification",
+                {
+                    "step_id": step.id,
+                    "tool": step.tool_name,
+                    "registered": independent is not None,
+                    **(
+                        {
+                            "passed": independent.passed,
+                            "available": independent.available,
+                            "detail": independent.detail,
+                        }
+                        if independent is not None
+                        else {}
+                    ),
+                },
+            )
+            await self._finalize_pending_focus(cancelled=False)
             verification = self._verifier.verify_step(
                 step,
                 result,
@@ -571,13 +627,58 @@ class _TaskRunner:
     ) -> ToolResult:
         before = None
         target_app = invocation.tool_name
-        policy = self._registry.get(invocation.tool_name).focus_policy
+        tool = self._registry.get(invocation.tool_name)
+        policy = tool.focus_policy
+        try:
+            parsed = tool.parse_arguments(invocation)
+        except Exception as exc:
+            return ToolResult(
+                invocation_id=invocation.id,
+                ok=False,
+                error=f"execution arguments invalid: {type(exc).__name__}",
+            )
         if self._focus_manager is not None:
             try:
-                tool = self._registry.get(invocation.tool_name)
-                parsed = tool.parse_arguments(invocation)
                 target_app = tool.focus_target(parsed) or invocation.tool_name
                 before = self._focus_manager.snapshot(datetime.now(UTC))
+                await self._audit_only("focus.snapshot", before.model_dump(mode="json"))
+            except Exception as exc:
+                focus = FocusRestorationResult(
+                    detail=f"focus snapshot unavailable: {type(exc).__name__}"
+                )
+                await self._record_focus(focus)
+                return ToolResult(
+                    invocation_id=invocation.id,
+                    ok=False,
+                    error=focus.detail,
+                )
+
+        try:
+            tool.validate_execution_authority(parsed)
+            if self._focus_manager is not None:
+                await self._audit_only(
+                    "focus.validation",
+                    {"tool": tool.name, "target_app": target_app, "authorized": True},
+                )
+        except Exception as exc:
+            if self._focus_manager is not None:
+                await self._audit_only(
+                    "focus.validation",
+                    {
+                        "tool": tool.name,
+                        "target_app": target_app,
+                        "authorized": False,
+                        "reason": type(exc).__name__,
+                    },
+                )
+            return ToolResult(
+                invocation_id=invocation.id,
+                ok=False,
+                error=f"execution authority unavailable: {type(exc).__name__}",
+            )
+
+        if self._focus_manager is not None and before is not None:
+            try:
                 if policy is FocusPolicy.ASK_IF_AMBIGUOUS:
                     focus = self._focus_manager.reconcile(before, target_app, policy)
                     await self._record_focus(focus)
@@ -586,12 +687,31 @@ class _TaskRunner:
                         ok=False,
                         error="focus intent is ambiguous; explicit user direction required",
                     )
-            except Exception as exc:
-                await self._record_focus(
-                    FocusRestorationResult(
-                        detail=f"focus snapshot unavailable: {type(exc).__name__}"
-                    )
+                transition = self._focus_manager.prepare_transition(
+                    before,
+                    target_app,
+                    policy,
                 )
+                await self._audit_only("focus.transition", transition.model_dump(mode="json"))
+                if policy is FocusPolicy.RESTORE_PREVIOUS_FOCUS:
+                    if not transition.verified:
+                        focus = FocusRestorationResult(
+                            final_bundle_id=transition.to_bundle_id,
+                            detail=transition.detail,
+                        )
+                        await self._record_focus(focus)
+                        return ToolResult(
+                            invocation_id=invocation.id,
+                            ok=False,
+                            error="temporary target focus could not be verified",
+                        )
+                    self._pending_focus = _PendingFocus(before, target_app, policy)
+            except Exception as exc:
+                focus = FocusRestorationResult(
+                    detail=f"focus transition unavailable: {type(exc).__name__}"
+                )
+                await self._record_focus(focus)
+                return ToolResult(invocation_id=invocation.id, ok=False, error=focus.detail)
 
         exec_task = asyncio.ensure_future(
             guarded_execute(self.machine, self._registry, invocation, allowed_scope)
@@ -601,7 +721,11 @@ class _TaskRunner:
         if exec_task in done:
             cancel_task.cancel()
             result = exec_task.result()
-            if self._focus_manager is not None and before is not None:
+            if (
+                self._focus_manager is not None
+                and before is not None
+                and policy is not FocusPolicy.RESTORE_PREVIOUS_FOCUS
+            ):
                 try:
                     focus = self._focus_manager.reconcile(before, target_app, policy)
                 except Exception as exc:
@@ -615,6 +739,7 @@ class _TaskRunner:
         with contextlib.suppress(asyncio.CancelledError):
             await exec_task
         if self._focus_manager is not None and before is not None:
+            self._pending_focus = None
             try:
                 focus = self._focus_manager.reconcile(
                     before,
@@ -629,6 +754,25 @@ class _TaskRunner:
                 )
             await self._record_focus(focus)
         return ToolResult(invocation_id=invocation.id, ok=False, cancelled=True, error="cancelled")
+
+    async def _finalize_pending_focus(self, *, cancelled: bool) -> None:
+        pending = self._pending_focus
+        self._pending_focus = None
+        if pending is None or self._focus_manager is None:
+            return
+        try:
+            focus = self._focus_manager.reconcile(
+                pending.before,
+                pending.target_app,
+                pending.policy,
+                cancelled=cancelled,
+            )
+        except Exception as exc:
+            focus = FocusRestorationResult(
+                cancelled=cancelled,
+                detail=f"focus verification unavailable: {type(exc).__name__}",
+            )
+        await self._record_focus(focus)
 
     async def _record_focus(self, result: FocusRestorationResult) -> None:
         # A later background read must never hide an earlier failed focus

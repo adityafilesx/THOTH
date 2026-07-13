@@ -30,6 +30,10 @@ from thoth_daemon.schemas.ax import (
 )
 
 
+class AXOperationCancelled(RuntimeError):
+    pass
+
+
 class AXController:
     def __init__(
         self,
@@ -95,6 +99,26 @@ class AXController:
                 require_target=target is not None,
                 verification_target=True,
             )
+
+    def validate_execution_intent(
+        self,
+        bundle_id: str,
+        capability: str,
+        tool_name: str,
+        *,
+        query: AXElementQuery | None = None,
+        action_name: str | None = None,
+        verifiers: tuple[AXVerificationRequest, ...] = (),
+    ) -> None:
+        self.authorize_intent(
+            bundle_id,
+            capability,
+            tool_name,
+            query=query,
+            action_name=action_name,
+            verifiers=verifiers,
+        )
+        self._permissions.require_granted(now=self.now())
 
     def inspect_application(self, bundle_id: str, capability: str) -> AXApplicationSnapshot:
         self._authorize(bundle_id, capability, tool_name="ax.inspect_application")
@@ -175,6 +199,7 @@ class AXController:
         expected_current_value: AXPrimitive | None = None,
         action_name: str | None = None,
         verifier: AXVerificationExpectation | None = None,
+        cancelled: Callable[[], bool] | None = None,
     ) -> AXActionResult:
         element = self._require_element(
             bundle_id,
@@ -183,6 +208,7 @@ class AXController:
             expected_current_value=expected_current_value,
             action_name=action_name,
             verifier=verifier,
+            cancelled=cancelled,
         )
         return AXActionResult(
             performed=False,
@@ -200,6 +226,7 @@ class AXController:
         *,
         expected_current_value: AXPrimitive | None = None,
         verifier: AXVerificationExpectation,
+        cancelled: Callable[[], bool] | None = None,
     ) -> AXActionResult:
         element = self._require_element(
             bundle_id,
@@ -207,8 +234,11 @@ class AXController:
             query,
             expected_current_value=expected_current_value,
             verifier=verifier,
+            cancelled=cancelled,
         )
+        self._raise_if_cancelled(cancelled)
         self._permissions.require_granted(now=self.now())
+        self._raise_if_cancelled(cancelled)
         if not self._adapter.set_value(element, value):
             raise RuntimeError("AX set_value did not complete")
         return self._action_result(
@@ -224,6 +254,7 @@ class AXController:
         *,
         expected_current_value: AXPrimitive | None = None,
         verifier: AXVerificationExpectation,
+        cancelled: Callable[[], bool] | None = None,
     ) -> AXActionResult:
         element = self._require_element(
             bundle_id,
@@ -232,12 +263,15 @@ class AXController:
             expected_current_value=expected_current_value,
             action_name=action_name,
             verifier=verifier,
+            cancelled=cancelled,
         )
+        self._raise_if_cancelled(cancelled)
         if action_name not in element.supported_actions:
             raise RuntimeError(
                 f"AX action {action_name!r} is not supported by the resolved element"
             )
         self._permissions.require_granted(now=self.now())
+        self._raise_if_cancelled(cancelled)
         if not self._adapter.perform_action(element, action_name):
             raise RuntimeError(f"AX action {action_name!r} did not complete")
         return self._action_result(element, "AX action completed; independent verification pending")
@@ -251,6 +285,7 @@ class AXController:
         *,
         expected_current_value: AXPrimitive | None = None,
         verifier: AXVerificationExpectation,
+        cancelled: Callable[[], bool] | None = None,
     ) -> AXActionResult:
         element = self._require_element(
             bundle_id,
@@ -258,8 +293,11 @@ class AXController:
             query,
             expected_current_value=expected_current_value,
             verifier=verifier,
+            cancelled=cancelled,
         )
+        self._raise_if_cancelled(cancelled)
         self._permissions.require_granted(now=self.now())
+        self._raise_if_cancelled(cancelled)
         if not self._adapter.select_option(element, option):
             raise RuntimeError("AX option selection did not complete")
         return self._action_result(
@@ -294,7 +332,9 @@ class AXController:
         expected_current_value: AXPrimitive | None,
         action_name: str | None = None,
         verifier: AXVerificationExpectation | None = None,
+        cancelled: Callable[[], bool] | None = None,
     ) -> AXElementSnapshot:
+        self._raise_if_cancelled(cancelled)
         result = self.resolve(
             bundle_id,
             capability,
@@ -302,6 +342,7 @@ class AXController:
             require_enabled=True,
             verifier=verifier,
         )
+        self._raise_if_cancelled(cancelled)
         self._authorize(
             bundle_id,
             capability,
@@ -321,6 +362,11 @@ class AXController:
         if expected_current_value is not None and observed != expected_current_value:
             raise RuntimeError("expected current value did not match observed state")
         return result.element
+
+    @staticmethod
+    def _raise_if_cancelled(cancelled: Callable[[], bool] | None) -> None:
+        if cancelled is not None and cancelled():
+            raise AXOperationCancelled("AX operation cancelled before mutation")
 
     def _authorize(
         self,

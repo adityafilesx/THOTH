@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from datetime import datetime
+from threading import Event
 from time import monotonic
 from typing import ClassVar, Literal
 
@@ -99,8 +101,34 @@ class _SemanticTool(ToolDefinition[BaseModel, BaseModel]):
             verifiers=verifiers,
         )
 
+    def validate_execution_authority(self, args: _AppIn) -> None:
+        query = args.query if isinstance(args, _QueryIn) else None
+        action_name = args.action_name if isinstance(args, AXPerformActionIn) else None
+        verifiers = (
+            (args.verifier, *args.additional_verifiers) if isinstance(args, _MutationIn) else ()
+        )
+        self._controller.validate_execution_intent(
+            args.bundle_id,
+            args.capability,
+            self.name,
+            query=query,
+            action_name=action_name,
+            verifiers=verifiers,
+        )
+
 
 class _MutationTool(_SemanticTool):
+    async def _run_cancellable(
+        self,
+        operation: Callable[[Callable[[], bool]], AXActionResult],
+    ) -> AXActionResult:
+        cancelled = Event()
+        try:
+            return await asyncio.to_thread(operation, cancelled.is_set)
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+
     def verify_independently(self, args: _MutationIn) -> IndependentToolVerification:
         requests = (args.verifier, *args.additional_verifiers)
         results = [self._controller.verify(request, args.capability) for request in requests]
@@ -129,7 +157,11 @@ class AXInspectApplication(_SemanticTool):
 
     async def run(self, args: AXInspectApplicationIn, dry_run: bool) -> AXInspectApplicationOut:
         return AXInspectApplicationOut(
-            snapshot=self._controller.inspect_application(args.bundle_id, args.capability)
+            snapshot=await asyncio.to_thread(
+                self._controller.inspect_application,
+                args.bundle_id,
+                args.capability,
+            )
         )
 
 
@@ -152,8 +184,11 @@ class AXInspectWindow(_SemanticTool):
 
     async def run(self, args: AXInspectWindowIn, dry_run: bool) -> AXInspectWindowOut:
         return AXInspectWindowOut(
-            snapshot=self._controller.inspect_window(
-                args.bundle_id, args.capability, args.window_identifier
+            snapshot=await asyncio.to_thread(
+                self._controller.inspect_window,
+                args.bundle_id,
+                args.capability,
+                args.window_identifier,
             )
         )
 
@@ -171,7 +206,12 @@ class AXFindElement(_SemanticTool):
     verification = VerificationStrategy.NONE_READONLY
 
     async def run(self, args: AXFindElementIn, dry_run: bool) -> AXResolutionResult:
-        return self._controller.resolve(args.bundle_id, args.capability, args.query)
+        return await asyncio.to_thread(
+            self._controller.resolve,
+            args.bundle_id,
+            args.capability,
+            args.query,
+        )
 
 
 class AXReadValueOut(_Out):
@@ -192,7 +232,12 @@ class AXReadValue(_SemanticTool):
     verification = VerificationStrategy.NONE_READONLY
 
     async def run(self, args: AXReadValueIn, dry_run: bool) -> AXReadValueOut:
-        result = self._controller.resolve(args.bundle_id, args.capability, args.query)
+        result = await asyncio.to_thread(
+            self._controller.resolve,
+            args.bundle_id,
+            args.capability,
+            args.query,
+        )
         if result.element is None:
             raise RuntimeError(result.rejection_reason or "AX element did not resolve")
         return AXReadValueOut(
@@ -229,20 +274,26 @@ class AXSetValue(_MutationTool):
 
     async def run(self, args: AXSetValueIn, dry_run: bool) -> AXActionResult:
         if dry_run:
-            return self._controller.preview_action(
+            return await self._run_cancellable(
+                lambda cancelled: self._controller.preview_action(
+                    args.bundle_id,
+                    args.capability,
+                    args.query,
+                    expected_current_value=args.expected_current_value,
+                    verifier=args.verifier.expectation,
+                    cancelled=cancelled,
+                )
+            )
+        return await self._run_cancellable(
+            lambda cancelled: self._controller.set_value(
                 args.bundle_id,
                 args.capability,
                 args.query,
+                args.value,
                 expected_current_value=args.expected_current_value,
                 verifier=args.verifier.expectation,
+                cancelled=cancelled,
             )
-        return self._controller.set_value(
-            args.bundle_id,
-            args.capability,
-            args.query,
-            args.value,
-            expected_current_value=args.expected_current_value,
-            verifier=args.verifier.expectation,
         )
 
 
@@ -263,21 +314,27 @@ class AXPerformAction(_MutationTool):
 
     async def run(self, args: AXPerformActionIn, dry_run: bool) -> AXActionResult:
         if dry_run:
-            return self._controller.preview_action(
+            return await self._run_cancellable(
+                lambda cancelled: self._controller.preview_action(
+                    args.bundle_id,
+                    args.capability,
+                    args.query,
+                    expected_current_value=args.expected_current_value,
+                    action_name=args.action_name,
+                    verifier=args.verifier.expectation,
+                    cancelled=cancelled,
+                )
+            )
+        return await self._run_cancellable(
+            lambda cancelled: self._controller.perform_action(
                 args.bundle_id,
                 args.capability,
                 args.query,
+                args.action_name,
                 expected_current_value=args.expected_current_value,
-                action_name=args.action_name,
                 verifier=args.verifier.expectation,
+                cancelled=cancelled,
             )
-        return self._controller.perform_action(
-            args.bundle_id,
-            args.capability,
-            args.query,
-            args.action_name,
-            expected_current_value=args.expected_current_value,
-            verifier=args.verifier.expectation,
         )
 
 
@@ -309,20 +366,26 @@ class AXSelectOption(_MutationTool):
 
     async def run(self, args: AXSelectOptionIn, dry_run: bool) -> AXActionResult:
         if dry_run:
-            return self._controller.preview_action(
+            return await self._run_cancellable(
+                lambda cancelled: self._controller.preview_action(
+                    args.bundle_id,
+                    args.capability,
+                    args.query,
+                    expected_current_value=args.expected_current_value,
+                    verifier=args.verifier.expectation,
+                    cancelled=cancelled,
+                )
+            )
+        return await self._run_cancellable(
+            lambda cancelled: self._controller.select_option(
                 args.bundle_id,
                 args.capability,
                 args.query,
+                args.option,
                 expected_current_value=args.expected_current_value,
                 verifier=args.verifier.expectation,
+                cancelled=cancelled,
             )
-        return self._controller.select_option(
-            args.bundle_id,
-            args.capability,
-            args.query,
-            args.option,
-            expected_current_value=args.expected_current_value,
-            verifier=args.verifier.expectation,
         )
 
 
@@ -343,7 +406,12 @@ class AXWaitForElement(_SemanticTool):
     async def run(self, args: AXWaitForElementIn, dry_run: bool) -> AXResolutionResult:
         deadline = monotonic() + args.timeout_s
         while True:
-            result = self._controller.resolve(args.bundle_id, args.capability, args.query)
+            result = await asyncio.to_thread(
+                self._controller.resolve,
+                args.bundle_id,
+                args.capability,
+                args.query,
+            )
             if result.element is not None or result.ambiguous or monotonic() >= deadline:
                 return result
             await asyncio.sleep(0.05)
@@ -376,7 +444,12 @@ class AXWaitForValue(_SemanticTool):
         deadline = monotonic() + args.timeout_s
         last: AXElementSnapshot | None = None
         while True:
-            result = self._controller.resolve(args.bundle_id, args.capability, args.query)
+            result = await asyncio.to_thread(
+                self._controller.resolve,
+                args.bundle_id,
+                args.capability,
+                args.query,
+            )
             last = result.element
             metadata = last.value_metadata if last is not None else None
             if (
@@ -418,7 +491,12 @@ class AXListSupportedActions(_SemanticTool):
     verification = VerificationStrategy.NONE_READONLY
 
     async def run(self, args: AXListSupportedActionsIn, dry_run: bool) -> AXListSupportedActionsOut:
-        result = self._controller.resolve(args.bundle_id, args.capability, args.query)
+        result = await asyncio.to_thread(
+            self._controller.resolve,
+            args.bundle_id,
+            args.capability,
+            args.query,
+        )
         if result.element is None:
             raise RuntimeError(result.rejection_reason or "AX element did not resolve")
         return AXListSupportedActionsOut(

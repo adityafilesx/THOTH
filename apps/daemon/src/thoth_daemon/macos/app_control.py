@@ -61,10 +61,13 @@ class AppKitAppControl:
         return bool(self._ws().launchApplication_(name))
 
     def activate(self, name: str) -> bool:
+        """Activate by localized application name or exact bundle identifier."""
         from AppKit import NSApplicationActivateIgnoringOtherApps
 
         for app in self._ws().runningApplications():
-            if app.localizedName() and str(app.localizedName()) == name:
+            localized = str(app.localizedName()) if app.localizedName() else None
+            bundle = str(app.bundleIdentifier()) if app.bundleIdentifier() else None
+            if localized == name or bundle == name:
                 return bool(app.activateWithOptions_(NSApplicationActivateIgnoringOtherApps))
         return False
 
@@ -98,7 +101,7 @@ class MockAppControl:
 
     def activate(self, name: str) -> bool:
         for app in self._running:
-            if app.name == name:
+            if app.name == name or app.bundle_id == name:
                 self._frontmost = app
                 return True
         return False

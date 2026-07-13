@@ -28,6 +28,34 @@ def _ctrl() -> MockAppControl:
 
 
 class TestFocusChange:
+    def test_prepare_restore_policy_focuses_target_before_action(self) -> None:
+        ctrl = MockAppControl(running=[FINDER, TEXTEDIT])
+        manager = FocusManager(ctrl)
+        before = manager.snapshot(T0)
+
+        transition = manager.prepare_transition(
+            before,
+            "TextEdit",
+            FocusPolicy.RESTORE_PREVIOUS_FOCUS,
+        )
+
+        assert transition.attempted is True
+        assert transition.verified is True
+        assert transition.to_bundle_id == "com.apple.TextEdit"
+        assert ctrl.frontmost() == TEXTEDIT
+
+    def test_prepare_restore_policy_fails_closed_when_target_is_missing(self) -> None:
+        ctrl = _ctrl()
+        transition = FocusManager(ctrl).prepare_transition(
+            FocusManager(ctrl).snapshot(T0),
+            "TextEdit",
+            FocusPolicy.RESTORE_PREVIOUS_FOCUS,
+        )
+
+        assert transition.attempted is True
+        assert transition.verified is False
+        assert ctrl.frontmost() == FINDER
+
     def test_keep_new_focus_keeps_the_target(self) -> None:
         ctrl = _ctrl()
         manager = FocusManager(ctrl)

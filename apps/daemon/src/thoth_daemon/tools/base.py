@@ -83,6 +83,10 @@ class ToolDefinition(ABC, Generic[TInput, TOutput]):
         """
         del args
 
+    def validate_execution_authority(self, args: Any) -> None:
+        """Refresh execution-time authority before any focus transition."""
+        self.validate_authority(args)
+
     def focus_target(self, args: Any) -> str | None:
         """Return the OS application name whose focus must be verified.
 

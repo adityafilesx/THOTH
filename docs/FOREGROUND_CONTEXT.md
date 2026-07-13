@@ -12,10 +12,13 @@ All foreground data is untrusted, read-only context. Window titles and bundle id
 
 1. The registered tool supplies the authoritative `FocusPolicy`; model proposals are overwritten.
 2. Immediately before execution, the orchestrator records the current frontmost app.
-3. `ASK_IF_AMBIGUOUS` runs no tool and requires explicit direction.
-4. The tool runs only through the existing `EXECUTING`-state path.
-5. The manager independently checks `KEEP_NEW_FOCUS` or `DO_NOT_STEAL_FOCUS`, or restores and verifies `RESTORE_PREVIOUS_FOCUS`.
-6. Every result emits immutable `focus.result` audit evidence and is exposed to presentation. An unverified focus result makes a completed task display as partial.
+3. Typed execution authority is refreshed. Semantic AX tools re-check both the immutable application rule and current TCC trust before any temporary activation.
+4. `ASK_IF_AMBIGUOUS` runs no tool and requires explicit direction. `RESTORE_PREVIOUS_FOCUS` activates an exact application name or bundle identifier and independently confirms the target became frontmost.
+5. The tool runs only through the existing `EXECUTING`-state path.
+6. Registered independent verification runs while the temporary target remains frontmost. Only after that fresh probe does the manager restore and independently verify the original application.
+7. `focus.snapshot`, `focus.validation`, `focus.transition`, `tool.independent_verification`, and `focus.result` provide ordered immutable evidence. An unverified focus result makes a completed task display as partial.
+
+Cancellation is checked during tool execution and independent verification. Semantic AX calls run off the event loop with a shared cancellation flag checked before resolution, after resolution, after the fresh permission probe, and immediately before mutation. A single in-flight macOS AX message is atomic and cannot be interrupted; cancellation prevents a later mutation when it arrives during a preceding inspection or permission phase. A cancellation during a focus transition records the final observed focus and performs no further focus action, preserving the Phase 5.3 cleanup rule.
 
 Shell and background-service tools remain `DO_NOT_STEAL_FOCUS`; they do not foreground Terminal. App launch/focus are `KEEP_NEW_FOCUS`. Browser policies are per operation rather than one blanket setting. Screenshots and full AX trees are never captured or retained by the broker.
 

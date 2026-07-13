@@ -37,6 +37,18 @@ def test_mock_activate_sets_frontmost() -> None:
     assert ac.activate("Nope") is False
 
 
+def test_mock_activate_accepts_exact_bundle_identifier() -> None:
+    ac = MockAppControl(
+        running=[
+            AppInfo(name="Finder", bundle_id="com.apple.finder", active=True),
+            AppInfo(name="THOTH AX Test App", bundle_id="me.adityalabs.thoth.axtest", active=False),
+        ]
+    )
+    assert ac.activate("me.adityalabs.thoth.axtest") is True
+    assert ac.frontmost() is not None
+    assert ac.frontmost().name == "THOTH AX Test App"
+
+
 @pytest.mark.skipif(not _HAS_APPKIT, reason="AppKit/pyobjc not available (non-macOS)")
 def test_real_list_running_nonintrusive() -> None:
     from thoth_daemon.macos.app_control import AppKitAppControl

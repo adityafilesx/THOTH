@@ -112,6 +112,23 @@ remain testable compatibility code only. Terminal continues to use restricted
 subprocess execution, and Chromium continues to prefer browser DOM automation;
 neither gains generic UI mutation through AX.
 
+## Focus and cancellation ordering
+
+Immediately before a semantic AX execution, the orchestrator snapshots the
+frontmost application, refreshes profile authority and TCC trust, and only then
+performs a temporary bundle-bound focus transition when the registered policy
+is `RESTORE_PREVIOUS_FOCUS`. Failure to validate permission, capability, or
+target focus runs no AX tool. Independent AX verification re-reads UI state
+while the target remains frontmost; restoration and final-frontmost
+verification occur afterward. Each stage has a separate audit event.
+
+AX controller work runs outside the asyncio event loop. Mutation calls share a
+cancellation flag checked before and after semantic resolution, after the
+fresh permission probe, and immediately before the adapter mutation. This
+prevents a cancelled inspection from later becoming a mutation. macOS AX
+messages themselves are atomic synchronous calls and cannot be interrupted
+mid-message; cancellation never fabricates rollback or verification evidence.
+
 ## Independent verification
 
 Semantic mutations register an independent tool verifier with the

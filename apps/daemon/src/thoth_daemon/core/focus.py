@@ -33,6 +33,10 @@ class FocusTransition(BaseModel):
     policy: FocusPolicy
     from_bundle_id: str | None
     target_app: str
+    attempted: bool = False
+    verified: bool = False
+    to_bundle_id: str | None = None
+    detail: str = ""
 
 
 class FocusRestorationResult(BaseModel):
@@ -56,6 +60,43 @@ class FocusManager:
             captured_at=now,
             bundle_id=front.bundle_id if front else None,
             app_name=front.name if front else None,
+        )
+
+    def prepare_transition(
+        self,
+        before: FocusSnapshot,
+        target_app: str,
+        policy: FocusPolicy,
+    ) -> FocusTransition:
+        """Temporarily focus a target only when the policy requires it."""
+        transition = FocusTransition(
+            policy=policy,
+            from_bundle_id=before.bundle_id,
+            target_app=target_app,
+        )
+        if policy is not FocusPolicy.RESTORE_PREVIOUS_FOCUS:
+            return transition.model_copy(
+                update={"verified": policy is not FocusPolicy.ASK_IF_AMBIGUOUS}
+            )
+
+        activated = self._app_control.activate(target_app)
+        final = self._app_control.frontmost()
+        verified = (
+            activated
+            and final is not None
+            and (final.name == target_app or final.bundle_id == target_app)
+        )
+        return transition.model_copy(
+            update={
+                "attempted": True,
+                "verified": verified,
+                "to_bundle_id": final.bundle_id if final else None,
+                "detail": (
+                    "temporary target focus verified"
+                    if verified
+                    else "temporary target focus unavailable"
+                ),
+            }
         )
 
     def change_focus(
@@ -140,7 +181,7 @@ class FocusManager:
 
         # KEEP_NEW_FOCUS: independently confirm the requested application,
         # rather than trusting the action's return value.
-        verified = final is not None and final.name == target_app
+        verified = final is not None and (final.name == target_app or final.bundle_id == target_app)
         return FocusRestorationResult(
             verified=verified,
             final_bundle_id=final_bundle,
