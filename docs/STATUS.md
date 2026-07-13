@@ -1,6 +1,6 @@
 # THOTH status
 
-**As of:** 2026-07-13
+**As of:** 2026-07-14
 
 Phases 0–4, 5.0, 5.1, 5.2, and 5.3 are implemented. Phase 5.2 adds the post-verification persona layer and optional fact-checked local summaries. Phase 5.3 adds snapshot foreground context, execution-bound focus policy, six immutable application profiles, authoritative workspace association, expiring operational dialogue, live task presentation APIs, and desktop status rendering.
 
@@ -19,7 +19,7 @@ Phases 0–4, 5.0, 5.1, 5.2, and 5.3 are implemented. Phase 5.2 adds the post-ve
 | Gate | Result |
 |---|---|
 | `uv run --project apps/daemon pytest apps/daemon/tests` | **782 passed, 1 skipped** |
-| Locked-desktop skip | live temporary focus/restoration; `loginwindow` was frontmost |
+| Unlocked focus rerun | 6 foreground/focus live tests passed; no skip |
 | Ruff check / format | clean / 181 files formatted |
 | `mypy apps/daemon/src` (strict) | clean, 99 source files |
 | `pnpm -C apps/desktop test` | **65 passed** |
@@ -33,12 +33,17 @@ Host context is required for Chromium Mach ports, loopback sockets, hardware `sy
 ## Real macOS evidence
 
 - NSWorkspace detected Finder, TextEdit, Code, Terminal, and Chrome.
-- Foreground capture identified `com.apple.loginwindow`; the desktop was locked.
+- The original foreground capture identified `com.apple.loginwindow`; an
+  unlocked rerun identified ChatGPT / `com.openai.codex` and passed all six
+  foreground/focus live tests.
 - TextEdit launched and was detected as running, but could not become frontmost while locked.
 - A real background Python HTTP service ran without changing the frontmost bundle.
 - The real running Code bundle matched THOTH using authoritative approved-path and task-workspace evidence; bundle/title data remained hints.
 - Live Qwen3 4B inference, constrained planning, and persona-summary tests passed in the host-context full gate.
-- Temporary focus restoration and foreground-specific Finder/TextEdit/Code assertions remain unverified because `loginwindow` was frontmost.
+- A real Code → temporary TextEdit action → Code sequence independently
+  verified final frontmost bundle `com.microsoft.VSCode`. Direct
+  Finder-frontmost and TextEdit-leave-focused capstones remain pending Phase
+  5.4 evidence.
 
 See `docs/PHASE_5_2_5_3_CAPSTONE.md` for the complete matrix.
 
@@ -48,7 +53,9 @@ See `docs/PHASE_5_2_5_3_CAPSTONE.md` for the complete matrix.
 - AX editor/document manipulation remains experimental until Accessibility permission and real evidence exist.
 - Chromium foreground presentation and form operations remain experimental; only separately verified read-only/background capabilities are marked verified.
 - Dialogue is process-local and intentionally disappears on restart.
-- An unlocked desktop rerun is required to verify temporary focus restoration and supported apps while actually frontmost.
+- Narrow semantic Accessibility control remains unverified until the Phase 5.4
+  packaged-app, permission, capability, resolver, action, and independent
+  verifier gates pass.
 
 ## Honest capability statement
 

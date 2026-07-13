@@ -1,6 +1,6 @@
 # Phase 5.2–5.3 capstone evidence
 
-**Date:** 2026-07-13
+**Date:** 2026-07-13; unlocked-focus addendum 2026-07-14
 
 **Branch:** `phase-5/persona`
 
@@ -14,20 +14,25 @@
 - Ruff check/format, strict mypy, ESLint, TypeScript, Vite build, Cargo check, and fresh Alembic upgrade: passed.
 - Exact `make test`: passed.
 
-The sole skip was live temporary focus/restoration: the interactive desktop was locked and `com.apple.loginwindow` was frontmost. The test did not bypass the lock or fabricate restoration.
+The original run had one skip because the interactive desktop was locked and
+`com.apple.loginwindow` was frontmost. On 2026-07-14 the unlocked rerun
+collected all six foreground/focus live tests without a skip. A separate exact
+Code → TextEdit action → Code restoration sequence reported
+`restored=True`, `verified=True`, and independently probed final bundle id
+`com.microsoft.VSCode`.
 
 ## Required capstones
 
 | # | Capstone | Outcome | Evidence / limitation |
 |---|---|---|---|
-| 1 | Detect actual foreground application | Pass | Host NSWorkspace returned `loginwindow` / `com.apple.loginwindow`. |
+| 1 | Detect actual foreground application | Pass | Original host probe returned `loginwindow`; unlocked addendum returned ChatGPT / `com.openai.codex`. |
 | 2 | Detect Finder when foreground | Not verified | Finder was detected running; foreground transition was blocked by the locked desktop. |
 | 3 | Detect TextEdit when foreground | Not verified | TextEdit launched and was detected running; `loginwindow` remained frontmost. |
 | 4 | Detect VS Code | Pass | Real `Code` / `com.microsoft.VSCode` process detected. |
 | 5 | Match THOTH workspace in VS Code | Pass, bounded | Real Code bundle plus authoritative approved THOTH path/task workspace matched; no title-only authority. |
 | 6 | Open TextEdit and leave focused | Failed closed | Launch succeeded; final focus could not be verified while locked. |
 | 7 | Start background service without focus theft | Pass | Real loopback Python HTTP service ran; frontmost bundle remained `loginwindow`; service terminated. |
-| 8 | Temporarily focus app and restore original | Skipped | Exact reason: locked desktop (`loginwindow` frontmost). |
+| 8 | Temporarily focus app and restore original | Pass on unlocked rerun | Started with Code / `com.microsoft.VSCode`; invoked temporary TextEdit focus under `RESTORE_PREVIOUS_FOCUS`; final NSWorkspace probe was Code / `com.microsoft.VSCode`; result was restored and verified. |
 | 9 | Resolve “open it” for one recent artifact | Pass | Real temporary artifact, authoritative same-task reference. |
 | 10 | Reject ambiguous “open it” | Pass | Two real artifacts raise `DialogueAmbiguous`. |
 | 11 | Expire dialogue and reject stale reference | Pass | Expired state is removed and raises `DialogueExpired`. |
@@ -45,9 +50,9 @@ The sole skip was live temporary focus/restoration: the interactive desktop was 
 - Unapproved app focus is stopped by scope; ambiguous focus runs nothing; disappearing restoration targets, cancellation, and background focus theft are detected.
 - Focus/tool imports succeed in either order in fresh interpreters.
 
-## Residual evidence gap
+## Unlocked-focus addendum
 
-Unlock the desktop and rerun:
+Executed on 2026-07-14:
 
 ```bash
 uv run --project apps/daemon pytest \
@@ -55,4 +60,8 @@ uv run --project apps/daemon pytest \
   apps/daemon/tests/core/test_focus_live.py -v -s
 ```
 
-Only after that passes may Finder/TextEdit/Code foreground transitions and temporary restoration be marked verified for this environment.
+Result: **6 passed**. The three inventory checks, actual-frontmost capture,
+temporary restoration test, and background-service focus-preservation test all
+passed. Direct Finder-frontmost and TextEdit-leave-focused capstones remain
+separate Phase 5.4 evidence items; this addendum does not infer them from
+process inventory.
