@@ -46,7 +46,6 @@ from thoth_daemon.storage.db import init_schema, make_engine, make_session_facto
 from thoth_daemon.storage.permissions import PermissionStore
 from thoth_daemon.storage.skills import SkillStore
 from thoth_daemon.tools.app_tools import register_app_tools
-from thoth_daemon.tools.ax_tools import register_ax_tools
 from thoth_daemon.tools.browser_interaction_tools import register_browser_interaction_tools
 from thoth_daemon.tools.browser_tools import register_browser_tools
 from thoth_daemon.tools.fs_tools import register_fs_tools
@@ -179,7 +178,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         register_git_tools(registry)  # git workflow tools (slice 5)
         register_app_tools(registry, app_control)  # macOS app launch/focus/list (slice 6)
         register_browser_tools(registry)  # scoped browser read (slice 7)
-        register_ax_tools(registry)  # AX element tools (Phase 4 slice 3; needs TCC live)
         register_semantic_ax_tools(registry)  # bounded semantic AX tools (Phase 5.4)
         register_browser_interaction_tools(registry)  # interactive session (Phase 4 slice 4)
 

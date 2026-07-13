@@ -8,7 +8,9 @@ from pydantic import ValidationError
 from thoth_daemon.core.application_profiles import (
     ApplicationProfile,
     ApplicationProfileRegistry,
+    AXCapabilityRule,
     CapabilityForbidden,
+    CapabilityTargetForbidden,
     InterfaceKind,
     ProfileVerifier,
 )
@@ -21,6 +23,7 @@ from thoth_daemon.schemas.ax import (
     AXElementSnapshot,
     AXValueKind,
     AXValueMetadata,
+    AXVerificationExpectation,
     AXWindowSnapshot,
 )
 from thoth_daemon.tools.registry import ToolRegistry
@@ -41,6 +44,67 @@ CAPABILITIES = (
     "ax_list_supported_actions",
 )
 TOOL_NAMES = tuple(name.replace("_", ".", 1) for name in CAPABILITIES)
+ALL_VERIFIERS = tuple(AXVerificationExpectation)
+
+
+def _rules() -> dict[str, AXCapabilityRule]:
+    read_ids = ("ax-single-line-input", "ax-save-button", "ax-picker")
+    rules = {
+        capability: AXCapabilityRule(
+            tool_name=capability.replace("_", ".", 1),
+            allowed_identifiers=read_ids,
+            allowed_verifier_identifiers=read_ids,
+            allowed_verifiers=ALL_VERIFIERS,
+            default_risk=RiskLevel.R0,
+            focus_policy=FocusPolicy.DO_NOT_STEAL_FOCUS,
+        )
+        for capability in CAPABILITIES
+        if capability
+        not in {
+            "ax_inspect_application",
+            "ax_inspect_window",
+            "ax_set_value",
+            "ax_perform_action",
+            "ax_select_option",
+        }
+    }
+    rules.update(
+        {
+            capability: AXCapabilityRule(
+                tool_name=capability.replace("_", ".", 1),
+                default_risk=RiskLevel.R0,
+                focus_policy=FocusPolicy.DO_NOT_STEAL_FOCUS,
+            )
+            for capability in ("ax_inspect_application", "ax_inspect_window")
+        }
+    )
+    rules["ax_set_value"] = AXCapabilityRule(
+        tool_name="ax.set_value",
+        allowed_identifiers=("ax-single-line-input",),
+        allowed_verifier_identifiers=("ax-single-line-input",),
+        allowed_verifiers=(AXVerificationExpectation.VALUE_EQUALS,),
+        default_risk=RiskLevel.R1,
+        focus_policy=FocusPolicy.RESTORE_PREVIOUS_FOCUS,
+    )
+    rules["ax_perform_action"] = AXCapabilityRule(
+        tool_name="ax.perform_action",
+        allowed_identifiers=("ax-save-button",),
+        allowed_roles=("AXButton",),
+        allowed_verifier_identifiers=("ax-save-button",),
+        allowed_actions=("AXPress",),
+        allowed_verifiers=(AXVerificationExpectation.ENABLED,),
+        default_risk=RiskLevel.R1,
+        focus_policy=FocusPolicy.RESTORE_PREVIOUS_FOCUS,
+    )
+    rules["ax_select_option"] = AXCapabilityRule(
+        tool_name="ax.select_option",
+        allowed_identifiers=("ax-picker",),
+        allowed_verifier_identifiers=("ax-picker",),
+        allowed_verifiers=(AXVerificationExpectation.VALUE_EQUALS,),
+        default_risk=RiskLevel.R1,
+        focus_policy=FocusPolicy.RESTORE_PREVIOUS_FOCUS,
+    )
+    return rules
 
 
 def _profile() -> ApplicationProfileRegistry:
@@ -60,6 +124,7 @@ def _profile() -> ApplicationProfileRegistry:
                 },
                 default_focus_behaviour=FocusPolicy.RESTORE_PREVIOUS_FOCUS,
                 last_real_verification_date=date(2026, 7, 14),
+                ax_capability_rules=_rules(),
             )
         ]
     )
@@ -259,6 +324,73 @@ class TestReads:
 
 
 class TestMutations:
+    async def test_profile_rejects_unlisted_target_action_and_verifier(self) -> None:
+        registry, adapter = _registry(
+            _adapter(
+                _element(
+                    reference_id="ref-button",
+                    role="AXButton",
+                    identifier="ax-save-button",
+                    supported_actions=("AXPress", "AXConfirm"),
+                    value_metadata=None,
+                )
+            )
+        )
+        action = registry.get("ax.perform_action")
+        raw = {
+            **_base_args("ax_perform_action"),
+            "query": {"application_bundle_id": BUNDLE, "identifier": "ax-save-button"},
+            "action_name": "AXConfirm",
+            "expected_result": "confirmation applied",
+            "verifier": {
+                "application_bundle_id": BUNDLE,
+                "target": {
+                    "application_bundle_id": BUNDLE,
+                    "identifier": "ax-save-button",
+                },
+                "expectation": "enabled",
+            },
+            "timeout_s": 2,
+        }
+        with pytest.raises(CapabilityTargetForbidden, match="action"):
+            await action.run(action.input_model.model_validate(raw), False)
+        assert adapter.mutations == []
+
+        read = registry.get("ax.read_value")
+        with pytest.raises(CapabilityTargetForbidden, match="identifier"):
+            await read.run(
+                read.input_model.model_validate(
+                    {
+                        **_base_args("ax_read_value"),
+                        "query": {
+                            "application_bundle_id": BUNDLE,
+                            "identifier": "injected-target",
+                        },
+                    }
+                ),
+                False,
+            )
+
+        allowed_action = action.input_model.model_validate(
+            {
+                **raw,
+                "action_name": "AXPress",
+                "additional_verifiers": (
+                    {
+                        "application_bundle_id": BUNDLE,
+                        "target": {
+                            "application_bundle_id": BUNDLE,
+                            "identifier": "ax-save-button",
+                        },
+                        "expectation": "focused",
+                    },
+                ),
+            }
+        )
+        await action.run(allowed_action, False)
+        with pytest.raises(CapabilityTargetForbidden, match="verifier"):
+            action.verify_independently(allowed_action)
+
     async def test_set_value_dry_run_is_inert_and_real_run_is_not_self_verified(self) -> None:
         registry, adapter = _registry()
         tool = registry.get("ax.set_value")

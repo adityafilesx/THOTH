@@ -275,7 +275,24 @@ class _TaskRunner:
                 return None
             # Never trust a planner/model focus proposal. The registered tool
             # contract is authoritative at the last pre-policy boundary.
-            step.focus_policy = self._registry.get(step.tool_name).focus_policy
+            tool = self._registry.get(step.tool_name)
+            step.focus_policy = tool.focus_policy
+            try:
+                parsed = tool.input_model.model_validate(step.arguments)
+                tool.validate_authority(parsed)
+            except Exception as exc:
+                await self._audit_only(
+                    "plan.rejected",
+                    {
+                        "reason": (
+                            f"unauthorized or invalid arguments for '{step.tool_name}': "
+                            f"{type(exc).__name__}"
+                        )
+                    },
+                )
+                await self._goto(TaskState.RISK_REVIEW, "risk review")
+                await self._fail(f"unauthorized or invalid arguments for '{step.tool_name}'")
+                return None
         self.task.plan = self.plan
         if await self._check_cancel():
             return None

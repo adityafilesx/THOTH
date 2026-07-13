@@ -74,6 +74,15 @@ class ToolDefinition(ABC, Generic[TInput, TOutput]):
         scope. Default: touches nothing (mocks and pure-compute tools)."""
         return ResourceScope()
 
+    def validate_authority(self, args: Any) -> None:
+        """Apply trusted, tool-specific authorization before policy review.
+
+        Typed input validation is necessary but not sufficient for tools whose
+        targets are constrained by a separate trusted profile. Most tools have
+        no additional authority source and therefore use this no-op default.
+        """
+        del args
+
     def focus_target(self, args: Any) -> str | None:
         """Return the OS application name whose focus must be verified.
 

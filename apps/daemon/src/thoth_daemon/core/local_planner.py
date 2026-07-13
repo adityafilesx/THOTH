@@ -104,8 +104,9 @@ class PlanValidator:
             step.focus_policy = tool.focus_policy
 
             try:
-                tool.input_model.model_validate(step.arguments)
-            except ValidationError as exc:
+                args = tool.input_model.model_validate(step.arguments)
+                tool.validate_authority(args)
+            except Exception as exc:
                 raise PlanRejected(PlanRejection.BAD_ARGUMENTS, f"{step.tool_name}: {exc}") from exc
 
             default = tool.default_risk

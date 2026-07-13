@@ -84,6 +84,21 @@ class _SemanticTool(ToolDefinition[BaseModel, BaseModel]):
     def focus_target(self, args: _AppIn) -> str:
         return args.bundle_id
 
+    def validate_authority(self, args: _AppIn) -> None:
+        query = args.query if isinstance(args, _QueryIn) else None
+        action_name = args.action_name if isinstance(args, AXPerformActionIn) else None
+        verifiers = (
+            (args.verifier, *args.additional_verifiers) if isinstance(args, _MutationIn) else ()
+        )
+        self._controller.authorize_intent(
+            args.bundle_id,
+            args.capability,
+            self.name,
+            query=query,
+            action_name=action_name,
+            verifiers=verifiers,
+        )
+
 
 class _MutationTool(_SemanticTool):
     def verify_independently(self, args: _MutationIn) -> IndependentToolVerification:
@@ -219,6 +234,7 @@ class AXSetValue(_MutationTool):
                 args.capability,
                 args.query,
                 expected_current_value=args.expected_current_value,
+                verifier=args.verifier.expectation,
             )
         return self._controller.set_value(
             args.bundle_id,
@@ -226,6 +242,7 @@ class AXSetValue(_MutationTool):
             args.query,
             args.value,
             expected_current_value=args.expected_current_value,
+            verifier=args.verifier.expectation,
         )
 
 
@@ -251,6 +268,8 @@ class AXPerformAction(_MutationTool):
                 args.capability,
                 args.query,
                 expected_current_value=args.expected_current_value,
+                action_name=args.action_name,
+                verifier=args.verifier.expectation,
             )
         return self._controller.perform_action(
             args.bundle_id,
@@ -258,6 +277,7 @@ class AXPerformAction(_MutationTool):
             args.query,
             args.action_name,
             expected_current_value=args.expected_current_value,
+            verifier=args.verifier.expectation,
         )
 
 
@@ -294,6 +314,7 @@ class AXSelectOption(_MutationTool):
                 args.capability,
                 args.query,
                 expected_current_value=args.expected_current_value,
+                verifier=args.verifier.expectation,
             )
         return self._controller.select_option(
             args.bundle_id,
@@ -301,6 +322,7 @@ class AXSelectOption(_MutationTool):
             args.query,
             args.option,
             expected_current_value=args.expected_current_value,
+            verifier=args.verifier.expectation,
         )
 
 
@@ -409,7 +431,7 @@ def register_semantic_ax_tools(
     registry: ToolRegistry, controller: AXController | None = None
 ) -> None:
     active_controller = controller or default_ax_controller()
-    for tool in (
+    tools = (
         AXInspectApplication(active_controller),
         AXInspectWindow(active_controller),
         AXFindElement(active_controller),
@@ -420,5 +442,11 @@ def register_semantic_ax_tools(
         AXWaitForElement(active_controller),
         AXWaitForValue(active_controller),
         AXListSupportedActions(active_controller),
-    ):
+    )
+    for tool in tools:
+        active_controller.validate_tool_contract(
+            tool.name,
+            tool.default_risk,
+            tool.focus_policy,
+        )
         registry.register(tool)

@@ -5,6 +5,7 @@ from datetime import UTC, date, datetime
 from thoth_daemon.core.application_profiles import (
     ApplicationProfile,
     ApplicationProfileRegistry,
+    AXCapabilityRule,
     InterfaceKind,
     ProfileVerifier,
 )
@@ -32,6 +33,7 @@ from thoth_daemon.schemas.ax import (
     AXVerificationRequest,
     AXWindowSnapshot,
 )
+from thoth_daemon.schemas.enums import RiskLevel
 
 NOW = datetime(2026, 7, 14, 16, tzinfo=UTC)
 BUNDLE = "me.adityalabs.thoth.axtest"
@@ -92,6 +94,16 @@ def _controller(
         verifier_mapping={CAPABILITY: ProfileVerifier.ACCESSIBILITY_VALUE},
         default_focus_behaviour=FocusPolicy.DO_NOT_STEAL_FOCUS,
         last_real_verification_date=date(2026, 7, 14),
+        ax_capability_rules={
+            CAPABILITY: AXCapabilityRule(
+                tool_name="ax.set_value",
+                allowed_identifiers=("field",),
+                allowed_verifier_identifiers=("field",),
+                allowed_verifiers=tuple(AXVerificationExpectation),
+                default_risk=RiskLevel.R1,
+                focus_policy=FocusPolicy.RESTORE_PREVIOUS_FOCUS,
+            )
+        },
     )
     app = _application(element or _element())
     adapter = MockSemanticAXAdapter([app])

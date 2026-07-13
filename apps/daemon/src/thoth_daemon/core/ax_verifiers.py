@@ -33,6 +33,8 @@ class _ElementVerifier:
             request.application_bundle_id,
             capability,
             request.target,
+            verifier=request.expectation,
+            verification_target=True,
         ).element
 
     def _result(
@@ -128,6 +130,7 @@ class AXWindowExistsVerifier:
                 request.application_bundle_id,
                 capability,
                 request.window_identifier,
+                verifier=request.expectation,
             )
             if request.window_identifier is not None
             else None

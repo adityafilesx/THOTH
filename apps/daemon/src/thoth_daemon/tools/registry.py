@@ -59,6 +59,7 @@ class ToolRegistry:
     ) -> ToolResult:
         tool = self.get(invocation.tool_name)  # raises UnknownToolError
         args = tool.parse_arguments(invocation)  # raises ValidationError
+        tool.validate_authority(args)
 
         # Backstop scope check — no tool runs against an out-of-scope target,
         # even via a direct registry call. The orchestrator gate is primary.

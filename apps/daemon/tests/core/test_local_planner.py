@@ -151,6 +151,27 @@ class TestPlanValidator:
 
         assert plan.steps[0].focus_policy is FocusPolicy.DO_NOT_STEAL_FOCUS
 
+    def test_tool_authority_hook_rejects_model_target_before_policy(self) -> None:
+        class ProfileDeniedRead(BrowserRead):
+            name = "profile_denied_read"
+
+            def validate_authority(self, args: object) -> None:
+                del args
+                raise ValueError("target is outside the trusted profile")
+
+        registry = ToolRegistry()
+        registry.register(ProfileDeniedRead(MockBrowser()))
+        raw = _plan(
+            {
+                "tool_name": "profile_denied_read",
+                "arguments": {"url": "https://untrusted.example"},
+                "declared_risk": "R0",
+            }
+        )
+        with pytest.raises(PlanRejected) as exc:
+            PlanValidator(registry).validate(raw, task_id="t1")
+        assert exc.value.kind is PlanRejection.BAD_ARGUMENTS
+
 
 class _FakeClient:
     def __init__(self, plan: dict) -> None:

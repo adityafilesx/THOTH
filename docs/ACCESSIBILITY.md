@@ -83,6 +83,15 @@ capability. A mutation tool therefore cannot claim a read capability or a
 model-chosen substitute. Registry scope is the same bundle identifier, while
 the immutable application profile must independently authorize the capability.
 
+Each application profile binds that capability to the exact dotted tool,
+semantic identifier and/or role allowlists, AX action allowlist, verifier
+allowlist, risk floor, and focus policy. Authorization occurs once against the
+query and again against the freshly resolved element. A matching label alone
+cannot expand this trusted rule. Missing rules, target substitutions, action
+substitutions, verifier substitutions, and tool/profile metadata conflicts fail
+closed. Profiles returned through status APIs are copies, not live registry
+authority.
+
 Reads are R0 and preserve current focus. The three reversible local mutation
 tools are R1, support inert dry runs, and restore prior focus. External side
 effects are not authorized through these generic R1 capabilities; submission,
@@ -96,6 +105,12 @@ uses bounded attribute-value APIs for child lists, suppresses sensitive values
 before constructing raw nodes, and re-finds action targets by identifier or a
 unique role/label match. The deterministic mock is explicitly named and used
 only by tests.
+
+The earlier underscore-named Phase 4 AX tools are not registered in the
+production daemon because they predate bundle-bound application profiles. They
+remain testable compatibility code only. Terminal continues to use restricted
+subprocess execution, and Chromium continues to prefer browser DOM automation;
+neither gains generic UI mutation through AX.
 
 ## Independent verification
 
