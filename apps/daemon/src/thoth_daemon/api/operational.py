@@ -5,12 +5,13 @@ from __future__ import annotations
 import contextlib
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict
 
 from thoth_daemon.core.application_profiles import ApplicationProfileRegistry
+from thoth_daemon.core.ax_diagnostics import AXDiagnosticsStore
 from thoth_daemon.core.dialogue import (
     ApprovalFollowUpRejected,
     ArtifactReference,
@@ -31,6 +32,7 @@ from thoth_daemon.core.persona_summary import PersonaSummaryComposer
 from thoth_daemon.core.runtime_status import LocalRuntimeMonitor
 from thoth_daemon.core.task_presentation import TaskPresentationComposer
 from thoth_daemon.inference.base import InferenceProvider
+from thoth_daemon.macos.ax_permission import AXPermissionService
 from thoth_daemon.schemas import Task
 from thoth_daemon.storage.permissions import PermissionStore
 
@@ -50,6 +52,12 @@ class DialogueResolveBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     text: str
+
+
+class AccessibilitySettingsRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    user_requested: Literal[True]
 
 
 def _orch(request: Request) -> Orchestrator:
@@ -177,6 +185,31 @@ async def capture_foreground(
 async def application_profiles(request: Request) -> list[dict[str, Any]]:
     profiles = cast(ApplicationProfileRegistry, request.app.state.application_profiles)
     return [profile.model_dump(mode="json") for profile in profiles.all()]
+
+
+@router.get("/api/accessibility")
+async def accessibility_status(request: Request) -> dict[str, Any]:
+    permissions = cast(AXPermissionService, request.app.state.ax_permissions)
+    diagnostics = cast(AXDiagnosticsStore, request.app.state.ax_diagnostics)
+    profiles = cast(ApplicationProfileRegistry, request.app.state.application_profiles)
+    return {
+        "permission": permissions.check(now=datetime.now(UTC), force=True).model_dump(mode="json"),
+        "applications": [profile.model_dump(mode="json") for profile in profiles.all()],
+        "diagnostics": diagnostics.snapshot().model_dump(mode="json"),
+    }
+
+
+@router.post("/api/accessibility/open-settings")
+async def open_accessibility_settings(
+    body: AccessibilitySettingsRequest,
+    request: Request,
+) -> dict[str, Any]:
+    permissions = cast(AXPermissionService, request.app.state.ax_permissions)
+    opened = permissions.open_settings(user_requested=body.user_requested)
+    return {
+        "opened": opened,
+        "permission": permissions.check(now=datetime.now(UTC), force=True).model_dump(mode="json"),
+    }
 
 
 @router.get("/api/dialogue/{task_id}")

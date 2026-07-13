@@ -87,6 +87,10 @@ class ToolDefinition(ABC, Generic[TInput, TOutput]):
         """Refresh execution-time authority before any focus transition."""
         self.validate_authority(args)
 
+    def bind_execution_context(self, args: Any, *, task_id: str, step_id: str) -> None:
+        """Attach non-authoritative runtime diagnostics, if a tool exposes them."""
+        del args, task_id, step_id
+
     def focus_target(self, args: Any) -> str | None:
         """Return the OS application name whose focus must be verified.
 

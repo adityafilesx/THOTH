@@ -4,6 +4,7 @@ export type View =
   | "command"
   | "plan"
   | "timeline"
+  | "accessibility"
   | "permissions"
   | "skills"
   | "settings";

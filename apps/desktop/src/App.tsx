@@ -7,6 +7,7 @@ import { WsClient } from "@/lib/ws";
 import { useConnectionStore } from "@/stores/connection";
 import { useTasksStore } from "@/stores/tasks";
 import { useUiStore } from "@/stores/ui";
+import { Accessibility } from "@/views/Accessibility";
 import { ApprovalDrawer } from "@/views/ApprovalDrawer";
 import { CommandCenter } from "@/views/CommandCenter";
 import { Permissions } from "@/views/Permissions";
@@ -55,6 +56,8 @@ function CurrentView() {
       return <PlanView />;
     case "timeline":
       return <Timeline />;
+    case "accessibility":
+      return <Accessibility />;
     case "permissions":
       return <Permissions />;
     case "skills":

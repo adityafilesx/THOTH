@@ -19,6 +19,7 @@
 | Voice audio | In-memory during push-to-talk | Discarded post-transcription |
 | Foreground snapshots | In-memory only | 120 seconds by default |
 | Operational dialogue references/constraints | In-memory only, task-isolated | 5 minutes; gone on restart |
+| Accessibility diagnostics | One bounded semantic snapshot in memory; no labels, values, windows, elements, or raw tree | Replaced by the next AX operation; gone on restart |
 | Frontend state | In-memory only | Gone on quit; never contains secrets |
 
 ## Redaction guarantee

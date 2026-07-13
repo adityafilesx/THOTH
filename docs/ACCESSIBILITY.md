@@ -129,6 +129,23 @@ prevents a cancelled inspection from later becoming a mutation. macOS AX
 messages themselves are atomic synchronous calls and cannot be interrupted
 mid-message; cancellation never fabricates rollback or verification evidence.
 
+## Desktop status and diagnostics
+
+`GET /api/accessibility` returns a fresh typed permission probe, copied
+application profiles, and one bounded in-memory semantic diagnostic snapshot.
+The snapshot may contain task/step/tool identifiers, bundle ID, semantic
+identifier/role/alias, resolution method/confidence/candidate count, focus
+policy, deterministic verification evidence, permission error, and ambiguity.
+It has no labels, values, windows, elements, screenshots, raw AX tree, or hidden
+reasoning and is never persisted.
+
+The desktop Accessibility view displays permission and capability classes as
+live daemon data. Resolver confidence and verifier evidence are hidden until
+the user enables the developer-diagnostics switch. The only settings side
+effect is a button that sends literal `user_requested: true`; malformed or
+implicit requests cannot open System Settings, and the daemon still does not
+click TCC controls or claim that opening the pane granted trust.
+
 ## Independent verification
 
 Semantic mutations register an independent tool verifier with the

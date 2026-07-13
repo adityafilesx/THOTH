@@ -116,6 +116,22 @@ class _SemanticTool(ToolDefinition[BaseModel, BaseModel]):
             verifiers=verifiers,
         )
 
+    def bind_execution_context(
+        self,
+        args: _AppIn,
+        *,
+        task_id: str,
+        step_id: str,
+    ) -> None:
+        self._controller.bind_diagnostics(
+            task_id=task_id,
+            step_id=step_id,
+            tool_name=self.name,
+            bundle_id=args.bundle_id,
+            capability=args.capability,
+            query=args.query if isinstance(args, _QueryIn) else None,
+        )
+
 
 class _MutationTool(_SemanticTool):
     async def _run_cancellable(

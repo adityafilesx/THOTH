@@ -1,4 +1,5 @@
 import {
+  Accessibility as AccessibilityIcon,
   Activity,
   ListChecks,
   Settings2,
@@ -17,6 +18,7 @@ const NAV: { view: View; label: string; icon: typeof Terminal }[] = [
   { view: "command", label: "Command", icon: Terminal },
   { view: "plan", label: "Plan", icon: ListChecks },
   { view: "timeline", label: "Timeline", icon: Activity },
+  { view: "accessibility", label: "Accessibility", icon: AccessibilityIcon },
   { view: "permissions", label: "Permissions", icon: Shield },
   { view: "skills", label: "Skills", icon: Wand2 },
   { view: "settings", label: "Settings", icon: Settings2 },

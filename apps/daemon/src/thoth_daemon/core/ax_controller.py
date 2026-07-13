@@ -9,9 +9,11 @@ from thoth_daemon.core.application_profiles import (
     ApplicationProfileRegistry,
     build_default_application_profiles,
 )
+from thoth_daemon.core.ax_diagnostics import AXDiagnosticsStore
 from thoth_daemon.core.ax_resolver import AXResolutionResult, AXResolver
 from thoth_daemon.macos.app_control import AppControl, default_app_control
 from thoth_daemon.macos.ax_permission import (
+    AXPermissionError,
     AXPermissionService,
     default_ax_permission_service,
 )
@@ -43,6 +45,7 @@ class AXController:
         resolver: AXResolver | None = None,
         clock: Callable[[], datetime] | None = None,
         app_control: AppControl | None = None,
+        diagnostics: AXDiagnosticsStore | None = None,
     ) -> None:
         self._adapter = adapter
         self._permissions = permissions
@@ -50,6 +53,7 @@ class AXController:
         self._resolver = resolver or AXResolver()
         self._clock = clock or (lambda: datetime.now(UTC))
         self._app_control = app_control
+        self._diagnostics = diagnostics
 
     def now(self) -> datetime:
         return self._clock()
@@ -118,7 +122,35 @@ class AXController:
             action_name=action_name,
             verifiers=verifiers,
         )
-        self._permissions.require_granted(now=self.now())
+        try:
+            self._permissions.require_granted(now=self.now())
+        except AXPermissionError as exc:
+            if self._diagnostics is not None:
+                self._diagnostics.record_permission_error(str(exc), now=self.now())
+            raise
+
+    def bind_diagnostics(
+        self,
+        *,
+        task_id: str,
+        step_id: str,
+        tool_name: str,
+        bundle_id: str,
+        capability: str,
+        query: AXElementQuery | None,
+    ) -> None:
+        if self._diagnostics is None:
+            return
+        rule = self._profiles.ax_rule(bundle_id, capability)
+        self._diagnostics.bind(
+            task_id=task_id,
+            step_id=step_id,
+            tool_name=tool_name,
+            bundle_id=bundle_id,
+            query=query,
+            focus_policy=rule.focus_policy,
+            now=self.now(),
+        )
 
     def inspect_application(self, bundle_id: str, capability: str) -> AXApplicationSnapshot:
         self._authorize(bundle_id, capability, tool_name="ax.inspect_application")
@@ -188,6 +220,8 @@ class AXController:
                 resolved_target=True,
                 verification_target=verification_target,
             )
+        if self._diagnostics is not None:
+            self._diagnostics.record_resolution(result, now=self.now())
         return result
 
     def preview_action(
@@ -321,7 +355,10 @@ class AXController:
             require_target=target is not None,
             verification_target=True,
         )
-        return AXVerifierDispatcher(self, self._app_control).verify(request, capability)
+        result = AXVerifierDispatcher(self, self._app_control).verify(request, capability)
+        if self._diagnostics is not None:
+            self._diagnostics.record_verification(result, now=self.now())
+        return result
 
     def _require_element(
         self,

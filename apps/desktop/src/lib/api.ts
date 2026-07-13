@@ -169,6 +169,46 @@ export interface ApplicationProfile {
   forbidden_operations: string[];
 }
 
+export type AXPermissionStatus =
+  | "not_determined"
+  | "denied"
+  | "granted"
+  | "revoked"
+  | "unavailable";
+
+export interface AXPermissionState {
+  status: AXPermissionStatus;
+  checked_at: string;
+  stale_after: string;
+  detail: string;
+}
+
+export interface AXDiagnostics {
+  current_task_id: string | null;
+  current_step_id: string | null;
+  current_tool: string | null;
+  bundle_id: string | null;
+  semantic_target: {
+    identifier: string | null;
+    role: string | null;
+    semantic_alias: string | null;
+  } | null;
+  resolution_method: string | null;
+  resolution_confidence: number | null;
+  candidate_count: number | null;
+  focus_policy: FocusPolicy | null;
+  verification_evidence: string | null;
+  permission_error: string | null;
+  clarification_required: boolean;
+  updated_at: string | null;
+}
+
+export interface AccessibilityStatus {
+  permission: AXPermissionState;
+  applications: ApplicationProfile[];
+  diagnostics: AXDiagnostics;
+}
+
 export const api = {
   health: () => request<HealthResponse>("/api/health"),
   permissions: () => request<PermissionsResponse>("/api/permissions"),
@@ -218,6 +258,15 @@ export const api = {
   },
   applicationProfiles: () =>
     request<ApplicationProfile[]>("/api/application-profiles"),
+  accessibility: () => request<AccessibilityStatus>("/api/accessibility"),
+  openAccessibilitySettings: () =>
+    request<{ opened: boolean; permission: AXPermissionState }>(
+      "/api/accessibility/open-settings",
+      {
+        method: "POST",
+        body: JSON.stringify({ user_requested: true }),
+      },
+    ),
   dialogue: (taskId: string) =>
     request<Record<string, unknown>>(`/api/dialogue/${taskId}`),
   resolveDialogue: (taskId: string, text: string) =>

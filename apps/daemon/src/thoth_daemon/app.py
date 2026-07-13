@@ -12,6 +12,8 @@ from thoth_daemon.audit.store import AuditStore
 from thoth_daemon.config import Settings
 from thoth_daemon.core.application_profiles import build_default_application_profiles
 from thoth_daemon.core.approvals import ApprovalEngine
+from thoth_daemon.core.ax_controller import AXController
+from thoth_daemon.core.ax_diagnostics import AXDiagnosticsStore
 from thoth_daemon.core.claude_planner import AnthropicPlannerClient, ClaudePlanner
 from thoth_daemon.core.dialogue import DialogueExpired, OperationalDialogueStore
 from thoth_daemon.core.focus import FocusManager
@@ -40,6 +42,8 @@ from thoth_daemon.inference import (
 )
 from thoth_daemon.logging_setup import configure_logging, get_logger
 from thoth_daemon.macos.app_control import default_app_control
+from thoth_daemon.macos.ax_permission import default_ax_permission_service
+from thoth_daemon.macos.semantic_ax import RealSemanticAXAdapter
 from thoth_daemon.schemas import ResourceScope, WorkspaceProfile
 from thoth_daemon.security.auth import mint_token, write_token_file
 from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
@@ -153,6 +157,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         app_control = default_app_control()
         focus_manager = FocusManager(app_control)
+        ax_permissions = default_ax_permission_service()
+        ax_diagnostics = AXDiagnosticsStore()
+        app.state.ax_permissions = ax_permissions
+        app.state.ax_diagnostics = ax_diagnostics
+        ax_controller = AXController(
+            RealSemanticAXAdapter(ax_permissions),
+            ax_permissions,
+            app.state.application_profiles,
+            app_control=app_control,
+            diagnostics=ax_diagnostics,
+        )
         app.state.foreground = ForegroundContextBroker(
             app_control,
             workspace_matcher=match_workspace,
@@ -178,7 +193,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         register_git_tools(registry)  # git workflow tools (slice 5)
         register_app_tools(registry, app_control)  # macOS app launch/focus/list (slice 6)
         register_browser_tools(registry)  # scoped browser read (slice 7)
-        register_semantic_ax_tools(registry)  # bounded semantic AX tools (Phase 5.4)
+        register_semantic_ax_tools(registry, ax_controller)  # bounded semantic AX tools (5.4)
         register_browser_interaction_tools(registry)  # interactive session (Phase 4 slice 4)
 
         # Planner selection (slice 8). Default "mock"; "claude" uses a

@@ -72,6 +72,40 @@ async def test_foreground_capture_and_six_profiles_are_live(client: AsyncClient)
     assert any(profile["bundle_id"] == "com.apple.finder" for profile in profiles)
 
 
+async def test_accessibility_status_is_live_bounded_and_requires_explicit_settings_request(
+    client: AsyncClient,
+) -> None:
+    response = await client.get("/api/accessibility")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["permission"]["status"] in {
+        "not_determined",
+        "denied",
+        "granted",
+        "revoked",
+        "unavailable",
+    }
+    assert len(body["applications"]) == 6
+    assert set(body["diagnostics"]) >= {
+        "current_task_id",
+        "semantic_target",
+        "resolution_method",
+        "resolution_confidence",
+        "focus_policy",
+        "verification_evidence",
+        "permission_error",
+        "clarification_required",
+    }
+    assert "windows" not in body["diagnostics"]
+    assert "elements" not in body["diagnostics"]
+
+    refused = await client.post(
+        "/api/accessibility/open-settings",
+        json={"user_requested": False},
+    )
+    assert refused.status_code == 422
+
+
 async def test_dialogue_state_is_created_and_cannot_approve(client: AsyncClient) -> None:
     task = (await client.post("/api/tasks", json={"goal": "send the email"})).json()
     state = await client.get(f"/api/dialogue/{task['id']}")

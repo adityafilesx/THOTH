@@ -456,6 +456,19 @@ class _TaskRunner:
                 return "stop"
             self._executions += 1
 
+            tool = self._registry.get(invocation.tool_name)
+            parsed = tool.parse_arguments(invocation)
+            try:
+                tool.bind_execution_context(
+                    parsed,
+                    task_id=self.task.id,
+                    step_id=step.id,
+                )
+            except Exception as exc:
+                await self._audit_only(
+                    "diagnostics.unavailable",
+                    {"tool": tool.name, "reason": type(exc).__name__},
+                )
             result = await self._run_tool(invocation, allowed_scope)
             result.correlation_id = self._corr
             if self.cancelled or result.cancelled:

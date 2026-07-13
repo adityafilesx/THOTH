@@ -17,6 +17,7 @@ from thoth_daemon.core.application_profiles import (
     ProfileVerifier,
 )
 from thoth_daemon.core.ax_controller import AXController
+from thoth_daemon.core.ax_diagnostics import AXDiagnosticsStore
 from thoth_daemon.core.focus import FocusPolicy
 from thoth_daemon.macos.ax_permission import AXPermissionError, AXPermissionService
 from thoth_daemon.macos.semantic_ax import MockSemanticAXAdapter
@@ -179,6 +180,7 @@ def _registry(
     adapter: MockSemanticAXAdapter | None = None,
     *,
     trusted: bool = True,
+    diagnostics: AXDiagnosticsStore | None = None,
 ) -> tuple[ToolRegistry, MockSemanticAXAdapter]:
     active_adapter = adapter or _adapter(_element())
     controller = AXController(
@@ -186,6 +188,7 @@ def _registry(
         AXPermissionService(trust_probe=lambda: trusted),
         _profile(),
         clock=lambda: NOW,
+        diagnostics=diagnostics,
     )
     registry = ToolRegistry()
     register_semantic_ax_tools(registry, controller)
@@ -248,6 +251,22 @@ class TestContracts:
 
 
 class TestReads:
+    async def test_runtime_diagnostics_bind_task_and_record_resolution(self) -> None:
+        diagnostics = AXDiagnosticsStore()
+        registry, _ = _registry(diagnostics=diagnostics)
+        tool = registry.get("ax.read_value")
+        args = tool.input_model.model_validate({**_base_args("ax_read_value"), "query": _query()})
+        tool.bind_execution_context(args, task_id="task-ax", step_id="step-ax")
+        await tool.run(args, False)
+
+        snapshot = diagnostics.snapshot()
+        assert snapshot.current_task_id == "task-ax"
+        assert snapshot.current_tool == "ax.read_value"
+        assert snapshot.semantic_target is not None
+        assert snapshot.semantic_target.identifier == "ax-single-line-input"
+        assert snapshot.resolution_method == "identifier"
+        assert snapshot.resolution_confidence == 1.0
+
     async def test_inspect_find_read_and_supported_actions(self) -> None:
         registry, _ = _registry()
         inspect = registry.get("ax.inspect_application")
