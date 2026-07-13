@@ -54,6 +54,8 @@ class TestCapture:
         # Privacy invariant: the model has no image/screenshot field at all.
         assert "screenshot" not in ForegroundContext.model_fields
         assert "image" not in ForegroundContext.model_fields
+        assert "ax_tree" not in ForegroundContext.model_fields
+        assert "accessibility_tree" not in ForegroundContext.model_fields
 
     def test_title_is_redacted_at_capture(self) -> None:
         broker = ForegroundContextBroker(

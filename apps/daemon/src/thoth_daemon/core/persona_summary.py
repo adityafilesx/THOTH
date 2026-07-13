@@ -32,6 +32,34 @@ _MODEL_SUMMARIZABLE = frozenset(
     {ResponseIntent.VERIFIED_COMPLETION, ResponseIntent.PARTIAL_COMPLETION}
 )
 
+_EXECUTION_OR_POLICY_DIRECTIVE = re.compile(
+    r"(?:\btool_name\b|\barguments\b|\bshell_run\b|\bapprove\b|\bapproval\b|"
+    r"\blower\b.{0,24}\brisk\b|\brisk\b.{0,12}\bR[0-3]\b|\brm\s+-rf\b)",
+    re.IGNORECASE,
+)
+_CAPITALIZED_TARGET = re.compile(r"\b[A-Z][A-Za-z0-9_.-]{2,}\b")
+_PROTECTED_TARGET = re.compile(
+    r"(?:https?://[^\s,;]+|[\w.+-]+@[\w-]+\.[\w.-]+|"
+    r"(?:~|/)[^\s,;]+|\b(?:[a-z0-9-]+\.){2,}[a-z0-9-]+\b)",
+    re.IGNORECASE,
+)
+_GENERIC_CAPITALIZED = frozenset(
+    {
+        "all",
+        "both",
+        "everything",
+        "facts",
+        "four",
+        "one",
+        "summary",
+        "task",
+        "the",
+        "three",
+        "thoth",
+        "two",
+    }
+)
+
 _NUMBER_WORDS = {
     "zero": "0",
     "one": "1",
@@ -77,11 +105,25 @@ class FactualConsistencyValidator:
         except ResponsePolicyViolation as exc:
             raise FactualConsistencyError(f"policy: {exc}") from exc
 
+        if _EXECUTION_OR_POLICY_DIRECTIVE.search(candidate):
+            raise FactualConsistencyError(
+                "model summary contains an execution, approval, or policy directive"
+            )
+
         # No invented numbers: every digit token in the candidate must appear
         # in the source facts (counts, ports, versions cannot be hallucinated).
         corpus = " ".join(
             [fact.summary, *fact.succeeded_items, *fact.failed_items, fact.failure_reason or ""]
         )
+        corpus_folded = corpus.casefold()
+        for token in _PROTECTED_TARGET.findall(candidate):
+            if token.casefold().rstrip(".\")'}]") not in corpus_folded:
+                raise FactualConsistencyError(f"unsupported named target {token!r}")
+        for token in _CAPITALIZED_TARGET.findall(candidate):
+            folded = token.casefold()
+            if folded not in _GENERIC_CAPITALIZED and folded not in corpus_folded:
+                raise FactualConsistencyError(f"unsupported named target {token!r}")
+
         allowed = _number_tokens(corpus)
         for token in _number_tokens(candidate):
             if token not in allowed:

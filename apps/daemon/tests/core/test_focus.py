@@ -6,6 +6,8 @@ where the policy requires it, and INDEPENDENTLY verifies the final
 frontmost application.
 """
 
+import subprocess
+import sys
 from datetime import UTC, datetime
 
 import pytest
@@ -182,6 +184,22 @@ class TestToolFocusPolicyDeclaration:
         )
 
         assert step.model_dump(mode="json")["focus_policy"] == "keep_new_focus"
+
+    @pytest.mark.parametrize(
+        "statement",
+        [
+            "import thoth_daemon.core.focus; import thoth_daemon.tools.base",
+            "import thoth_daemon.tools.base; import thoth_daemon.core.focus",
+        ],
+    )
+    def test_focus_policy_import_order_has_no_cycle(self, statement: str) -> None:
+        completed = subprocess.run(
+            [sys.executable, "-c", statement],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        assert completed.returncode == 0, completed.stderr
 
 
 if __name__ == "__main__":  # pragma: no cover
