@@ -31,6 +31,10 @@ ignore = [
 "apps/daemon/src/thoth_daemon/evals/run_capstones.py" = ["S603", "S607"]
 # The inference HTTP caller's `timeout` param mirrors the real client API.
 "apps/daemon/src/thoth_daemon/inference/llamacpp.py" = ["ASYNC109"]
+# Hardware detection reads sysctl with fixed argv.
+"apps/daemon/src/thoth_daemon/inference/benchmark.py" = ["S603", "S607"]
+# Loopback Ollama tags check with a fixed host.
+"apps/daemon/src/thoth_daemon/evals/run_local_bench.py" = ["S310"]
 
 [tool.mypy]
 python_version = "3.12"
