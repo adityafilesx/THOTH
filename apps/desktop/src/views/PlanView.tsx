@@ -118,6 +118,11 @@ export function PlanView() {
                   <span className="font-mono text-[10px] text-faint">
                     {String(step.index + 1).padStart(2, "0")}
                   </span>
+                  {step.focus_policy && (
+                    <span className="font-mono text-[10px] text-faint">
+                      focus {step.focus_policy.replaceAll("_", " ")}
+                    </span>
+                  )}
                   <span className="truncate text-sm text-ink">
                     {step.title}
                   </span>

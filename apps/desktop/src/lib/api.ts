@@ -3,7 +3,7 @@
  * every mutation here maps 1:1 to a daemon endpoint, and no business
  * logic lives on this side.
  */
-import type { ApprovalRequest, Task } from "@thoth/shared-schemas";
+import type { ApprovalRequest, FocusPolicy, Task } from "@thoth/shared-schemas";
 
 import { getSessionToken } from "./auth";
 
@@ -90,6 +90,85 @@ export interface SettingsResponse {
   network_isolation: boolean;
 }
 
+export type ResponseIntent =
+  | "acknowledgement"
+  | "plan_ready"
+  | "approval_required"
+  | "execution_progress"
+  | "verified_completion"
+  | "partial_completion"
+  | "failed"
+  | "policy_refusal"
+  | "needs_clarification"
+  | "interrupted"
+  | "degraded_mode"
+  | "resumable_task";
+
+export type LocalRuntimeStatus =
+  "unavailable" | "starting" | "ready" | "generating" | "degraded" | "failed";
+
+export interface ForegroundContext {
+  captured_at: string;
+  reason: string;
+  active_bundle_id: string | null;
+  active_app_name: string | null;
+  active_window_title: string | null;
+  focused_ax_role: string | null;
+  focused_ax_identifier: string | null;
+  browser_domain: string | null;
+  selected_file_paths: string[];
+  workspace_id: string | null;
+  previous_bundle_id: string | null;
+  task_id: string | null;
+}
+
+export interface FocusRestorationResult {
+  restored: boolean;
+  verified: boolean;
+  requires_user: boolean;
+  cancelled: boolean;
+  final_bundle_id: string | null;
+  detail: string;
+}
+
+export interface TaskStages {
+  proposed: boolean;
+  approval: "not_required" | "required" | "pending" | "approved" | "denied";
+  executed: boolean;
+  verified: boolean;
+}
+
+export interface TaskPresentation {
+  task_id: string;
+  authoritative: true;
+  response: {
+    intent: ResponseIntent;
+    used_model: boolean;
+    display: { text: string };
+    spoken: { text: string; max_chars: number };
+  };
+  display_response: string;
+  spoken_response_preview: string;
+  foreground: ForegroundContext | null;
+  matched_workspace_id: string | null;
+  planned_focus_policy: FocusPolicy | null;
+  focus_result: FocusRestorationResult | null;
+  runtime_status: LocalRuntimeStatus;
+  dialogue_expires_at: string | null;
+  stages: TaskStages;
+}
+
+export type TaskPayload = Task & { presentation?: TaskPresentation };
+
+export interface ApplicationProfile {
+  bundle_id: string;
+  display_name: string;
+  version: string;
+  verified_capabilities: string[];
+  experimental_capabilities: string[];
+  forbidden_operations: string[];
+}
+
 export const api = {
   health: () => request<HealthResponse>("/api/health"),
   permissions: () => request<PermissionsResponse>("/api/permissions"),
@@ -105,21 +184,21 @@ export const api = {
     }),
   settings: () => request<SettingsResponse>("/api/settings"),
   createTask: (goal: string, source: "text" | "voice" = "text") =>
-    request<Task>("/api/tasks", {
+    request<TaskPayload>("/api/tasks", {
       method: "POST",
       body: JSON.stringify({ goal, source }),
     }),
-  listTasks: () => request<Task[]>("/api/tasks"),
-  getTask: (id: string) => request<Task>(`/api/tasks/${id}`),
+  listTasks: () => request<TaskPayload[]>("/api/tasks"),
+  getTask: (id: string) => request<TaskPayload>(`/api/tasks/${id}`),
   cancelTask: (id: string) =>
-    request<Task>(`/api/tasks/${id}/cancel`, { method: "POST" }),
+    request<TaskPayload>(`/api/tasks/${id}/cancel`, { method: "POST" }),
   pendingApprovals: () => request<ApprovalRequest[]>("/api/approvals/pending"),
   decideApproval: (
     id: string,
     approved: boolean,
     modifiedArguments?: Record<string, unknown>,
   ) =>
-    request<ApprovalRequest>(`/api/approvals/${id}/decision`, {
+    request<TaskPayload>(`/api/approvals/${id}/decision`, {
       method: "POST",
       body: JSON.stringify({
         approved,
@@ -130,4 +209,20 @@ export const api = {
     request<import("@thoth/shared-schemas").AuditEvent[]>(
       `/api/tasks/${id}/audit`,
     ),
+  operationalStatus: (id: string) =>
+    request<TaskPresentation>(`/api/operational-status/${id}`),
+  foreground: (reason = "user_requested", taskId?: string) => {
+    const query = new URLSearchParams({ reason });
+    if (taskId) query.set("task_id", taskId);
+    return request<ForegroundContext>(`/api/foreground?${query.toString()}`);
+  },
+  applicationProfiles: () =>
+    request<ApplicationProfile[]>("/api/application-profiles"),
+  dialogue: (taskId: string) =>
+    request<Record<string, unknown>>(`/api/dialogue/${taskId}`),
+  resolveDialogue: (taskId: string, text: string) =>
+    request<Record<string, unknown>>(`/api/dialogue/${taskId}/resolve`, {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    }),
 };

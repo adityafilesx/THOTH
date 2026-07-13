@@ -2,6 +2,7 @@ import { Mic, SendHorizontal } from "lucide-react";
 import { useState } from "react";
 
 import { StateLadder } from "@/components/StateLadder";
+import { OperationalSummary } from "@/components/OperationalSummary";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,10 @@ export function CommandCenter() {
 
   return (
     <div className="mx-auto flex h-full max-w-3xl flex-col gap-4">
+      {active?.presentation && (
+        <OperationalSummary presentation={active.presentation} />
+      )}
+
       <div className="flex min-h-0 flex-1 gap-4">
         <Card className="w-56 shrink-0 overflow-y-auto">
           <CardContent className="p-3">
@@ -63,7 +68,9 @@ export function CommandCenter() {
                 {active.error && (
                   <div>
                     <div className="eyebrow mb-1 text-danger">failure</div>
-                    <p className="font-mono text-xs text-danger">{active.error}</p>
+                    <p className="font-mono text-xs text-danger">
+                      {active.error}
+                    </p>
                   </div>
                 )}
               </div>
@@ -71,8 +78,8 @@ export function CommandCenter() {
               <div className="flex h-full flex-col items-center justify-center gap-2 py-16 text-center">
                 <p className="text-sm text-muted">No task running.</p>
                 <p className="text-xs text-faint">
-                  Type a goal below — THOTH plans it, classifies every step by risk, and asks
-                  before anything leaves this machine.
+                  Type a goal below — THOTH plans it, classifies every step by
+                  risk, and asks before anything leaves this machine.
                 </p>
               </div>
             )}
@@ -109,7 +116,12 @@ export function CommandCenter() {
           aria-label="Goal"
           className="h-10 font-mono"
         />
-        <Button type="submit" size="lg" disabled={!goal.trim() || submitting} aria-label="Send goal">
+        <Button
+          type="submit"
+          size="lg"
+          disabled={!goal.trim() || submitting}
+          aria-label="Send goal"
+        >
           <SendHorizontal size={14} />
           Run
         </Button>

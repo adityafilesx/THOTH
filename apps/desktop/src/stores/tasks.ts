@@ -11,13 +11,15 @@ import type {
 } from "@thoth/shared-schemas";
 import { create } from "zustand";
 
+import type { TaskPayload, TaskPresentation } from "@/lib/api";
+
 interface TasksState {
-  tasks: Record<string, Task>;
+  tasks: Record<string, TaskPayload>;
   activeTaskId: string | null;
   pendingApprovals: ApprovalRequest[];
   auditByTask: Record<string, AuditEvent[]>;
-  setTasks: (tasks: Task[]) => void;
-  upsertTask: (task: Task) => void;
+  setTasks: (tasks: TaskPayload[]) => void;
+  upsertTask: (task: TaskPayload) => void;
   setActiveTask: (id: string | null) => void;
   setPendingApprovals: (approvals: ApprovalRequest[]) => void;
   setAudit: (taskId: string, events: AuditEvent[]) => void;
@@ -48,24 +50,35 @@ export const useTasksStore = create<TasksState>((set) => ({
         case "task.step_finished": {
           const task = envelope.payload.task as Task | undefined;
           if (!task) return s;
+          const presentation = envelope.payload.presentation as
+            TaskPresentation | undefined;
+          const existing = s.tasks[task.id];
+          const merged: TaskPayload = {
+            ...task,
+            presentation: presentation ?? existing?.presentation,
+          };
           return {
             ...s,
-            tasks: { ...s.tasks, [task.id]: task },
+            tasks: { ...s.tasks, [task.id]: merged },
             activeTaskId: s.activeTaskId ?? task.id,
           };
         }
         case "approval.requested": {
-          const approval = envelope.payload.approval as ApprovalRequest | undefined;
+          const approval = envelope.payload.approval as
+            ApprovalRequest | undefined;
           if (!approval) return s;
           const rest = s.pendingApprovals.filter((a) => a.id !== approval.id);
           return { ...s, pendingApprovals: [...rest, approval] };
         }
         case "approval.decided": {
-          const approval = envelope.payload.approval as ApprovalRequest | undefined;
+          const approval = envelope.payload.approval as
+            ApprovalRequest | undefined;
           if (!approval) return s;
           return {
             ...s,
-            pendingApprovals: s.pendingApprovals.filter((a) => a.id !== approval.id),
+            pendingApprovals: s.pendingApprovals.filter(
+              (a) => a.id !== approval.id,
+            ),
           };
         }
         case "audit.appended": {
@@ -77,7 +90,9 @@ export const useTasksStore = create<TasksState>((set) => ({
             ...s,
             auditByTask: {
               ...s.auditByTask,
-              [event.task_id]: [...existing, event].sort((a, b) => a.seq - b.seq),
+              [event.task_id]: [...existing, event].sort(
+                (a, b) => a.seq - b.seq,
+              ),
             },
           };
         }
