@@ -139,3 +139,9 @@ The initial sandbox could not access the existing uv cache; the exact commands w
 10. Update ADRs and project truth documents, then run every completion gate before making the bounded Phase 5.2/5.3 claim.
 
 Production code remained untouched until this audit was completed.
+
+## Recovery completion addendum
+
+The continuation plan was executed without amending or discarding the Claude commits. Preserved foreground/focus work was repaired and committed first; application-profile, workspace, dialogue, persona/API, desktop, focus-enforcement, constraint, adversarial, and capstone changes were committed separately.
+
+Final measured gate: 782 daemon tests passed with one precise locked-desktop focus-restoration skip; 65 desktop tests passed; all static analysis, builds, Cargo, Alembic, and `make test` passed. Real host evidence and remaining limitations are recorded in `docs/PHASE_5_2_5_3_CAPSTONE.md`.

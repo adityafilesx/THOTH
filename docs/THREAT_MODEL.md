@@ -85,3 +85,21 @@ New attack surfaces and their mitigations; the §4 invariants all still hold and
 - AX element interaction and STT are pending the Accessibility permission and a local model + microphone respectively; both fail closed today.
 - A secret typed into a shell argument or commit message is recorded in audit (mitigated by per-command approval; documented in ADR-014/015).
 - Harness capstone approvals are granted programmatically (recorded as simulated-human); live capstones will use real human approvals.
+
+## 7. Phase 5.2–5.3 context and presentation surfaces
+
+| Surface | Threat | Mitigation |
+|---|---|---|
+| Persona/local summary | false success, target mutation, approval pressure, tool/risk directives | post-verification frozen facts; deterministic safety-sensitive wording; local summary validates success, counts, named targets, and directives; deterministic fallback; no tool interface |
+| Foreground/window context | title injection, sensitive titles/paths, continuous surveillance | on-demand snapshots; untrusted hints; redaction before bounded in-memory retention; no screenshot/image/full AX-tree field |
+| Focus management | background focus theft, model focus downgrade, false restoration claim | registered policy authority; execution-bound snapshot; ambiguous action runs nothing; independent final-frontmost verification; immutable audit; failures retained |
+| Application profiles | model/page self-expansion, forbidden-operation downgrade | frozen versioned profiles; unknown/undeclared/forbidden fail closed; experimental requires trusted opt-in; verified requires verifier mapping + real date |
+| Workspace association | title spoof, symlink escape, stale/removed workspace | approved paths/task workspace are authority; bundle/title hints only; normalization and symlink containment; stale/missing/ambiguous fail safely |
+| Operational dialogue | approval replay, scope expansion, stale/cross-task reference, push despite constraint | task isolation + TTL + authoritative objects; vague approval rejected; approved workspace set required; `no_push` checked before approval/execution; restart drops state |
+
+### Residual risks after Phase 5.3
+
+- The locked desktop prevented real final-focus/restoration evidence in this run; code fails closed and the live test skips with the precise `loginwindow` reason.
+- AX editor/document manipulation remains experimental until explicit Accessibility permission and a real verification pass.
+- Dialogue is deliberately volatile; restart loses short follow-up context rather than persisting sensitive operational memory.
+- Local-model availability depends on the loopback runtime. Model-dependent requests degrade deterministically; no cloud fallback is attempted.

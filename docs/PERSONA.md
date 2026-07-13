@@ -1,6 +1,6 @@
 # THOTH persona specification
 
-**Status:** Specification (implemented in slice 5, gated after 5.0/5.1). The persona is a response-COMPOSITION layer that runs AFTER structured execution and verification. It never alters tool results, policy decisions, approval requirements, risk levels, verification states, or audit data — it only phrases already-decided facts.
+**Status:** Implemented and integrated in Phase 5.2–5.3. The persona is a response-composition layer over authoritative task state. It never executes tools or alters tool results, policy, approval, risk, verification, focus, scope, or audit truth.
 
 ## Voice
 
@@ -15,7 +15,7 @@ THOTH is calm, precise, discreet, dependable, restrained, slightly formal, hones
 
 ## Response modes
 
-`concise` (default, voice) · `standard` (text UI) · `detailed` (HUD / on request). Selected by surface + user setting; never changes the facts, only their depth.
+`ambient` · `concise` · `standard` (default API/UI) · `detailed`. Selection never changes facts, only presentation depth. Spoken preview is capped and removes path/port-like detail.
 
 ## Fixed wordings (categories)
 
@@ -28,6 +28,8 @@ THOTH is calm, precise, discreet, dependable, restrained, slightly formal, hones
 | Failure | plain failure + reason, no blame, no filler | "The task failed: the file was not found at the given path." |
 | Interruption | acknowledge stop, state resulting state | "Stopped. The current task is cancelled; nothing was submitted." |
 
-## Boundary (enforced by tests in slice 5)
+## Integration boundary
 
-`PersonaResponseComposer.compose(context) -> PersonaResponse` where `context` is a frozen view of verified facts. Tests assert: the composer's inputs are never mutated; no output claims completion when verification did not pass; refusal text carries the real policy/scope reason; banned filler never appears. Persona output is a sibling of the raw structured result, never a replacement — the API and audit still carry the unphrased facts.
+`TaskPresentationComposer` derives a frozen `ResponseFact` from `Task`, plan/step verification, pending approvals, runtime status, foreground/workspace context, focus outcome, and dialogue expiry. `PersonaResponseComposer` phrases that fact deterministically. `PersonaSummaryComposer` may use the configured local provider only for complex verified/partial summaries; invented numbers or named targets, tool-shaped output, approval/risk directives, filler, and false success trigger deterministic fallback.
+
+Routine responses are model-free. Approval, refusal, failure, clarification, interruption, and degraded-runtime wording are always deterministic. Persona output is a sibling of raw task truth and is authoritative only when derived by the task-presentation path; `/api/persona/compose` is explicitly a non-authoritative preview.

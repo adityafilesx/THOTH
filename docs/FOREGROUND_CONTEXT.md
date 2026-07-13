@@ -1,20 +1,23 @@
 # Seamless computer control — architecture specification
 
-**Status:** Specification (implemented in slices 6–7, gated after 5.0/5.1). Builds on the Phase 4 app-control + AX adapters; adds no new risk downgrade path.
+**Status:** Implemented in Phase 5.3. Builds on the Phase 4 app-control adapter and adds no authorization, approval, scope, or risk path.
 
 ## ForegroundContextBroker
 
-A read-mostly broker that snapshots the current foreground context on demand (never continuously, never screenshots). Fields: active application bundle id, active window title, focused Accessibility role, selected file URLs (only when safely obtainable via AX/Finder without extra permission), current browser domain (from the interactive session), associated workspace (resolved from path/app), current THOTH task, previous foreground application. All of it is UNTRUSTED, read-only context used to resolve references ("open it", "this project") — it can never approve actions or expand scope.
+`ForegroundContextBroker` snapshots current context only when an API/task response requests it. It has no timer, background loop, screenshot/image field, or full Accessibility-tree field. Optional title/selection/browser providers are redacted at capture time. History is process-local and purged after a bounded retention window (120 seconds by default).
+
+All foreground data is untrusted, read-only context. Window titles and bundle ids are hints; they cannot grant workspace scope, approve an action, change an objective, or expand a capability profile.
 
 ## Focus-change protocol (every focus-changing action)
 
-1. Record current foreground context (broker snapshot).
-2. Decide whether a focus change is actually necessary (skip if the target is already frontmost).
-3. Perform the action (existing app_launch / app_focus / AX tools — same risk levels, same scope enforcement).
-4. Restore focus to the previous application when appropriate (configurable; default restore for background operations).
-5. Verify the final foreground state where required (ACCESSIBILITY_VALUE / APPLICATION_RUNNING verifiers — reuse Phase 4 framework).
+1. The registered tool supplies the authoritative `FocusPolicy`; model proposals are overwritten.
+2. Immediately before execution, the orchestrator records the current frontmost app.
+3. `ASK_IF_AMBIGUOUS` runs no tool and requires explicit direction.
+4. The tool runs only through the existing `EXECUTING`-state path.
+5. The manager independently checks `KEEP_NEW_FOCUS` or `DO_NOT_STEAL_FOCUS`, or restores and verifies `RESTORE_PREVIOUS_FOCUS`.
+6. Every result emits immutable `focus.result` audit evidence and is exposed to presentation. An unverified focus result makes a completed task display as partial.
 
-Screenshots are never captured or retained. Selected-file URLs are read only when obtainable without new TCC prompts.
+Shell and background-service tools remain `DO_NOT_STEAL_FOCUS`; they do not foreground Terminal. App launch/focus are `KEEP_NEW_FOCUS`. Browser policies are per operation rather than one blanket setting. Screenshots and full AX trees are never captured or retained by the broker.
 
 ## Application capability profiles
 

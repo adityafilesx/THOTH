@@ -1,6 +1,6 @@
 # THOTH
 
-**A local-first, voice-enabled macOS computer operator.** THOTH converts user intentions into safe, inspectable, and verified computer actions.
+**A local-first macOS computer operator.** THOTH converts user intentions into safe, inspectable, and verified computer actions.
 
 THOTH is not a chatbot, a note-taking app, a generic second brain, or a voice-command launcher. It is an autonomous operator with a deterministic safety core:
 
@@ -8,11 +8,11 @@ THOTH is not a chatbot, a note-taking app, a generic second brain, or a voice-co
 
 ## Status
 
-**Phases 0–3 complete; Phase 4 built (live-planner runs pending an API key).** The deterministic safety core is real and enforced end-to-end: risk policy (R0–R3, no downgrades), single-use invocation-bound approvals, scoped tool execution only in `EXECUTING`, twelve independent post-execution verifiers (fail-closed when a probe is unavailable), bounded recovery (retries → replans → `FAILED_REQUIRES_USER`), and a tamper-evident audit hash chain. Real capabilities behind the same contracts: scoped filesystem, restricted shell, git, macOS app launch/focus, Accessibility element tools (element interaction pending the TCC permission), interactive browser sessions with two-phase form submission (`prepare` → explicit R2 approval of the exact payload → `submit`), a planning-only skill engine with five built-in skills, and push-to-talk voice adapters (STT pending a model + microphone; interruptible `say` TTS verified).
+**Phases 0–4 and 5.0–5.3 are built.** The deterministic safety core is enforced end to end: no tool execution outside `EXECUTING`, no risk downgrade, invocation-bound single-use approvals, scoped tools, independent verification, bounded recovery, and tamper-evident audit. Local inference, reflex/skill/planner routing, a post-verification persona, snapshot foreground context, explicit focus policy, six application profiles, authoritative workspace association, and short-lived dialogue now sit around that unchanged core.
 
 Five capstone workflows ran against the real OS and were **independently verified** — real file and git state, a real `https://example.com` fetch, a real single-use approval, a real TextEdit launch ([docs/CAPSTONE_REPORT.md](docs/CAPSTONE_REPORT.md)). Those runs used scripted reference plans; the same goals through the **live Claude planner are pending live verification** (requires `ANTHROPIC_API_KEY`).
 
-Maximum supported claim: **THOTH can safely execute and verify selected multi-step workflows across approved local applications, files, Git repositories and browser environments.** It does not claim general autonomous computer control. See [docs/STATUS.md](docs/STATUS.md).
+Current bounded claim: **THOTH provides a consistent local persona, understands short-lived operational context, detects the active macOS workspace, and manages supported application focus without unnecessary disruption.** It does not claim voice interaction, proactivity, universal app control, continuous visual awareness, or long-term memory. See [docs/STATUS.md](docs/STATUS.md) and [Phase 5.2–5.3 capstones](docs/PHASE_5_2_5_3_CAPSTONE.md).
 
 ## Principles (priority order)
 
@@ -89,6 +89,8 @@ No planner or tool may downgrade its own risk level. See [docs/THREAT_MODEL.md](
 - [docs/MILESTONES.md](docs/MILESTONES.md) — phase checklists
 - [docs/DECISIONS.md](docs/DECISIONS.md) — architecture decision records
 - [docs/STATUS.md](docs/STATUS.md) — honest current state
+- [docs/PERSONA_EVALUATION.md](docs/PERSONA_EVALUATION.md) — persona safety/evaluation evidence
+- [docs/APPLICATION_PROFILES.md](docs/APPLICATION_PROFILES.md) — supported app capability authority
 
 ## Security
 

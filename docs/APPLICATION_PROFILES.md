@@ -14,14 +14,16 @@ Statuses:
 |---|---|---|---|---|
 | Finder | `com.apple.finder` | running/foreground detection, launch, focus | current folder, selected files | coordinate clicking, permission changes |
 | TextEdit | `com.apple.TextEdit` | running/foreground detection, launch, focus | AX read/edit | unrestricted document access |
-| Visual Studio Code | `com.microsoft.VSCode` | running/foreground detection, launch, focus | authoritative workspace match, editor read/edit | unrestricted editor control, extension install |
+| Visual Studio Code | `com.microsoft.VSCode` | running/foreground detection, launch, focus, authoritative workspace match | editor read/edit | unrestricted editor control, extension install |
 | Terminal | `com.apple.Terminal` | running/foreground detection, launch, focus | safe working-directory metadata | shell execution through UI, terminal-history reads |
 | THOTH Accessibility Test App | `org.python.python` | none yet | AX inspect/read/edit/press | production use, launch by non-unique bundle id |
 | Chromium | `org.chromium.Chromium` | background read-only operations | background interaction, foreground presentation, forms, submission | bypassing two-phase submission, profile/credential access |
 
 The dev AX test app is currently a Tk process and does not have a unique packaged bundle identifier. Its profile therefore marks no capability verified and forbids bundle-based launch; `org.python.python` is recorded only to identify the current host process shape. It must be packaged with a unique bundle identifier before that profile can authorize launch/focus.
 
-VS Code workspace matching remains experimental until the authoritative matcher is implemented and a real THOTH workspace match is recorded. Chromium form interaction and submission remain experimental despite unit/fixture coverage; they are not described as generally verified web control.
+VS Code workspace matching was exercised on 2026-07-13 against the real running `com.microsoft.VSCode` process and the approved THOTH repository path. Authoritative sources were the approved path and active task workspace; the bundle id was a hint. Chromium form interaction and submission remain experimental despite unit/fixture coverage and are not described as generally verified web control.
+
+The profile registry is immutable after startup. Model output and webpage/window content cannot self-add a capability, promote experimental status, or downgrade a forbidden operation.
 
 ## Authority and verification
 
