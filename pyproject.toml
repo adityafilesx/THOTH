@@ -27,6 +27,8 @@ ignore = [
 # Verification probes intentionally shell out to `ps`/`git` with fixed argv
 # (shell=False, no untrusted input) for read-only state probes.
 "apps/daemon/src/thoth_daemon/core/verifiers/context.py" = ["S603", "S607"]
+# Capstone CLI sets up its own git fixture workspace with fixed argv.
+"apps/daemon/src/thoth_daemon/evals/run_capstones.py" = ["S603", "S607"]
 
 [tool.mypy]
 python_version = "3.12"
