@@ -47,3 +47,25 @@ def test_diagnostics_omit_labels_values_and_raw_trees() -> None:
     assert "private document title" not in str(payload)
     assert "windows" not in payload
     assert "elements" not in payload
+
+
+def test_diagnostics_retain_exactly_one_latest_snapshot() -> None:
+    store = AXDiagnosticsStore()
+    query = AXElementQuery(
+        application_bundle_id="me.adityalabs.thoth.axtest",
+        identifier="ax-save-button",
+    )
+    for task_id in ("old-task", "current-task"):
+        store.bind(
+            task_id=task_id,
+            step_id="step",
+            tool_name="ax.find_element",
+            bundle_id=query.application_bundle_id,
+            query=query,
+            focus_policy=FocusPolicy.DO_NOT_STEAL_FOCUS,
+            now=NOW,
+        )
+
+    assert store.max_retained_snapshots == 1
+    assert store.snapshot().current_task_id == "current-task"
+    assert not hasattr(store, "history")

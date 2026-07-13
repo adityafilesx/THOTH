@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from threading import Lock
+from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -40,6 +41,8 @@ class AXDiagnosticsSnapshot(BaseModel):
 
 class AXDiagnosticsStore:
     """Keep only the latest redacted semantic operation in process memory."""
+
+    max_retained_snapshots: ClassVar[int] = 1
 
     def __init__(self) -> None:
         self._lock = Lock()

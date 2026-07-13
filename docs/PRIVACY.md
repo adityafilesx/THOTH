@@ -8,6 +8,7 @@
 - Cloud model calls (the planning-only Anthropic Messages call — ADR-019; NOT a tool-executing agent loop) send only the normalized user goal and the tool catalog (names, risks, descriptions). Tool results, file contents, and Keychain material are never sent. The API key lives in the environment only — never in SQLite, logs, prompts, audit payloads, or frontend state. Planner-evaluation and capstone reports are redacted by construction (tool names + risk levels only; step inputs excluded).
 - Phase 5 defaults remain local: routine persona responses are deterministic; optional summaries/plans use the configured loopback provider. Cloud inference is disabled unless explicitly enabled and is never a fallback.
 - Foreground awareness is snapshot-on-demand. THOTH does not continuously capture screens or Accessibility trees. Window titles and selected paths redact before bounded in-memory retention.
+- Accessibility inspection is operation-local and bounded. Secure/authentication values are omitted before typed snapshots are built; focused-modal filtering prevents background-window data from becoming an unintended action target.
 
 ## Data inventory
 

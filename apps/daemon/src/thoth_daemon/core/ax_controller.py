@@ -202,7 +202,13 @@ class AXController:
             raise RuntimeError("AX query bundle does not match the approved bundle")
         self._permissions.require_granted(now=self.now())
         snapshot = self._adapter.inspect_application(bundle_id)
-        elements = [element for window in snapshot.windows for element in window.elements]
+        # A focused modal changes the active interaction surface. Never reach
+        # through it to a background window merely because an old semantic
+        # selector still matches there. Explicit modal handling requires a
+        # separately profile-authorized target.
+        focused_windows = tuple(window for window in snapshot.windows if window.focused is True)
+        active_windows = focused_windows or snapshot.windows
+        elements = [element for window in active_windows for element in window.elements]
         result = self._resolver.resolve(
             query,
             elements,

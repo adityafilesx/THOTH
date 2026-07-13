@@ -149,3 +149,19 @@ The daemon exposes a fresh permission state, copied application profiles, and on
 ## ADR-037: Accessibility persona outcomes are closed and deterministic
 **Date:** 2026-07-14 · **Status:** Accepted
 Terminal semantic AX presentation classifies authoritative task state, dotted AX tool identity, verification detail, and focus result into a closed outcome enum. Fixed display and shorter spoken templates cover permission, resolution, capability, verification, focus, application-lifecycle, stale-reference, partial, and cancellation outcomes without a model call. Planner titles, raw AX labels/descriptions/errors, and model result summaries are never echoed; application names come from a bundle-ID allowlist. `COMPLETED` alone is insufficient: verified wording requires every AX step's independent verification and required focus verification to pass. Rejected: model-written AX failures/successes, trusting an AX API return as task verification, and presenting untrusted UI text as execution truth.
+
+## ADR-038: Accessibility permission is fresh execution authority
+**Date:** 2026-07-14 · **Status:** Accepted
+`AXIsProcessTrusted` is observed through a typed five-state service. Cached state is presentation-only; plan validation and every operation force fresh trust, including another probe immediately before mutation. Revocation therefore stops before adapter mutation. System Settings can open once only after a literal explicit user request, and THOTH never clicks TCC controls or equates a settings visit with a grant. Rejected: cached permission as authority, automated permission granting, repeated prompting, and failing unrelated non-AX capabilities when TCC is absent.
+
+## ADR-039: AX snapshots are bounded, untrusted, and operation-local
+**Date:** 2026-07-14 · **Status:** Accepted
+Typed snapshots carry `TOOL_RESULT_UNTRUSTED` provenance, omit coordinates, suppress secure/authentication values before construction, and enforce fixed depth/node/window/string/action ceilings. Resolver candidates and wait attempts are bounded; focused windows hide background targets when a modal is active. Raw snapshots are not persisted. Desktop diagnostics replace exactly one redacted semantic summary and expose no tree, label, value, or screenshot. Rejected: full-tree retention, continuous capture, coordinate identity, unbounded polling, and reaching through an unexpected modal.
+
+## ADR-040: Browser DOM automation remains primary over AX
+**Date:** 2026-07-14 · **Status:** Accepted
+Chromium's profile orders `browser_dom` before Accessibility. Playwright owns page semantics, domain scope, URL verification, downloads, and two-phase form submission; AX is limited to bounded application/window inspection until a separately evidenced capability is added. This keeps webpage content untrusted and preserves submission approval binding. Rejected: duplicating form submission through generic AX, using AX to bypass DOM/domain controls, and promoting browser UI capabilities from page text.
+
+## ADR-041: Restricted subprocess remains primary over Terminal AX
+**Date:** 2026-07-14 · **Status:** Accepted
+Terminal's profile contains only bounded AX snapshot rules. Commands execute through the restricted argv-only subprocess tool with scope, risk, timeout, cancellation, redaction, and independent verification; THOTH never opens or foregrounds Terminal merely to run a background command. Rejected: typing commands into Terminal through AX, reading terminal history, and treating visible terminal output as shell execution authority.

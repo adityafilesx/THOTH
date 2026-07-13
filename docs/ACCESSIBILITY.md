@@ -180,3 +180,18 @@ An AX API return is never sufficient for success language. A task in
 independent passing verification result and any required focus result passed.
 All AX failure, refusal, clarification, cancellation, and routine response
 paths remain model-free.
+
+## Hard resource limits
+
+Traversal is capped at depth 12, 500 elements, 20 windows, 4,096 UTF-8 bytes
+per string, and 32 actions per element. Resolution considers at most 50 fuzzy
+candidates. Wait tools accept at most 30 seconds and stop after at most 600
+fresh semantic resolution polls. Mutations accept at most eight additional
+verifiers, execute under the registry's 10-second tool timeout, and have no
+internal retry loop. Orchestrator recovery remains separately bounded at two
+retries per step. Diagnostics retain exactly one redacted in-memory snapshot.
+
+When any focused window exists, semantic resolution considers only focused
+windows. This prevents a stale/background selector from reaching through an
+unexpected modal. Interaction with the modal itself still requires an exact
+profile-authorized semantic target.

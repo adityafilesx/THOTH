@@ -28,6 +28,11 @@ from thoth_daemon.schemas.ax import (
 from thoth_daemon.tools.base import IndependentToolVerification, ToolDefinition
 from thoth_daemon.tools.registry import ToolRegistry
 
+MAX_AX_ACTION_SECONDS = 30.0
+MAX_AX_WAIT_SECONDS = 30.0
+MAX_AX_RESOLUTION_ATTEMPTS = 600
+AX_POLL_INTERVAL_SECONDS = 0.05
+
 
 class _In(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -57,7 +62,7 @@ class _MutationIn(_QueryIn):
     expected_result: str = Field(min_length=1, max_length=4096)
     verifier: AXVerificationRequest
     additional_verifiers: tuple[AXVerificationRequest, ...] = Field(default=(), max_length=8)
-    timeout_s: float = Field(gt=0, le=30)
+    timeout_s: float = Field(gt=0, le=MAX_AX_ACTION_SECONDS)
 
     @model_validator(mode="after")
     def _verifier_bundle_matches(self) -> _MutationIn:
@@ -407,7 +412,7 @@ class AXSelectOption(_MutationTool):
 
 class AXWaitForElementIn(_QueryIn):
     capability: Literal["ax_wait_for_element"]
-    timeout_s: float = Field(default=5, gt=0, le=30)
+    timeout_s: float = Field(default=5, gt=0, le=MAX_AX_WAIT_SECONDS)
 
 
 class AXWaitForElement(_SemanticTool):
@@ -417,26 +422,34 @@ class AXWaitForElement(_SemanticTool):
     output_model = AXResolutionResult
     default_risk = RiskLevel.R0
     timeout_s = 35
+    max_resolution_attempts = MAX_AX_RESOLUTION_ATTEMPTS
     verification = VerificationStrategy.NONE_READONLY
 
     async def run(self, args: AXWaitForElementIn, dry_run: bool) -> AXResolutionResult:
         deadline = monotonic() + args.timeout_s
+        attempts = 0
         while True:
+            attempts += 1
             result = await asyncio.to_thread(
                 self._controller.resolve,
                 args.bundle_id,
                 args.capability,
                 args.query,
             )
-            if result.element is not None or result.ambiguous or monotonic() >= deadline:
+            if (
+                result.element is not None
+                or result.ambiguous
+                or monotonic() >= deadline
+                or attempts >= self.max_resolution_attempts
+            ):
                 return result
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(AX_POLL_INTERVAL_SECONDS)
 
 
 class AXWaitForValueIn(_QueryIn):
     capability: Literal["ax_wait_for_value"]
     expected_value: AXPrimitive
-    timeout_s: float = Field(default=5, gt=0, le=30)
+    timeout_s: float = Field(default=5, gt=0, le=MAX_AX_WAIT_SECONDS)
 
 
 class AXWaitForValueOut(_Out):
@@ -453,13 +466,16 @@ class AXWaitForValue(_SemanticTool):
     output_model = AXWaitForValueOut
     default_risk = RiskLevel.R0
     timeout_s = 35
+    max_resolution_attempts = MAX_AX_RESOLUTION_ATTEMPTS
     verification = VerificationStrategy.NONE_READONLY
     redaction_fields: ClassVar[list[str]] = ["expected_value"]
 
     async def run(self, args: AXWaitForValueIn, dry_run: bool) -> AXWaitForValueOut:
         deadline = monotonic() + args.timeout_s
         last: AXElementSnapshot | None = None
+        attempts = 0
         while True:
+            attempts += 1
             result = await asyncio.to_thread(
                 self._controller.resolve,
                 args.bundle_id,
@@ -479,14 +495,18 @@ class AXWaitForValue(_SemanticTool):
                     value_metadata=metadata,
                     observed_at=self._controller.now(),
                 )
-            if result.ambiguous or monotonic() >= deadline:
+            if (
+                result.ambiguous
+                or monotonic() >= deadline
+                or attempts >= self.max_resolution_attempts
+            ):
                 return AXWaitForValueOut(
                     matched=False,
                     element=last,
                     value_metadata=metadata,
                     observed_at=self._controller.now(),
                 )
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(AX_POLL_INTERVAL_SECONDS)
 
 
 class AXListSupportedActionsOut(_Out):
