@@ -26,6 +26,7 @@ from thoth_daemon.storage.permissions import PermissionStore
 from thoth_daemon.storage.skills import SkillStore
 from thoth_daemon.tools.app_tools import register_app_tools
 from thoth_daemon.tools.ax_tools import register_ax_tools
+from thoth_daemon.tools.browser_interaction_tools import register_browser_interaction_tools
 from thoth_daemon.tools.browser_tools import register_browser_tools
 from thoth_daemon.tools.fs_tools import register_fs_tools
 from thoth_daemon.tools.git_tools import register_git_tools
@@ -85,6 +86,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         register_app_tools(registry)  # macOS app launch/focus/list (slice 6)
         register_browser_tools(registry)  # scoped browser read (slice 7)
         register_ax_tools(registry)  # AX element tools (Phase 4 slice 3; needs TCC live)
+        register_browser_interaction_tools(registry)  # interactive session (Phase 4 slice 4)
 
         # Planner selection (slice 8). Default "mock"; "claude" uses a
         # planning-only Anthropic call (needs ANTHROPIC_API_KEY). Plan output is
