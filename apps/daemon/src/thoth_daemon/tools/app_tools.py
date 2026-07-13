@@ -83,6 +83,9 @@ class AppLaunch(ToolDefinition[AppLaunchIn, AppLaunchOut]):
     def requested_scope(self, args: AppLaunchIn) -> ResourceScope:
         return ResourceScope(apps=[args.app])
 
+    def focus_target(self, args: AppLaunchIn) -> str:
+        return args.app
+
     async def run(self, args: AppLaunchIn, dry_run: bool) -> AppLaunchOut:
         if dry_run:
             return AppLaunchOut(app=args.app, launched=False)
@@ -116,6 +119,9 @@ class AppFocus(ToolDefinition[AppFocusIn, AppFocusOut]):
 
     def requested_scope(self, args: AppFocusIn) -> ResourceScope:
         return ResourceScope(apps=[args.app])
+
+    def focus_target(self, args: AppFocusIn) -> str:
+        return args.app
 
     async def run(self, args: AppFocusIn, dry_run: bool) -> AppFocusOut:
         ok = self._ac.activate(args.app)

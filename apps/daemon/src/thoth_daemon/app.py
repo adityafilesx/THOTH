@@ -14,6 +14,7 @@ from thoth_daemon.core.application_profiles import build_default_application_pro
 from thoth_daemon.core.approvals import ApprovalEngine
 from thoth_daemon.core.claude_planner import AnthropicPlannerClient, ClaudePlanner
 from thoth_daemon.core.dialogue import OperationalDialogueStore
+from thoth_daemon.core.focus import FocusManager
 from thoth_daemon.core.foreground import ForegroundContext, ForegroundContextBroker
 from thoth_daemon.core.local_plan_client import OllamaPlanClient
 from thoth_daemon.core.local_planner import LocalPlanner
@@ -151,6 +152,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return match.workspace_id if match else None
 
         app_control = default_app_control()
+        focus_manager = FocusManager(app_control)
         app.state.foreground = ForegroundContextBroker(
             app_control,
             workspace_matcher=match_workspace,
@@ -203,6 +205,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             workspace=default_ws,
             enforcer=ScopeEnforcer(),
             scope_provider=scope_provider,
+            focus_manager=focus_manager,
+            focus_result_sink=app.state.focus_results.__setitem__,
         )
         log.info("daemon_started", extra={"data": {"host": cfg.host, "port": cfg.port}})
         yield

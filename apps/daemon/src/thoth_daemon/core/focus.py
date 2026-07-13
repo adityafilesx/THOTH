@@ -80,11 +80,37 @@ class FocusManager:
             )
 
         action()
+        return transition, self.reconcile(
+            before,
+            target_app,
+            policy,
+            cancelled=cancelled is not None and cancelled(),
+        )
 
-        if cancelled is not None and cancelled():
+    def reconcile(
+        self,
+        before: FocusSnapshot,
+        target_app: str,
+        policy: FocusPolicy,
+        *,
+        cancelled: bool = False,
+    ) -> FocusRestorationResult:
+        """Verify/restore focus after an action executed elsewhere.
+
+        The orchestrator uses this form because tool execution is async. The
+        final frontmost application is always read independently from macOS.
+        """
+        if policy is FocusPolicy.ASK_IF_AMBIGUOUS:
+            return FocusRestorationResult(
+                requires_user=True,
+                final_bundle_id=before.bundle_id,
+                detail="focus change is ambiguous; awaiting user confirmation",
+            )
+
+        if cancelled:
             # Cancelled mid-transition: do NOT perform restoration steps.
             final = self._app_control.frontmost()
-            return transition, FocusRestorationResult(
+            return FocusRestorationResult(
                 cancelled=True,
                 final_bundle_id=final.bundle_id if final else None,
                 detail="cancelled during focus transition; no restoration performed",
@@ -94,7 +120,7 @@ class FocusManager:
             self._app_control.activate(before.app_name)
             final = self._app_control.frontmost()
             verified = final is not None and final.bundle_id == before.bundle_id
-            return transition, FocusRestorationResult(
+            return FocusRestorationResult(
                 restored=verified,
                 verified=verified,
                 final_bundle_id=final.bundle_id if final else None,
@@ -106,7 +132,7 @@ class FocusManager:
         if policy is FocusPolicy.DO_NOT_STEAL_FOCUS:
             # Focus must NOT have moved off the prior app.
             verified = final_bundle == before.bundle_id
-            return transition, FocusRestorationResult(
+            return FocusRestorationResult(
                 verified=verified,
                 final_bundle_id=final_bundle,
                 detail="focus preserved" if verified else "focus was stolen unexpectedly",
@@ -115,7 +141,7 @@ class FocusManager:
         # KEEP_NEW_FOCUS: independently confirm the requested application,
         # rather than trusting the action's return value.
         verified = final is not None and final.name == target_app
-        return transition, FocusRestorationResult(
+        return FocusRestorationResult(
             verified=verified,
             final_bundle_id=final_bundle,
             detail="new focus kept" if verified else "target focus was not verified",

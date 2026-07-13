@@ -264,10 +264,16 @@ class TaskPresentationComposer:
 
 
 def task_event_payload(
-    task: Task, pending_approvals: list[ApprovalRequest] | None = None
+    task: Task,
+    pending_approvals: list[ApprovalRequest] | None = None,
+    focus_result: FocusRestorationResult | None = None,
 ) -> dict[str, object]:
     """WS sibling payload: raw task truth plus deterministic presentation."""
-    presentation = TaskPresentationComposer().compose(task, pending_approvals=pending_approvals)
+    presentation = TaskPresentationComposer().compose(
+        task,
+        pending_approvals=pending_approvals,
+        focus_result=focus_result,
+    )
     return {
         "task": task.model_dump(mode="json"),
         "presentation": presentation.model_dump(mode="json"),

@@ -66,6 +66,14 @@ class ToolDefinition(ABC, Generic[TInput, TOutput]):
         scope. Default: touches nothing (mocks and pure-compute tools)."""
         return ResourceScope()
 
+    def focus_target(self, args: Any) -> str | None:
+        """Return the OS application name whose focus must be verified.
+
+        Most tools do not target an application. Focus-changing tools must
+        override this rather than relying on model-provided target text.
+        """
+        return None
+
     @abstractmethod
     async def run(self, args: Any, dry_run: bool) -> BaseModel:
         """Execute the tool. Must cooperate with cancellation and honor

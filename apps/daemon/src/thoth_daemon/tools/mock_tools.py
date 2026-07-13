@@ -94,6 +94,9 @@ class MockOpenApp(ToolDefinition[OpenAppIn, OpenAppOut]):
         super().__init__()
         self.side_effect_count = 0
 
+    def focus_target(self, args: OpenAppIn) -> str:
+        return args.app
+
     async def run(self, args: OpenAppIn, dry_run: bool) -> OpenAppOut:
         if not dry_run:
             self.side_effect_count += 1

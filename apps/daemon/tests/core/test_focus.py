@@ -145,11 +145,15 @@ class TestToolFocusPolicyDeclaration:
         assert AppList(MockAppControl()).focus_policy is FocusPolicy.DO_NOT_STEAL_FOCUS
 
     def test_app_launch_and_focus_keep_new_focus(self) -> None:
-        from thoth_daemon.tools.app_tools import AppFocus, AppLaunch
+        from thoth_daemon.tools.app_tools import AppFocus, AppFocusIn, AppLaunch, AppLaunchIn
 
         ctrl = MockAppControl()
-        assert AppLaunch(ctrl).focus_policy is FocusPolicy.KEEP_NEW_FOCUS
-        assert AppFocus(ctrl).focus_policy is FocusPolicy.KEEP_NEW_FOCUS
+        launch = AppLaunch(ctrl)
+        focus = AppFocus(ctrl)
+        assert launch.focus_policy is FocusPolicy.KEEP_NEW_FOCUS
+        assert focus.focus_policy is FocusPolicy.KEEP_NEW_FOCUS
+        assert launch.focus_target(AppLaunchIn(app="TextEdit")) == "TextEdit"
+        assert focus.focus_target(AppFocusIn(app="TextEdit")) == "TextEdit"
 
     def test_shell_and_background_service_policy_do_not_steal_focus(self) -> None:
         from thoth_daemon.tools.shell_tool import ShellRun

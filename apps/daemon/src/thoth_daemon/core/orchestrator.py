@@ -19,12 +19,14 @@ Enforcement wired here, not by convention:
 import asyncio
 import contextlib
 from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import ValidationError
 
 from thoth_daemon.audit.store import AuditStore
 from thoth_daemon.core.approvals import ApprovalEngine, ApprovalRequiredError
+from thoth_daemon.core.focus import FocusManager, FocusPolicy, FocusRestorationResult
 from thoth_daemon.core.planner import PlannerAdapter
 from thoth_daemon.core.policy import PolicyEngine
 from thoth_daemon.core.recovery import RecoveryController
@@ -49,6 +51,7 @@ from thoth_daemon.tools.registry import ToolRegistry
 
 Publish = Callable[[str, dict[str, Any]], Awaitable[None]]
 ScopeProvider = Callable[[], Awaitable[ResourceScope]]
+FocusResultSink = Callable[[str, FocusRestorationResult], None]
 
 # Hard cap on tool executions per task (initial plan + retries + replans
 # combined). Exceeding it escalates to FAILED_REQUIRES_USER (slice 8).
@@ -94,6 +97,8 @@ class _TaskRunner:
         enforcer: ScopeEnforcer,
         scope_provider: ScopeProvider,
         planner: PlannerAdapter,
+        focus_manager: FocusManager | None,
+        focus_result_sink: FocusResultSink | None,
     ) -> None:
         self.task = task
         self.plan = plan
@@ -110,6 +115,9 @@ class _TaskRunner:
         self._workspace = workspace
         self._enforcer = enforcer
         self._scope_provider = scope_provider
+        self._focus_manager = focus_manager
+        self._focus_result_sink = focus_result_sink
+        self._focus_result: FocusRestorationResult | None = None
 
         self._pending: list[tuple[str, dict[str, Any]]] = []
         self.machine = TaskStateMachine(task.id, task.state, emit=self._collect)
@@ -133,7 +141,11 @@ class _TaskRunner:
             if event_type == "state.transition":
                 await self._publish(
                     "task.state_changed",
-                    task_event_payload(self.task, self._approvals.pending()),
+                    task_event_payload(
+                        self.task,
+                        self._approvals.pending(),
+                        self._focus_result,
+                    ),
                 )
 
     async def _goto(self, state: TaskState, reason: str) -> None:
@@ -360,7 +372,11 @@ class _TaskRunner:
         await self._publish(
             "task.step_started",
             {
-                **task_event_payload(self.task, self._approvals.pending()),
+                **task_event_payload(
+                    self.task,
+                    self._approvals.pending(),
+                    self._focus_result,
+                ),
                 "step_id": step.id,
             },
         )
@@ -419,7 +435,11 @@ class _TaskRunner:
             await self._publish(
                 "task.step_finished",
                 {
-                    **task_event_payload(self.task, self._approvals.pending()),
+                    **task_event_payload(
+                        self.task,
+                        self._approvals.pending(),
+                        self._focus_result,
+                    ),
                     "step_id": step.id,
                     "verification": verification.model_dump(mode="json"),
                 },
@@ -491,6 +511,30 @@ class _TaskRunner:
     async def _run_tool(
         self, invocation: ToolInvocation, allowed_scope: ResourceScope
     ) -> ToolResult:
+        before = None
+        target_app = invocation.tool_name
+        policy = self._registry.get(invocation.tool_name).focus_policy
+        if self._focus_manager is not None:
+            try:
+                tool = self._registry.get(invocation.tool_name)
+                parsed = tool.parse_arguments(invocation)
+                target_app = tool.focus_target(parsed) or invocation.tool_name
+                before = self._focus_manager.snapshot(datetime.now(UTC))
+                if policy is FocusPolicy.ASK_IF_AMBIGUOUS:
+                    focus = self._focus_manager.reconcile(before, target_app, policy)
+                    await self._record_focus(focus)
+                    return ToolResult(
+                        invocation_id=invocation.id,
+                        ok=False,
+                        error="focus intent is ambiguous; explicit user direction required",
+                    )
+            except Exception as exc:
+                await self._record_focus(
+                    FocusRestorationResult(
+                        detail=f"focus snapshot unavailable: {type(exc).__name__}"
+                    )
+                )
+
         exec_task = asyncio.ensure_future(
             guarded_execute(self.machine, self._registry, invocation, allowed_scope)
         )
@@ -498,12 +542,45 @@ class _TaskRunner:
         done, _ = await asyncio.wait({exec_task, cancel_task}, return_when=asyncio.FIRST_COMPLETED)
         if exec_task in done:
             cancel_task.cancel()
-            return exec_task.result()
+            result = exec_task.result()
+            if self._focus_manager is not None and before is not None:
+                try:
+                    focus = self._focus_manager.reconcile(before, target_app, policy)
+                except Exception as exc:
+                    focus = FocusRestorationResult(
+                        detail=f"focus verification unavailable: {type(exc).__name__}"
+                    )
+                await self._record_focus(focus)
+            return result
         # Cancellation won the race.
         exec_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await exec_task
+        if self._focus_manager is not None and before is not None:
+            try:
+                focus = self._focus_manager.reconcile(
+                    before,
+                    target_app,
+                    policy,
+                    cancelled=True,
+                )
+            except Exception as exc:
+                focus = FocusRestorationResult(
+                    cancelled=True,
+                    detail=f"focus verification unavailable: {type(exc).__name__}",
+                )
+            await self._record_focus(focus)
         return ToolResult(invocation_id=invocation.id, ok=False, cancelled=True, error="cancelled")
+
+    async def _record_focus(self, result: FocusRestorationResult) -> None:
+        # A later background read must never hide an earlier failed focus
+        # postcondition. Retain the most recent failure; otherwise retain the
+        # latest verified result.
+        if self._focus_result is None or not result.verified:
+            self._focus_result = result
+        if self._focus_result_sink is not None:
+            self._focus_result_sink(self.task.id, self._focus_result)
+        await self._audit_only("focus.result", result.model_dump(mode="json"))
 
     async def _check_cancel(self) -> bool:
         if self.cancelled and self.machine.state not in TERMINAL_STATES:
@@ -553,6 +630,8 @@ class Orchestrator:
         workspace: WorkspaceProfile,
         enforcer: ScopeEnforcer | None = None,
         scope_provider: ScopeProvider | None = None,
+        focus_manager: FocusManager | None = None,
+        focus_result_sink: FocusResultSink | None = None,
     ) -> None:
         self._registry = registry
         self._policy = policy
@@ -565,6 +644,8 @@ class Orchestrator:
         self._workspace = workspace
         self._enforcer = enforcer or ScopeEnforcer()
         self._scope_provider = scope_provider or _empty_scope
+        self._focus_manager = focus_manager
+        self._focus_result_sink = focus_result_sink
         self._runners: dict[str, _TaskRunner] = {}
         self._tasks: dict[str, Task] = {}
         self._background: set[asyncio.Task[None]] = set()
@@ -607,6 +688,8 @@ class Orchestrator:
             enforcer=self._enforcer,
             scope_provider=self._scope_provider,
             planner=self._planner,
+            focus_manager=self._focus_manager,
+            focus_result_sink=self._focus_result_sink,
         )
         self._runners[task.id] = runner
         background = asyncio.ensure_future(runner.run())
@@ -646,6 +729,8 @@ class Orchestrator:
             enforcer=self._enforcer,
             scope_provider=self._scope_provider,
             planner=self._planner,
+            focus_manager=self._focus_manager,
+            focus_result_sink=self._focus_result_sink,
         )
         self._runners[task.id] = runner
         background = asyncio.ensure_future(runner.run())
