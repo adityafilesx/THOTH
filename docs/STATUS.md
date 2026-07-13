@@ -1,6 +1,6 @@
 # THOTH Status
 
-**As of:** 2026-07-13 · **Phases 0, 1, 2 complete. All nine Phase 3 slices built (1–9). Phase 4 in progress** — slices 2 (correlation IDs), 7 (independent verification framework) and 8 (bounded recovery + FAILED_REQUIRES_USER) are merged; see `docs/PHASE_4_GAP_REPORT.md` for the full plan. **Live-verification gaps remain, each needing an environment this session lacked:** the planner's live Anthropic call (an API key), AX *element* interaction (Accessibility TCC), and git `push` (a network remote).
+**As of:** 2026-07-13 · **Phases 0, 1, 2 complete. All nine Phase 3 slices built (1–9). Phase 4 in progress** — slices 2 (correlation IDs), 7 (independent verification framework), 8 (bounded recovery + FAILED_REQUIRES_USER) and 9 (tamper-evident audit hash chain) are merged; see `docs/PHASE_4_GAP_REPORT.md` for the full plan. **Live-verification gaps remain, each needing an environment this session lacked:** the planner's live Anthropic call (an API key), AX *element* interaction (Accessibility TCC), and git `push` (a network remote).
 
 ## Where we are
 
@@ -13,9 +13,9 @@
 
 | Gate | Result |
 |---|---|
-| `uv run --project apps/daemon pytest` | **469 passed** |
+| `uv run --project apps/daemon pytest` | **477 passed** |
 | `ruff check apps/daemon` | All checks passed |
-| `mypy apps/daemon/src` (strict) | no issues, 60 files |
+| `mypy apps/daemon/src` (strict) | no issues, 61 files |
 | `pnpm -C apps/desktop test` (vitest) | **56 passed** |
 | `pnpm -C apps/desktop lint` (eslint) | clean |
 | `pnpm -C apps/desktop typecheck` (tsc) | clean |
@@ -23,7 +23,7 @@
 | `cargo check` (src-tauri) | Finished |
 | `alembic upgrade head` | applies; 8 tables |
 
-**Total: 525 automated tests passing.**
+**Total: 533 automated tests passing.**
 
 Also verified end-to-end against a live daemon: R0 task → `COMPLETED`; R3 plan → `FAILED` at policy; R2 task → `WAITING_FOR_APPROVAL` → approve → `COMPLETED`; approval reuse → HTTP 404 (single-use); cancel → `CANCELLED`; audit sequence monotonic; no secrets in JSONL logs.
 

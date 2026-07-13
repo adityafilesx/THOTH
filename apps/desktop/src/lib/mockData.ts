@@ -102,6 +102,8 @@ export const MOCK_AUDIT: AuditEvent[] = [
     event_type: "task.created",
     payload: { goal: "Continue the THOTH project" },
     created_at: "2026-07-11T09:00:00Z",
+    prev_hash: "",
+    hash: "mock-hash-1",
   },
   {
     event_id: "mock-ev-2",
@@ -111,6 +113,8 @@ export const MOCK_AUDIT: AuditEvent[] = [
     event_type: "state.transition",
     payload: { from: "RECEIVED", to: "UNDERSTANDING" },
     created_at: "2026-07-11T09:00:01Z",
+    prev_hash: "",
+    hash: "mock-hash-2",
   },
   {
     event_id: "mock-ev-3",
@@ -120,6 +124,8 @@ export const MOCK_AUDIT: AuditEvent[] = [
     event_type: "state.transition",
     payload: { from: "UNDERSTANDING", to: "PLANNING" },
     created_at: "2026-07-11T09:00:02Z",
+    prev_hash: "",
+    hash: "mock-hash-3",
   },
   {
     event_id: "mock-ev-4",
@@ -129,6 +135,8 @@ export const MOCK_AUDIT: AuditEvent[] = [
     event_type: "policy.decision",
     payload: { step: 0, effective_risk: "R0", requires_approval: false },
     created_at: "2026-07-11T09:00:04Z",
+    prev_hash: "",
+    hash: "mock-hash-4",
   },
   {
     event_id: "mock-ev-5",
@@ -138,5 +146,7 @@ export const MOCK_AUDIT: AuditEvent[] = [
     event_type: "tool.result",
     payload: { tool: "mock_read_file", ok: true, duration_ms: 42 },
     created_at: "2026-07-11T09:00:08Z",
+    prev_hash: "",
+    hash: "mock-hash-5",
   },
 ];

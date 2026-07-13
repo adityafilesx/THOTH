@@ -3,6 +3,7 @@ from typing import Any, cast
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict
 
+from thoth_daemon.audit.store import AuditStore
 from thoth_daemon.core.orchestrator import Orchestrator
 from thoth_daemon.schemas import TaskSource
 
@@ -51,6 +52,15 @@ async def get_task(task_id: str, request: Request) -> dict[str, Any]:
 async def task_audit(task_id: str, request: Request) -> list[dict[str, Any]]:
     events = await _orch(request).task_audit(task_id)
     return [e.model_dump(mode="json") for e in events]
+
+
+@router.get("/api/tasks/{task_id}/audit/verify")
+async def verify_task_audit(task_id: str, request: Request) -> dict[str, Any]:
+    """Recompute the task's tamper-evident hash chain and return the
+    verification manifest (slice 9)."""
+    audit = cast(AuditStore, request.app.state.audit)
+    manifest = await audit.verify_chain(task_id)
+    return manifest.model_dump(mode="json")
 
 
 @router.post("/api/tasks/{task_id}/cancel")

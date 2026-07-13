@@ -187,6 +187,10 @@ class AuditEvent(StrictModel):
     event_type: str
     payload: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=_utcnow)
+    # Tamper-evident hash chain (slice 9): hash commits to prev_hash +
+    # task_id + correlation_id + seq + event_type + payload + created_at.
+    prev_hash: str = ""
+    hash: str = ""
 
 
 class PolicyDecision(StrictModel):

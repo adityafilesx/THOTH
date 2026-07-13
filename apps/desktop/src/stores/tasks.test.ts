@@ -113,6 +113,8 @@ describe("applyEvent", () => {
     const ev = (seq: number, id: string): AuditEvent => ({
       event_id: id,
       correlation_id: "t-1",
+      prev_hash: "",
+      hash: `h-${seq}`,
       task_id: "t-1",
       seq,
       event_type: "state.transition",

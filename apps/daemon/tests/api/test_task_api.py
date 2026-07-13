@@ -30,6 +30,14 @@ class TestTaskEndpoints:
         assert seqs == list(range(len(seqs)))
         assert audit[0]["event_type"] == "task.created"
 
+    async def test_audit_verify_endpoint_returns_valid_manifest(self, client: AsyncClient) -> None:
+        task = (await client.post("/api/tasks", json={"goal": "read notes"})).json()
+        manifest = (await client.get(f"/api/tasks/{task['id']}/audit/verify")).json()
+        assert manifest["valid"] is True
+        assert manifest["events"] > 0
+        assert len(manifest["head_hash"]) == 64
+        assert manifest["first_invalid_seq"] is None
+
 
 class TestApprovalEndpoints:
     async def test_r2_halts_and_can_be_approved(self, client: AsyncClient) -> None:

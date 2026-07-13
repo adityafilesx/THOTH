@@ -31,6 +31,16 @@
       "format": "date-time",
       "title": "Created At",
       "type": "string"
+    },
+    "prev_hash": {
+      "default": "",
+      "title": "Prev Hash",
+      "type": "string"
+    },
+    "hash": {
+      "default": "",
+      "title": "Hash",
+      "type": "string"
     }
   },
   "required": [

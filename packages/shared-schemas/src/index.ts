@@ -130,6 +130,19 @@ export interface AuditEvent {
   event_type: string;
   payload: Record<string, unknown>;
   created_at: string;
+  /** Tamper-evident hash chain (slice 9). */
+  prev_hash: string;
+  hash: string;
+}
+
+/** Result of GET /api/tasks/{id}/audit/verify. */
+export interface ChainManifest {
+  task_id: string;
+  valid: boolean;
+  events: number;
+  head_hash: string;
+  first_invalid_seq: number | null;
+  reason: string;
 }
 
 export type WsEventType =

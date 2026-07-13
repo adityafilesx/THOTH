@@ -43,6 +43,8 @@ class AuditEventRow(Base):
     event_type: Mapped[str] = mapped_column(String(64))
     payload_json: Mapped[dict] = mapped_column(JSON)  # type: ignore[type-arg]
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    prev_hash: Mapped[str] = mapped_column(String(64), default="")
+    hash: Mapped[str] = mapped_column(String(64), default="")
 
 
 class ApprovalRow(Base):
