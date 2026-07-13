@@ -16,10 +16,17 @@ const STYLES: Record<TaskState, string> = {
   RECOVERING: "border-amber/40 bg-amber/10 text-amber",
   COMPLETED: "border-success/40 bg-success/10 text-success",
   FAILED: "border-danger/40 bg-danger/10 text-danger",
+  FAILED_REQUIRES_USER: "border-danger/40 bg-danger/10 text-danger",
   CANCELLED: QUIET,
 };
 
-const PULSING: TaskState[] = ["EXECUTING", "VERIFYING", "PLANNING", "UNDERSTANDING", "RECOVERING"];
+const PULSING: TaskState[] = [
+  "EXECUTING",
+  "VERIFYING",
+  "PLANNING",
+  "UNDERSTANDING",
+  "RECOVERING",
+];
 
 export function StateBadge({ state }: { state: TaskState }) {
   return (
@@ -31,7 +38,10 @@ export function StateBadge({ state }: { state: TaskState }) {
       )}
     >
       {PULSING.includes(state) && (
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" aria-hidden />
+        <span
+          className="h-1.5 w-1.5 animate-pulse rounded-full bg-current"
+          aria-hidden
+        />
       )}
       {state.replaceAll("_", " ")}
     </span>

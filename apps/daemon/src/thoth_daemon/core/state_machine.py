@@ -46,9 +46,18 @@ TRANSITIONS: dict[TaskState, frozenset[TaskState]] = {
             TaskState.FAILED,
         }
     ),
-    TaskState.RECOVERING: frozenset({TaskState.EXECUTING, TaskState.FAILED, TaskState.CANCELLED}),
+    TaskState.RECOVERING: frozenset(
+        {
+            TaskState.EXECUTING,  # retry the failed step
+            TaskState.PLANNING,  # bounded replan (slice 8)
+            TaskState.FAILED_REQUIRES_USER,  # budgets exhausted; user must act
+            TaskState.FAILED,
+            TaskState.CANCELLED,
+        }
+    ),
     TaskState.COMPLETED: frozenset(),
     TaskState.FAILED: frozenset(),
+    TaskState.FAILED_REQUIRES_USER: frozenset(),
     TaskState.CANCELLED: frozenset(),
 }
 

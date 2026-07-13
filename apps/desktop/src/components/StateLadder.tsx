@@ -7,14 +7,18 @@ import { cn } from "@/lib/utils";
  * rendered as a launch-sequence checklist; the current state is lit, past
  * states dimly confirmed, terminal states colored by outcome.
  */
-const ORDER: TaskState[] = TASK_STATES.filter(
-  (s) => !["COMPLETED", "FAILED", "CANCELLED"].includes(s),
-);
-const TERMINALS: TaskState[] = ["COMPLETED", "FAILED", "CANCELLED"];
+const TERMINALS: TaskState[] = [
+  "COMPLETED",
+  "FAILED",
+  "FAILED_REQUIRES_USER",
+  "CANCELLED",
+];
+const ORDER: TaskState[] = TASK_STATES.filter((s) => !TERMINALS.includes(s));
 
 function terminalStyle(state: TaskState): string {
   if (state === "COMPLETED") return "text-success";
-  if (state === "FAILED") return "text-danger";
+  if (state === "FAILED" || state === "FAILED_REQUIRES_USER")
+    return "text-danger";
   return "text-muted";
 }
 
@@ -23,7 +27,10 @@ export function StateLadder({ current }: { current: TaskState | null }) {
   const isTerminal = current !== null && TERMINALS.includes(current);
 
   return (
-    <ol data-testid="state-ladder" className="flex flex-col gap-0.5 font-mono text-[11px]">
+    <ol
+      data-testid="state-ladder"
+      className="flex flex-col gap-0.5 font-mono text-[11px]"
+    >
       {ORDER.map((state, i) => {
         const isCurrent = state === current;
         const isPast = !isTerminal && currentIndex > i;
@@ -52,11 +59,13 @@ export function StateLadder({ current }: { current: TaskState | null }) {
           aria-current={state === current ? "step" : undefined}
           className={cn(
             "flex items-center gap-2 rounded-sm px-2 py-1 uppercase tracking-wider",
-            state === current ? cn("bg-raised", terminalStyle(state)) : "text-faint/60",
+            state === current
+              ? cn("bg-raised", terminalStyle(state))
+              : "text-faint/60",
           )}
         >
           <span aria-hidden>{state === current ? "■" : "·"}</span>
-          {state}
+          {state.replaceAll("_", " ")}
         </li>
       ))}
     </ol>

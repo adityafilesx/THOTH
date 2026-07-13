@@ -12,6 +12,8 @@
     "action": {
       "enum": [
         "retry",
+        "replan",
+        "escalate",
         "fail"
       ],
       "title": "Action",

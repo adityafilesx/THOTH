@@ -65,6 +65,26 @@ def test_self_transition_is_invalid() -> None:
         machine.transition(TaskState.EXECUTING, reason="noop")
 
 
+def test_recovering_can_escalate_to_failed_requires_user() -> None:
+    machine = TaskStateMachine(task_id="t1", state=TaskState.RECOVERING, emit=Recorder())
+    machine.transition(TaskState.FAILED_REQUIRES_USER, reason="budgets exhausted")
+    assert machine.state is TaskState.FAILED_REQUIRES_USER
+
+
+def test_recovering_can_replan() -> None:
+    machine = TaskStateMachine(task_id="t1", state=TaskState.RECOVERING, emit=Recorder())
+    machine.transition(TaskState.PLANNING, reason="replanning after failure")
+    assert machine.state is TaskState.PLANNING
+
+
+def test_failed_requires_user_is_terminal() -> None:
+    assert TaskState.FAILED_REQUIRES_USER in TERMINAL_STATES
+    machine = TaskStateMachine(task_id="t1", state=TaskState.FAILED_REQUIRES_USER, emit=Recorder())
+    for dst in ALL_STATES:
+        with pytest.raises(InvalidTransitionError):
+            machine.transition(dst, reason="test")
+
+
 def test_full_happy_path_emits_ordered_audit_trail() -> None:
     recorder = Recorder()
     machine = TaskStateMachine(task_id="t1", state=TaskState.RECEIVED, emit=recorder)

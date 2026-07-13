@@ -12,10 +12,13 @@ class TaskState(StrEnum):
     RECOVERING = "RECOVERING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
+    FAILED_REQUIRES_USER = "FAILED_REQUIRES_USER"
     CANCELLED = "CANCELLED"
 
 
-TERMINAL_STATES = frozenset({TaskState.COMPLETED, TaskState.FAILED, TaskState.CANCELLED})
+TERMINAL_STATES = frozenset(
+    {TaskState.COMPLETED, TaskState.FAILED, TaskState.FAILED_REQUIRES_USER, TaskState.CANCELLED}
+)
 
 
 class RiskLevel(StrEnum):

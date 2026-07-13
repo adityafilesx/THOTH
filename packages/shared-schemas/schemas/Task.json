@@ -157,6 +157,7 @@
         "RECOVERING",
         "COMPLETED",
         "FAILED",
+        "FAILED_REQUIRES_USER",
         "CANCELLED"
       ],
       "title": "TaskState",

@@ -16,6 +16,7 @@ export type TaskState =
   | "RECOVERING"
   | "COMPLETED"
   | "FAILED"
+  | "FAILED_REQUIRES_USER"
   | "CANCELLED";
 
 export const TASK_STATES: TaskState[] = [
@@ -29,6 +30,7 @@ export const TASK_STATES: TaskState[] = [
   "RECOVERING",
   "COMPLETED",
   "FAILED",
+  "FAILED_REQUIRES_USER",
   "CANCELLED",
 ];
 

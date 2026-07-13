@@ -49,6 +49,10 @@ from thoth_daemon.tools.registry import ToolRegistry
 Publish = Callable[[str, dict[str, Any]], Awaitable[None]]
 ScopeProvider = Callable[[], Awaitable[ResourceScope]]
 
+# Hard cap on tool executions per task (initial plan + retries + replans
+# combined). Exceeding it escalates to FAILED_REQUIRES_USER (slice 8).
+MAX_EXECUTIONS_PER_TASK = 25
+
 
 class ExecutionStateError(Exception):
     """Raised when tool execution is attempted outside the EXECUTING state."""
@@ -88,10 +92,13 @@ class _TaskRunner:
         workspace: WorkspaceProfile,
         enforcer: ScopeEnforcer,
         scope_provider: ScopeProvider,
+        planner: PlannerAdapter,
     ) -> None:
         self.task = task
         self.plan = plan
         self._corr = task.correlation_id
+        self._planner = planner
+        self._executions = 0
         self._registry = registry
         self._policy = policy
         self._approvals = approvals
@@ -185,10 +192,55 @@ class _TaskRunner:
             return
 
         await self._goto(TaskState.PLANNING, "building execution plan")
+        while True:
+            outcome = await self._run_plan_cycle()
+            if outcome is None:
+                return  # terminal state already set
+            if outcome == "__completed__":
+                await self._goto(TaskState.COMPLETED, "all steps verified")
+                self.task.result_summary = f"Completed {len(self.plan.steps)} step(s)."
+                await self._audit_only("task.completed", {"steps": len(self.plan.steps)})
+                return
+            # Bounded replan: the RecoveryController approved a replan and
+            # ``outcome`` carries the failure context. The machine is in
+            # RECOVERING; the planner is re-invoked (still planning-only)
+            # and the fresh plan re-enters validation and risk review.
+            await self._goto(TaskState.PLANNING, "replanning after failure")
+            try:
+                new_plan = self._planner.plan(
+                    self.task.id, f"{self.task.goal}\n\n[RECOVERY] {outcome}"
+                )
+            except Exception as exc:
+                await self._fail(f"replanning failed: {exc}")
+                return
+            await self._audit_only(
+                "recovery.replanned",
+                {
+                    "reason": outcome,
+                    "summary": new_plan.summary,
+                    "steps": len(new_plan.steps),
+                },
+            )
+            self.plan = new_plan
+
+    async def _run_plan_cycle(self) -> str | None:
+        """Validate, risk-review, and execute the current plan. Returns
+        ``"__completed__"`` when every step verified, ``None`` when a
+        terminal state was set, or a failure-context string when the
+        recovery controller requested a bounded replan."""
         self.plan.correlation_id = self._corr
         for step in self.plan.steps:
             step.correlation_id = self._corr
         self.task.plan = self.plan
+        if len(self.plan.steps) > MAX_EXECUTIONS_PER_TASK:
+            await self._audit_only(
+                "plan.rejected",
+                {"reason": f"plan exceeds {MAX_EXECUTIONS_PER_TASK} steps"},
+            )
+            await self._fail(
+                f"plan exceeds {MAX_EXECUTIONS_PER_TASK} steps ({len(self.plan.steps)})"
+            )
+            return None
         # Validate the plan against the tool registry BEFORE risk review.
         for step in self.plan.steps:
             if not self._registry.has(step.tool_name):
@@ -197,9 +249,9 @@ class _TaskRunner:
                 )
                 await self._goto(TaskState.RISK_REVIEW, "risk review")
                 await self._fail(f"unknown tool '{step.tool_name}' in plan")
-                return
+                return None
         if await self._check_cancel():
-            return
+            return None
 
         await self._goto(TaskState.RISK_REVIEW, "risk review")
         decisions = []
@@ -225,23 +277,29 @@ class _TaskRunner:
                 await self._fail(
                     f"step '{step.title}' blocked by policy: {'; '.join(decision.reasons)}"
                 )
-                return
+                return None
             decisions.append(decision)
         if await self._check_cancel():
-            return
+            return None
 
         for step, decision in zip(self.plan.steps, decisions, strict=True):
-            ok = await self._execute_step(step, decision.requires_approval, decision.effective_risk)
-            if not ok:
-                return  # terminal state already set
+            outcome = await self._execute_step(
+                step, decision.requires_approval, decision.effective_risk
+            )
+            if outcome == "ok":
+                continue
+            if outcome == "stop":
+                return None  # terminal state already set
+            return outcome  # replan requested; outcome is the failure context
 
-        await self._goto(TaskState.COMPLETED, "all steps verified")
-        self.task.result_summary = f"Completed {len(self.plan.steps)} step(s)."
-        await self._audit_only("task.completed", {"steps": len(self.plan.steps)})
+        return "__completed__"
 
     async def _execute_step(
         self, step: PlanStep, requires_approval: bool, effective_risk: Any
-    ) -> bool:
+    ) -> str:
+        """Run one step to a verdict. Returns ``"ok"`` (verified),
+        ``"stop"`` (terminal state set), or a failure-context string when
+        the recovery controller requested a bounded replan."""
         invocation = ToolInvocation(
             correlation_id=self._corr,
             task_id=self.task.id,
@@ -255,7 +313,7 @@ class _TaskRunner:
         # EXECUTING. Resolved fresh so a revocation mid-task takes effect now.
         allowed_scope = await self._scope_provider()
         if not await self._scope_gate(step, invocation, allowed_scope):
-            return False
+            return "stop"
 
         # Reach EXECUTING, passing through approval if the step needs it.
         if self.machine.state is TaskState.VERIFYING:
@@ -280,12 +338,12 @@ class _TaskRunner:
             await self._publish("approval.decided", {"approval": decided.model_dump(mode="json")})
             if self.cancelled:
                 await self._goto(TaskState.CANCELLED, "cancelled while awaiting approval")
-                return False
+                return "stop"
             if not approved:
                 rec = self._recovery.on_denied(self.task.id, step.id, "approval denied")
                 await self._audit_only("recovery.decision", rec.model_dump(mode="json"))
                 await self._fail(f"approval denied for step '{step.title}'")
-                return False
+                return "stop"
             # Refresh invocation arguments if the user modified them.
             invocation.arguments = decided.arguments
             await self._goto(TaskState.EXECUTING, "approved; executing")
@@ -300,7 +358,7 @@ class _TaskRunner:
         )
         while True:
             if await self._check_cancel():
-                return False
+                return "stop"
 
             if requires_approval:
                 try:
@@ -308,13 +366,24 @@ class _TaskRunner:
                 except ApprovalRequiredError as exc:
                     await self._audit_only("execution_blocked", {"reason": str(exc)})
                     await self._fail(str(exc))
-                    return False
+                    return "stop"
+
+            # Hard execution budget across the whole task (initial plan +
+            # retries + replans). Exhaustion escalates to the user.
+            if self._executions >= MAX_EXECUTIONS_PER_TASK:
+                step.status = StepStatus.FAILED
+                await self._escalate(
+                    f"execution budget exhausted ({MAX_EXECUTIONS_PER_TASK} tool runs); "
+                    "user intervention required"
+                )
+                return "stop"
+            self._executions += 1
 
             result = await self._run_tool(invocation, allowed_scope)
             result.correlation_id = self._corr
             if self.cancelled or result.cancelled:
                 await self._goto(TaskState.CANCELLED, "cancelled mid-execution")
-                return False
+                return "stop"
 
             await self._audit_only(
                 "tool.result",
@@ -350,7 +419,8 @@ class _TaskRunner:
 
             if verification.passed:
                 step.status = StepStatus.SUCCEEDED
-                return True
+                self._recovery.on_step_success(self.task.id)
+                return "ok"
 
             rec = self._recovery.on_step_failure(
                 self.task.id,
@@ -362,7 +432,20 @@ class _TaskRunner:
             if rec.action == "fail":
                 step.status = StepStatus.FAILED
                 await self._fail(f"step '{step.title}' failed: {verification.detail}")
-                return False
+                return "stop"
+            if rec.action == "escalate":
+                step.status = StepStatus.FAILED
+                await self._escalate(
+                    f"step '{step.title}' failed: {verification.detail}; {rec.reason}"
+                )
+                return "stop"
+            if rec.action == "replan":
+                step.status = StepStatus.FAILED
+                await self._goto(TaskState.RECOVERING, f"replan {rec.attempt}")
+                return (
+                    f"previous plan failed at step '{step.title}' "
+                    f"({verification.detail}); produce a corrected plan"
+                )
             await self._goto(TaskState.RECOVERING, f"retry {rec.attempt}")
             await self._goto(TaskState.EXECUTING, "retrying step")
 
@@ -426,6 +509,17 @@ class _TaskRunner:
             with contextlib.suppress(InvalidTransitionError):
                 await self._goto(TaskState.FAILED, error)
         await self._audit_only("task.failed", {"error": error})
+
+    async def _escalate(self, error: str) -> None:
+        """Recovery budgets exhausted: end in FAILED_REQUIRES_USER so a
+        human decides — never a silent failure, never an unbounded loop."""
+        self.task.error = error
+        if self.machine.state not in TERMINAL_STATES:
+            with contextlib.suppress(InvalidTransitionError):
+                if self.machine.state is not TaskState.RECOVERING:
+                    await self._goto(TaskState.RECOVERING, "escalating to user")
+                await self._goto(TaskState.FAILED_REQUIRES_USER, error)
+        await self._audit_only("task.failed_requires_user", {"error": error})
 
     @staticmethod
     def _target_of(step: PlanStep) -> str:
@@ -504,6 +598,7 @@ class Orchestrator:
             workspace=self._workspace,
             enforcer=self._enforcer,
             scope_provider=self._scope_provider,
+            planner=self._planner,
         )
         self._runners[task.id] = runner
         background = asyncio.ensure_future(runner.run())

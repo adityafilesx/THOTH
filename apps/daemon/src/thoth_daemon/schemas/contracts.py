@@ -199,7 +199,7 @@ class PolicyDecision(StrictModel):
 class RecoveryDecision(StrictModel):
     task_id: str
     step_id: str
-    action: Literal["retry", "fail"]
+    action: Literal["retry", "replan", "escalate", "fail"]
     attempt: int = Field(ge=0)
     reason: str
 

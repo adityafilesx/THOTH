@@ -71,11 +71,13 @@ async def _orch(tmp_path: Path, planner: PlannerAdapter) -> Orchestrator:
 
 
 async def test_step_fails_when_independent_probe_fails(tmp_path: Path) -> None:
-    # Tool succeeds, but the declared file never exists → step must fail.
+    # Tool succeeds, but the declared file never exists → the step can never
+    # verify; bounded recovery (slice 8) retries, replans, then escalates to
+    # the user instead of silently failing.
     orch = await _orch(tmp_path, _CheckPlanner(tmp_path / "never.txt"))
     task = await orch.submit("inspect")
-    settled = await orch.settle(task.id)
-    assert settled.state is TaskState.FAILED
+    settled = await orch.settle(task.id, timeout=10.0)
+    assert settled.state is TaskState.FAILED_REQUIRES_USER
     assert "file_exists" in (settled.error or "")
 
 
