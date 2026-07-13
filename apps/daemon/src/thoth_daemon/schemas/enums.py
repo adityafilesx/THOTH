@@ -58,6 +58,15 @@ class RiskLevel(StrEnum):
         return self.rank >= other.rank
 
 
+class FocusPolicy(StrEnum):
+    """Authoritative final-focus behaviour declared by registered tools."""
+
+    KEEP_NEW_FOCUS = "keep_new_focus"
+    RESTORE_PREVIOUS_FOCUS = "restore_previous_focus"
+    DO_NOT_STEAL_FOCUS = "do_not_steal_focus"
+    ASK_IF_AMBIGUOUS = "ask_if_ambiguous"
+
+
 class TaskSource(StrEnum):
     TEXT = "text"
     VOICE = "voice"

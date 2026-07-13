@@ -4,8 +4,14 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from thoth_daemon.core.focus import FocusPolicy
 from thoth_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
-from thoth_daemon.tools.base import DuplicateToolError, ToolDefinition, UnknownToolError
+from thoth_daemon.tools.base import (
+    DuplicateToolError,
+    InvalidToolDefinitionError,
+    ToolDefinition,
+    UnknownToolError,
+)
 from thoth_daemon.tools.mock_tools import build_registry
 from thoth_daemon.tools.registry import ToolRegistry
 
@@ -49,6 +55,17 @@ class TestRegistration:
             assert tool.name.startswith("mock_")
             assert tool.timeout_s > 0
             assert tool.description
+            assert isinstance(tool.focus_policy, FocusPolicy)
+
+    def test_missing_or_invalid_focus_policy_fails_registration(
+        self, registry: ToolRegistry
+    ) -> None:
+        tool = registry.get("mock_read_file")
+        tool.focus_policy = None  # type: ignore[assignment]
+        fresh = ToolRegistry()
+
+        with pytest.raises(InvalidToolDefinitionError, match="focus_policy"):
+            fresh.register(tool)
 
 
 class TestArgumentValidation:

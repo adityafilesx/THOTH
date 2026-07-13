@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, ConfigDict
 
 from thoth_daemon.browser.browser_adapter import BrowserAdapter, default_browser
+from thoth_daemon.core.focus import FocusPolicy
 from thoth_daemon.schemas import ResourceScope, RiskLevel, VerificationStrategy
 from thoth_daemon.tools.base import ToolDefinition
 from thoth_daemon.tools.registry import ToolRegistry
@@ -32,6 +33,7 @@ class BrowserReadOut(BaseModel):
 class BrowserRead(ToolDefinition[BrowserReadIn, BrowserReadOut]):
     name = "browser_read"
     description = "Read the visible text of an approved web page (read-only)."
+    focus_policy = FocusPolicy.DO_NOT_STEAL_FOCUS
     input_model = BrowserReadIn
     output_model = BrowserReadOut
     default_risk = RiskLevel.R1

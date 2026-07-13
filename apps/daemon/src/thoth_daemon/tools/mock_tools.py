@@ -11,6 +11,7 @@ from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict
 
+from thoth_daemon.core.focus import FocusPolicy
 from thoth_daemon.schemas import RiskLevel, VerificationStrategy
 from thoth_daemon.tools.base import ToolDefinition
 from thoth_daemon.tools.registry import ToolRegistry
@@ -83,6 +84,7 @@ class OpenAppOut(_Out):
 class MockOpenApp(ToolDefinition[OpenAppIn, OpenAppOut]):
     name = "mock_open_app"
     description = "MOCK: open/focus an approved application (no real launch)."
+    focus_policy = FocusPolicy.KEEP_NEW_FOCUS
     input_model = OpenAppIn
     output_model = OpenAppOut
     default_risk = RiskLevel.R1

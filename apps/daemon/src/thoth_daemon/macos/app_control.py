@@ -84,6 +84,12 @@ class MockAppControl:
     def frontmost(self) -> AppInfo | None:
         return self._frontmost
 
+    def set_frontmost(self, app: AppInfo) -> None:
+        """Test helper: make ``app`` the frontmost (and running) application."""
+        if not any(a.bundle_id == app.bundle_id for a in self._running):
+            self._running.append(app)
+        self._frontmost = app
+
     def launch(self, name: str) -> bool:
         self.launched.append(name)
         if self._add_on_launch and not any(a.name == name for a in self._running):

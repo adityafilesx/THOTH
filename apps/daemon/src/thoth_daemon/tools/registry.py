@@ -12,11 +12,13 @@ import asyncio
 import time
 from typing import Any
 
+from thoth_daemon.core.focus import FocusPolicy
 from thoth_daemon.core.scope import ScopeEnforcer, ScopeViolation
 from thoth_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation, ToolResult
 from thoth_daemon.security.redaction import redact
 from thoth_daemon.tools.base import (
     DuplicateToolError,
+    InvalidToolDefinitionError,
     ToolDefinition,
     UnknownToolError,
 )
@@ -30,6 +32,10 @@ class ToolRegistry:
     def register(self, tool: ToolDefinition[Any, Any]) -> None:
         if tool.name in self._tools:
             raise DuplicateToolError(f"tool '{tool.name}' already registered")
+        if not isinstance(getattr(tool, "focus_policy", None), FocusPolicy):
+            raise InvalidToolDefinitionError(
+                f"tool '{tool.name}' has no valid authoritative focus_policy"
+            )
         self._tools[tool.name] = tool
 
     def get(self, name: str) -> ToolDefinition[Any, Any]:

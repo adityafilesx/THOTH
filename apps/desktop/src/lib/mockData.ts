@@ -22,6 +22,7 @@ export const MOCK_PLAN: ExecutionPlan = {
       tool_name: "mock_read_file",
       arguments: { path: "~/projects/thoth/README.md" },
       declared_risk: "R0",
+      focus_policy: "do_not_steal_focus",
       status: "succeeded",
       verification_checks: [
         {
@@ -43,6 +44,7 @@ export const MOCK_PLAN: ExecutionPlan = {
       tool_name: "mock_open_app",
       arguments: { app: "Visual Studio Code" },
       declared_risk: "R1",
+      focus_policy: "keep_new_focus",
       status: "running",
       verification_checks: [
         {
@@ -64,6 +66,7 @@ export const MOCK_PLAN: ExecutionPlan = {
       tool_name: "mock_git_push",
       arguments: { remote: "origin", branch: "release/0.1" },
       declared_risk: "R2",
+      focus_policy: "do_not_steal_focus",
       status: "pending",
       verification_checks: [
         {

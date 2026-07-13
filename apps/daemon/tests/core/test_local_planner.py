@@ -10,6 +10,8 @@ safe; it NEVER switches to a cloud model.
 
 import pytest
 
+from thoth_daemon.browser.browser_adapter import MockBrowser
+from thoth_daemon.core.focus import FocusPolicy
 from thoth_daemon.core.local_planner import (
     LocalPlanner,
     PlanRejected,
@@ -19,6 +21,7 @@ from thoth_daemon.core.local_planner import (
 )
 from thoth_daemon.schemas import RiskLevel
 from thoth_daemon.tools.app_tools import register_app_tools
+from thoth_daemon.tools.browser_tools import BrowserRead
 from thoth_daemon.tools.fs_tools import register_fs_tools
 from thoth_daemon.tools.registry import ToolRegistry
 
@@ -130,6 +133,23 @@ class TestPlanValidator:
         with pytest.raises(PlanRejected) as exc:
             VALIDATOR.validate({"summary": "no steps"}, task_id="t1")
         assert exc.value.kind is PlanRejection.MALFORMED
+
+    def test_registered_policy_overrides_model_focus_proposal(self) -> None:
+        registry = ToolRegistry()
+        registry.register(BrowserRead(MockBrowser()))
+        validator = PlanValidator(registry)
+        raw = _plan(
+            {
+                "tool_name": "browser_read",
+                "arguments": {"url": "https://example.com"},
+                "declared_risk": "R1",
+                "focus_policy": "keep_new_focus",
+            }
+        )
+
+        plan = validator.validate(raw, task_id="t1")
+
+        assert plan.steps[0].focus_policy is FocusPolicy.DO_NOT_STEAL_FOCUS
 
 
 class _FakeClient:

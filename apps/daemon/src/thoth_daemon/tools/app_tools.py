@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
 
+from thoth_daemon.core.focus import FocusPolicy
 from thoth_daemon.macos.app_control import AppControl, default_app_control
 from thoth_daemon.schemas import ResourceScope, RiskLevel, VerificationStrategy
 from thoth_daemon.tools.base import ToolDefinition
@@ -68,6 +69,7 @@ class AppLaunchOut(_Out):
 class AppLaunch(ToolDefinition[AppLaunchIn, AppLaunchOut]):
     name = "app_launch"
     description = "Launch an approved application."
+    focus_policy = FocusPolicy.KEEP_NEW_FOCUS
     input_model = AppLaunchIn
     output_model = AppLaunchOut
     default_risk = RiskLevel.R1
@@ -102,6 +104,7 @@ class AppFocusOut(_Out):
 class AppFocus(ToolDefinition[AppFocusIn, AppFocusOut]):
     name = "app_focus"
     description = "Bring an approved application to the front."
+    focus_policy = FocusPolicy.KEEP_NEW_FOCUS
     input_model = AppFocusIn
     output_model = AppFocusOut
     default_risk = RiskLevel.R1

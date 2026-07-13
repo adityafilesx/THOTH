@@ -68,7 +68,7 @@ class _FakeProvider:
         self._text = text
         self._fail = fail
 
-    async def generate(self, request):  # noqa: ANN001
+    async def generate(self, request):
         from thoth_daemon.inference.base import InferenceResult
 
         if self._fail:

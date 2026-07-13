@@ -6,11 +6,11 @@ LocalAIRuntimeManager. Persona reports degraded operation honestly.
 
 import pytest
 
+from thoth_daemon.core.persona import ResponseIntent
 from thoth_daemon.core.runtime_status import (
     LocalRuntimeMonitor,
     LocalRuntimeStatus,
 )
-from thoth_daemon.core.persona import ResponseIntent
 from thoth_daemon.inference.base import ProviderHealth
 
 
@@ -33,7 +33,7 @@ class TestMonitor:
 
     async def test_provider_error_is_failed(self) -> None:
         class _Broken:
-            async def health(self):  # noqa: ANN202
+            async def health(self):
                 raise RuntimeError("crashed")
 
         monitor = LocalRuntimeMonitor(_Broken())

@@ -99,6 +99,9 @@ class PlanValidator:
             if not self._registry.has(step.tool_name):
                 raise PlanRejected(PlanRejection.UNKNOWN_TOOL, f"no such tool {step.tool_name!r}")
             tool = self._registry.get(step.tool_name)
+            # Model focus suggestions are non-authoritative. The registered
+            # tool contract always wins, including ASK_IF_AMBIGUOUS.
+            step.focus_policy = tool.focus_policy
 
             try:
                 tool.input_model.model_validate(step.arguments)

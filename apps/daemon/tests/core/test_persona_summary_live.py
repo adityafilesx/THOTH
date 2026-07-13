@@ -23,7 +23,7 @@ MODEL = "qwen3:4b"
 
 def _available() -> bool:
     try:
-        with urllib.request.urlopen(f"{ENDPOINT}/api/tags", timeout=3) as resp:  # noqa: S310
+        with urllib.request.urlopen(f"{ENDPOINT}/api/tags", timeout=3) as resp:
             tags = json.loads(resp.read().decode())
         return any(m.get("name", "").startswith(MODEL) for m in tags.get("models", []))
     except (urllib.error.URLError, TimeoutError, OSError):

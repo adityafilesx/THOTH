@@ -23,6 +23,7 @@ from thoth_daemon.browser.session import (
     PageState,
     default_browser_session,
 )
+from thoth_daemon.core.focus import FocusPolicy
 from thoth_daemon.schemas import ResourceScope, RiskLevel, VerificationStrategy
 from thoth_daemon.tools.base import ToolDefinition
 from thoth_daemon.tools.registry import ToolRegistry
@@ -84,6 +85,7 @@ class OpenIn(_In):
 class BrowserOpen(_SessionTool, ToolDefinition[OpenIn, PageView]):
     name = "browser_open"
     description = "Open an approved URL in the interactive session."
+    focus_policy = FocusPolicy.KEEP_NEW_FOCUS
     input_model = OpenIn
     output_model = PageView
     default_risk = RiskLevel.R1
@@ -121,6 +123,7 @@ class FindOut(_Out):
 class BrowserFind(_SessionTool, ToolDefinition[FindIn, FindOut]):
     name = "browser_find"
     description = "Find elements on the CURRENT page by selector or text (read-only)."
+    focus_policy = FocusPolicy.DO_NOT_STEAL_FOCUS
     input_model = FindIn
     output_model = FindOut
     default_risk = RiskLevel.R0
@@ -146,6 +149,7 @@ class ClickIn(_In):
 class BrowserClick(_SessionTool, ToolDefinition[ClickIn, PageView]):
     name = "browser_click"
     description = "Click an element on the current approved page."
+    focus_policy = FocusPolicy.DO_NOT_STEAL_FOCUS
     input_model = ClickIn
     output_model = PageView
     default_risk = RiskLevel.R1
@@ -175,6 +179,7 @@ class FillIn(_In):
 class BrowserFill(_SessionTool, ToolDefinition[FillIn, PageView]):
     name = "browser_fill"
     description = "Type a value into a field on the current approved page (no submit)."
+    focus_policy = FocusPolicy.DO_NOT_STEAL_FOCUS
     input_model = FillIn
     output_model = PageView
     default_risk = RiskLevel.R1
@@ -202,6 +207,7 @@ class SelectIn(_In):
 class BrowserSelect(_SessionTool, ToolDefinition[SelectIn, PageView]):
     name = "browser_select"
     description = "Choose an option in a select element on the current approved page."
+    focus_policy = FocusPolicy.DO_NOT_STEAL_FOCUS
     input_model = SelectIn
     output_model = PageView
     default_risk = RiskLevel.R1
@@ -232,6 +238,7 @@ class DownloadOut(_Out):
 class BrowserDownload(_SessionTool, ToolDefinition[DownloadIn, DownloadOut]):
     name = "browser_download"
     description = "Download a file from an approved domain into an approved directory."
+    focus_policy = FocusPolicy.DO_NOT_STEAL_FOCUS
     input_model = DownloadIn
     output_model = DownloadOut
     default_risk = RiskLevel.R1
@@ -263,6 +270,7 @@ class ScreenshotOut(_Out):
 class BrowserScreenshot(_SessionTool, ToolDefinition[ScreenshotIn, ScreenshotOut]):
     name = "browser_screenshot"
     description = "Screenshot the current page into an approved path."
+    focus_policy = FocusPolicy.DO_NOT_STEAL_FOCUS
     input_model = ScreenshotIn
     output_model = ScreenshotOut
     default_risk = RiskLevel.R1
@@ -299,6 +307,7 @@ class BrowserPrepareSubmission(_SessionTool, ToolDefinition[PrepareIn, PrepareOu
         "Capture exactly what a form WOULD submit (action URL + field map) "
         "without submitting; returns a single-use submission id."
     )
+    focus_policy = FocusPolicy.DO_NOT_STEAL_FOCUS
     input_model = PrepareIn
     output_model = PrepareOut
     default_risk = RiskLevel.R1
@@ -330,6 +339,7 @@ class BrowserSubmit(_SessionTool, ToolDefinition[SubmitIn, PageView]):
         "Submit a PREVIOUSLY PREPARED form (single-use id). External "
         "side effect — requires explicit approval."
     )
+    focus_policy = FocusPolicy.DO_NOT_STEAL_FOCUS
     input_model = SubmitIn
     output_model = PageView
     default_risk = RiskLevel.R2

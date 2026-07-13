@@ -1,5 +1,16 @@
 {
   "$defs": {
+    "FocusPolicy": {
+      "description": "Authoritative final-focus behaviour declared by registered tools.",
+      "enum": [
+        "keep_new_focus",
+        "restore_previous_focus",
+        "do_not_steal_focus",
+        "ask_if_ambiguous"
+      ],
+      "title": "FocusPolicy",
+      "type": "string"
+    },
     "RiskLevel": {
       "description": "R0 read-only \u00b7 R1 reversible local \u00b7 R2 external side effect \u00b7\nR3 destructive/highly sensitive (blocked by default).\n\nTotally ordered so that ``max()`` expresses the no-downgrade rule.",
       "enum": [
@@ -114,6 +125,17 @@
     },
     "declared_risk": {
       "$ref": "#/$defs/RiskLevel"
+    },
+    "focus_policy": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FocusPolicy"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "status": {
       "$ref": "#/$defs/StepStatus",

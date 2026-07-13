@@ -231,7 +231,6 @@ class _TaskRunner:
         self.plan.correlation_id = self._corr
         for step in self.plan.steps:
             step.correlation_id = self._corr
-        self.task.plan = self.plan
         if len(self.plan.steps) > MAX_EXECUTIONS_PER_TASK:
             await self._audit_only(
                 "plan.rejected",
@@ -250,6 +249,10 @@ class _TaskRunner:
                 await self._goto(TaskState.RISK_REVIEW, "risk review")
                 await self._fail(f"unknown tool '{step.tool_name}' in plan")
                 return None
+            # Never trust a planner/model focus proposal. The registered tool
+            # contract is authoritative at the last pre-policy boundary.
+            step.focus_policy = self._registry.get(step.tool_name).focus_policy
+        self.task.plan = self.plan
         if await self._check_cancel():
             return None
 

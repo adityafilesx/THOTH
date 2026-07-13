@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from thoth_daemon.schemas.enums import (
     TRUSTED_PROVENANCE,
     ApprovalStatus,
+    FocusPolicy,
     Provenance,
     RiskLevel,
     StepStatus,
@@ -79,6 +80,9 @@ class PlanStep(StrictModel):
     tool_name: str
     arguments: dict[str, Any] = Field(default_factory=dict)
     declared_risk: RiskLevel
+    # A model may propose this value, but plan validation/orchestration always
+    # replace it with the registered tool's authoritative policy.
+    focus_policy: FocusPolicy | None = None
     status: StepStatus = StepStatus.PENDING
     verification_checks: list[VerificationCheck] = Field(default_factory=list)
     verification_passed: bool | None = None

@@ -36,6 +36,15 @@ PLAN_SCHEMA: dict[str, Any] = {
                     "tool_name": {"type": "string"},
                     "arguments": {"type": "object"},
                     "declared_risk": {"type": "string", "enum": ["R0", "R1", "R2", "R3"]},
+                    "focus_policy": {
+                        "type": "string",
+                        "enum": [
+                            "keep_new_focus",
+                            "restore_previous_focus",
+                            "do_not_steal_focus",
+                            "ask_if_ambiguous",
+                        ],
+                    },
                 },
             },
         },
@@ -54,12 +63,16 @@ def build_system_prompt(registry: ToolRegistry) -> str:
         "Available tools (use ONLY these; never invent a tool or an argument name):",
     ]
     for tool in registry.all():
-        lines.append(f"- {tool.name} (default risk {tool.default_risk.value}): {tool.description}")
+        lines.append(
+            f"- {tool.name} (default risk {tool.default_risk.value}; "
+            f"focus {tool.focus_policy.value}): {tool.description}"
+        )
     lines += [
         "",
         "Rules:",
         "- Use only the tools listed above, with their real argument names.",
         "- Set declared_risk from the tool's stated default risk (never lower it).",
+        "- You may suggest focus_policy, but the registered tool policy is authoritative.",
         "- Keep the plan as short as possible; do not add speculative steps.",
         "- Do not attempt destructive, credential-touching, or out-of-scope actions.",
         "- Output must match the provided JSON schema exactly.",
@@ -119,6 +132,7 @@ class ClaudePlanner(PlannerAdapter):
                     tool_name=str(step["tool_name"]),
                     arguments=dict(step.get("arguments") or {}),
                     declared_risk=RiskLevel(str(step["declared_risk"])),
+                    focus_policy=step.get("focus_policy"),
                 )
             )
         return ExecutionPlan(

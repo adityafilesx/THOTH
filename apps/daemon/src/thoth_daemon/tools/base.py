@@ -12,6 +12,7 @@ from typing import Any, ClassVar, Generic, TypeVar
 
 from pydantic import BaseModel
 
+from thoth_daemon.core.focus import FocusPolicy
 from thoth_daemon.schemas import (
     ResourceScope,
     RiskLevel,
@@ -31,6 +32,10 @@ class DuplicateToolError(Exception):
     pass
 
 
+class InvalidToolDefinitionError(Exception):
+    pass
+
+
 class ToolDefinition(ABC, Generic[TInput, TOutput]):
     name: str
     description: str
@@ -43,6 +48,9 @@ class ToolDefinition(ABC, Generic[TInput, TOutput]):
     verification: VerificationStrategy = VerificationStrategy.OUTPUT_ASSERTION
     resource_scope: ResourceScope
     redaction_fields: ClassVar[list[str]] = []
+    # Intended focus behaviour (Phase 5.3). Default: never steal focus; a
+    # focus-changing tool (app launch/focus) overrides to KEEP_NEW_FOCUS.
+    focus_policy: FocusPolicy = FocusPolicy.DO_NOT_STEAL_FOCUS
 
     def __init__(self) -> None:
         if not getattr(self, "resource_scope", None):

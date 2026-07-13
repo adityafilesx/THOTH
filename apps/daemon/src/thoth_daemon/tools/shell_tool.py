@@ -12,6 +12,7 @@ from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict
 
+from thoth_daemon.core.focus import FocusPolicy
 from thoth_daemon.schemas import ResourceScope, RiskLevel, VerificationStrategy
 from thoth_daemon.security.paths import expand_and_resolve
 from thoth_daemon.security.shell_policy import (
@@ -51,6 +52,7 @@ def _cap(data: bytes) -> tuple[str, bool]:
 class ShellRun(ToolDefinition[ShellRunIn, ShellRunOut]):
     name = "shell_run"
     description = "Run an allowlisted command (no shell) in an approved directory."
+    focus_policy = FocusPolicy.DO_NOT_STEAL_FOCUS
     input_model = ShellRunIn
     output_model = ShellRunOut
     default_risk = RiskLevel.R2

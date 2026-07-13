@@ -36,6 +36,12 @@ export const TASK_STATES: TaskState[] = [
 
 export type RiskLevel = "R0" | "R1" | "R2" | "R3";
 
+export type FocusPolicy =
+  | "keep_new_focus"
+  | "restore_previous_focus"
+  | "do_not_steal_focus"
+  | "ask_if_ambiguous";
+
 export type TaskSource = "text" | "voice";
 
 export type StepStatus =
@@ -77,6 +83,7 @@ export interface PlanStep {
   tool_name: string;
   arguments: Record<string, unknown>;
   declared_risk: RiskLevel;
+  focus_policy: FocusPolicy | null;
   status: StepStatus;
   verification_checks: VerificationCheck[];
   verification_passed: boolean | null;
