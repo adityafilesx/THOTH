@@ -129,6 +129,13 @@ class TestDefaultProfiles:
         with pytest.raises(CapabilityForbidden):
             registry.authorize("com.apple.Terminal", "execute_shell_through_ui")
 
+    def test_vscode_workspace_match_is_verified_by_authoritative_association(self) -> None:
+        result = build_default_application_profiles().authorize(
+            "com.microsoft.VSCode", "match_workspace"
+        )
+        assert result.status is CapabilityStatus.VERIFIED
+        assert result.verifier is ProfileVerifier.WORKSPACE_ASSOCIATION
+
     def test_chromium_separates_read_form_and_submission_capabilities(self) -> None:
         profile = build_default_application_profiles().get("org.chromium.Chromium")
         assert "background_read" in profile.verified_capabilities

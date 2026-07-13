@@ -35,6 +35,7 @@ class ProfileVerifier(StrEnum):
     BROWSER_URL = "browser_url"
     FILE_EXISTS = "file_exists"
     ACCESSIBILITY_VALUE = "accessibility_value"
+    WORKSPACE_ASSOCIATION = "workspace_association"
 
 
 class ApplicationProfile(BaseModel):
@@ -243,8 +244,14 @@ def build_default_application_profiles() -> ApplicationProfileRegistry:
         _profile(
             "com.microsoft.VSCode",
             "Visual Studio Code",
-            verified=("detect_running", "detect_foreground", "launch", "focus"),
-            experimental=("match_workspace", "editor_read", "editor_edit"),
+            verified=(
+                "detect_running",
+                "detect_foreground",
+                "launch",
+                "focus",
+                "match_workspace",
+            ),
+            experimental=("editor_read", "editor_edit"),
             forbidden=("unrestricted_editor_control", "extension_install"),
             interfaces=(InterfaceKind.NATIVE_API, InterfaceKind.CLI, InterfaceKind.ACCESSIBILITY),
             verifiers={
@@ -252,6 +259,7 @@ def build_default_application_profiles() -> ApplicationProfileRegistry:
                 "detect_foreground": foreground,
                 "launch": running,
                 "focus": foreground,
+                "match_workspace": ProfileVerifier.WORKSPACE_ASSOCIATION,
             },
             focus=FocusPolicy.KEEP_NEW_FOCUS,
             permissions=("accessibility_for_ax_only",),
