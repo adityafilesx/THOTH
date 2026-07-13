@@ -65,3 +65,34 @@ it never becomes a live authority. Cross-application references, undeclared
 aliases, denied capabilities, and snapshots above 500 elements fail closed.
 Labels remain inert untrusted strings and cannot define aliases or selector
 rules. No visual coordinate or window size participates in identity.
+
+## Tool boundary
+
+The daemon registers ten narrow semantic tools:
+
+```text
+ax.inspect_application   ax.inspect_window
+ax.find_element          ax.read_value
+ax.set_value             ax.perform_action
+ax.select_option         ax.wait_for_element
+ax.wait_for_value        ax.list_supported_actions
+```
+
+Every input binds an exact bundle identifier and a literal tool-specific
+capability. A mutation tool therefore cannot claim a read capability or a
+model-chosen substitute. Registry scope is the same bundle identifier, while
+the immutable application profile must independently authorize the capability.
+
+Reads are R0 and preserve current focus. The three reversible local mutation
+tools are R1, support inert dry runs, and restore prior focus. External side
+effects are not authorized through these generic R1 capabilities; submission,
+credential-dialog, and system-security operations remain unavailable or
+forbidden by profile. Mutation results deliberately say independent
+verification is pending and contain no `verified` success flag.
+
+The real adapter probes current TCC trust both in the controller and again at
+the OS operation boundary. It enumerates at most 20 windows and 500 elements,
+uses bounded attribute-value APIs for child lists, suppresses sensitive values
+before constructing raw nodes, and re-finds action targets by identifier or a
+unique role/label match. The deterministic mock is explicitly named and used
+only by tests.
