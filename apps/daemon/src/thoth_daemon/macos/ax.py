@@ -23,9 +23,13 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from thoth_daemon.macos.ax_permission import (
+    AXPermissionError,
+    AXPermissionService,
+    AXPermissionStatus,
+)
 
-class AXPermissionError(Exception):
-    """Accessibility (TCC) permission is not granted to this process."""
+__all__ = ["AXPermissionError"]
 
 
 @dataclass(frozen=True)
@@ -52,28 +56,29 @@ class RealAXAdapter:
     Accessibility TCC permission). Lazy PyObjC imports keep the daemon
     importable on machines without the frameworks."""
 
-    def __init__(self, trust_probe: Callable[[], bool] | None = None) -> None:
-        self._trust_probe = trust_probe
+    def __init__(
+        self,
+        trust_probe: Callable[[], bool] | None = None,
+        *,
+        permission_service: AXPermissionService | None = None,
+    ) -> None:
+        if trust_probe is not None and permission_service is not None:
+            raise ValueError("provide trust_probe or permission_service, not both")
+        self._permissions = permission_service or AXPermissionService(trust_probe=trust_probe)
 
     # -- permission gate --------------------------------------------------
     def is_trusted(self) -> bool:
-        if self._trust_probe is not None:
-            return self._trust_probe()
-        from ApplicationServices import AXIsProcessTrusted  # type: ignore[import-not-found]
-
-        return bool(AXIsProcessTrusted())
+        return self._permissions.check(force=True).status is AXPermissionStatus.GRANTED
 
     def _require_trust(self) -> None:
-        if not self.is_trusted():
-            raise AXPermissionError(
-                "Accessibility permission not granted. Enable it in System Settings "
-                "> Privacy & Security > Accessibility (pending live verification)."
-            )
+        self._permissions.require_granted()
 
     # -- element access ----------------------------------------------------
     def _app_element(self, app_name: str) -> Any:
         from AppKit import NSWorkspace  # type: ignore[import-untyped]
-        from ApplicationServices import AXUIElementCreateApplication
+        from ApplicationServices import (  # type: ignore[import-untyped]
+            AXUIElementCreateApplication,
+        )
 
         for app in NSWorkspace.sharedWorkspace().runningApplications():
             if app.localizedName() and str(app.localizedName()) == app_name:
@@ -129,7 +134,9 @@ class RealAXAdapter:
         return element.value if element else None
 
     def _raw_find(self, app_name: str, role: str, label: str) -> Any:
-        from ApplicationServices import AXUIElementCopyAttributeValue
+        from ApplicationServices import (
+            AXUIElementCopyAttributeValue,
+        )
 
         def attr(el: Any, name: str) -> Any:
             err, value = AXUIElementCopyAttributeValue(el, name, None)
@@ -153,7 +160,9 @@ class RealAXAdapter:
 
     def set_value(self, app_name: str, role: str, label: str, value: str) -> bool:
         self._require_trust()
-        from ApplicationServices import AXUIElementSetAttributeValue
+        from ApplicationServices import (
+            AXUIElementSetAttributeValue,
+        )
 
         raw = self._raw_find(app_name, role, label)
         if raw is None:
@@ -162,7 +171,9 @@ class RealAXAdapter:
 
     def perform_action(self, app_name: str, role: str, label: str, action: str) -> bool:
         self._require_trust()
-        from ApplicationServices import AXUIElementPerformAction
+        from ApplicationServices import (
+            AXUIElementPerformAction,
+        )
 
         raw = self._raw_find(app_name, role, label)
         if raw is None:
