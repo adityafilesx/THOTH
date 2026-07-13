@@ -30,6 +30,7 @@ from thoth_daemon.core.policy import PolicyEngine
 from thoth_daemon.core.recovery import RecoveryController
 from thoth_daemon.core.scope import ScopeEnforcer, ScopeViolation
 from thoth_daemon.core.state_machine import InvalidTransitionError, TaskStateMachine
+from thoth_daemon.core.task_presentation import task_event_payload
 from thoth_daemon.core.verification import VerificationEngine
 from thoth_daemon.schemas import (
     TERMINAL_STATES,
@@ -131,7 +132,8 @@ class _TaskRunner:
             await self._publish("audit.appended", {"event": event.model_dump(mode="json")})
             if event_type == "state.transition":
                 await self._publish(
-                    "task.state_changed", {"task": self.task.model_dump(mode="json")}
+                    "task.state_changed",
+                    task_event_payload(self.task, self._approvals.pending()),
                 )
 
     async def _goto(self, state: TaskState, reason: str) -> None:
@@ -357,7 +359,10 @@ class _TaskRunner:
         step.status = StepStatus.RUNNING
         await self._publish(
             "task.step_started",
-            {"task": self.task.model_dump(mode="json"), "step_id": step.id},
+            {
+                **task_event_payload(self.task, self._approvals.pending()),
+                "step_id": step.id,
+            },
         )
         while True:
             if await self._check_cancel():
@@ -414,7 +419,7 @@ class _TaskRunner:
             await self._publish(
                 "task.step_finished",
                 {
-                    "task": self.task.model_dump(mode="json"),
+                    **task_event_payload(self.task, self._approvals.pending()),
                     "step_id": step.id,
                     "verification": verification.model_dump(mode="json"),
                 },
@@ -571,7 +576,7 @@ class Orchestrator:
         await self._audit.append(
             task.id, "task.created", {"goal": goal, "source": source.value}, correlation_id=corr
         )
-        await self._publish("task.created", {"task": task.model_dump(mode="json")})
+        await self._publish("task.created", task_event_payload(task))
 
         # The planner is untrusted and (for the real planner) can raise on a
         # network/parse/validation error — fail the task cleanly, never crash.
@@ -586,7 +591,7 @@ class Orchestrator:
             await self._audit.append(
                 task.id, "task.failed", {"error": task.error}, correlation_id=corr
             )
-            await self._publish("task.state_changed", {"task": task.model_dump(mode="json")})
+            await self._publish("task.state_changed", task_event_payload(task))
             return task
         runner = _TaskRunner(
             task,
@@ -626,7 +631,7 @@ class Orchestrator:
             {"goal": goal, "source": source.value, "planned_by": "skill"},
             correlation_id=corr,
         )
-        await self._publish("task.created", {"task": task.model_dump(mode="json")})
+        await self._publish("task.created", task_event_payload(task))
         runner = _TaskRunner(
             task,
             plan.model_copy(update={"task_id": task.id}, deep=True),

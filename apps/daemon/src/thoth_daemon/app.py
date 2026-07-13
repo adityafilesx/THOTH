@@ -1,27 +1,44 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import FastAPI
 
-from thoth_daemon.api import health, intent, permissions, skills, tasks, voice, ws
+from thoth_daemon.api import health, intent, operational, permissions, skills, tasks, voice, ws
 from thoth_daemon.api import settings as settings_api
 from thoth_daemon.api.middleware import BearerAuthMiddleware
 from thoth_daemon.audit.store import AuditStore
 from thoth_daemon.config import Settings
+from thoth_daemon.core.application_profiles import build_default_application_profiles
 from thoth_daemon.core.approvals import ApprovalEngine
 from thoth_daemon.core.claude_planner import AnthropicPlannerClient, ClaudePlanner
+from thoth_daemon.core.dialogue import OperationalDialogueStore
+from thoth_daemon.core.foreground import ForegroundContext, ForegroundContextBroker
 from thoth_daemon.core.local_plan_client import OllamaPlanClient
 from thoth_daemon.core.local_planner import LocalPlanner
 from thoth_daemon.core.orchestrator import Orchestrator
 from thoth_daemon.core.planner import DeterministicMockPlanner, PlannerAdapter
 from thoth_daemon.core.policy import PolicyEngine
 from thoth_daemon.core.recovery import RecoveryController
+from thoth_daemon.core.runtime_status import LocalRuntimeMonitor
 from thoth_daemon.core.scope import ScopeEnforcer
 from thoth_daemon.core.skill_engine import seed_builtin_skills
 from thoth_daemon.core.verification import VerificationEngine
+from thoth_daemon.core.workspace_matching import (
+    WorkspaceAssociationProfile,
+    WorkspaceEvidence,
+    WorkspaceMatcher,
+)
 from thoth_daemon.events.bus import EventBus
+from thoth_daemon.inference import (
+    DeterministicInferenceProvider,
+    InferenceProvider,
+    LlamaCppInferenceProvider,
+    MLXInferenceProvider,
+)
 from thoth_daemon.logging_setup import configure_logging, get_logger
+from thoth_daemon.macos.app_control import default_app_control
 from thoth_daemon.schemas import ResourceScope, WorkspaceProfile
 from thoth_daemon.security.auth import mint_token, write_token_file
 from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
@@ -84,6 +101,61 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         audit_store = AuditStore(session_factory)
         app.state.audit = audit_store
 
+        # Minimal Phase 5 runtime/presentation state. Provider selection is
+        # explicit and local; there is no cloud fallback.
+        inference_provider: InferenceProvider
+        if cfg.inference_provider == "llama.cpp":
+            inference_provider = LlamaCppInferenceProvider(
+                model=cfg.inference_model,
+                endpoint=cfg.inference_endpoint,
+                isolation=cfg.network_isolation,
+            )
+        elif cfg.inference_provider == "mlx":
+            inference_provider = MLXInferenceProvider(model=cfg.inference_model)
+        else:
+            inference_provider = DeterministicInferenceProvider()
+        app.state.inference_provider = inference_provider
+        app.state.runtime_monitor = LocalRuntimeMonitor(inference_provider)
+        app.state.dialogue = OperationalDialogueStore()
+        app.state.application_profiles = build_default_application_profiles()
+        app.state.default_workspace = default_ws
+        app.state.focus_results = {}
+
+        association_profiles: list[WorkspaceAssociationProfile] = []
+        if default_ws.root_path:
+            association_profiles.append(
+                WorkspaceAssociationProfile(
+                    workspace_id=default_ws.id,
+                    approved_root_path=default_ws.root_path,
+                    aliases=(default_ws.name,),
+                    app_bundle_ids=("com.microsoft.VSCode",),
+                    title_hints=(default_ws.name,),
+                    approved=default_ws.trusted,
+                    verified_at=datetime.now(UTC),
+                )
+            )
+        workspace_matcher = WorkspaceMatcher(association_profiles)
+
+        def match_workspace(context: ForegroundContext) -> str | None:
+            match = workspace_matcher.match(
+                WorkspaceEvidence(
+                    active_bundle_id=context.active_bundle_id,
+                    redacted_window_title=context.active_window_title,
+                    approved_workspace_path=(
+                        default_ws.root_path if context.task_id and default_ws.root_path else None
+                    ),
+                    task_workspace_id=default_ws.id if context.task_id else None,
+                ),
+                now=datetime.now(UTC),
+            )
+            return match.workspace_id if match else None
+
+        app_control = default_app_control()
+        app.state.foreground = ForegroundContextBroker(
+            app_control,
+            workspace_matcher=match_workspace,
+        )
+
         async def scope_provider() -> ResourceScope:
             return await permissions_store.effective_scope(default_ws.id)
 
@@ -91,7 +163,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         register_fs_tools(registry)  # real, scoped filesystem tools (slice 3)
         register_shell_tool(registry)  # restricted shell (slice 4)
         register_git_tools(registry)  # git workflow tools (slice 5)
-        register_app_tools(registry)  # macOS app launch/focus/list (slice 6)
+        register_app_tools(registry, app_control)  # macOS app launch/focus/list (slice 6)
         register_browser_tools(registry)  # scoped browser read (slice 7)
         register_ax_tools(registry)  # AX element tools (Phase 4 slice 3; needs TCC live)
         register_browser_interaction_tools(registry)  # interactive session (Phase 4 slice 4)
@@ -147,4 +219,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(settings_api.router)
     app.include_router(voice.router)
     app.include_router(intent.router)
+    app.include_router(operational.router)
     return app
