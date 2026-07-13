@@ -52,6 +52,7 @@ from thoth_daemon.schemas import (
     ToolResult,
     WorkspaceProfile,
 )
+from thoth_daemon.tools.base import IndependentToolVerification
 from thoth_daemon.tools.registry import ToolRegistry
 
 Publish = Callable[[str, dict[str, Any]], Awaitable[None]]
@@ -448,7 +449,26 @@ class _TaskRunner:
             # Independent verification: the tool's declared strategy is the
             # system-enforced minimum; structured checks only ADD strictness.
             # "Exited 0" is never sufficient on its own.
-            verification = self._verifier.verify_step(step, result, tool.verification)
+            independent: IndependentToolVerification | None = None
+            if result.ok:
+                try:
+                    parsed = tool.parse_arguments(invocation)
+                    independent = tool.verify_independently(parsed)
+                except Exception as exc:
+                    independent = IndependentToolVerification(
+                        passed=False,
+                        available=False,
+                        detail=(
+                            "registered independent verification failed closed: "
+                            f"{type(exc).__name__}"
+                        ),
+                    )
+            verification = self._verifier.verify_step(
+                step,
+                result,
+                tool.verification,
+                independent=independent,
+            )
             verification.correlation_id = self._corr
             step.verification_passed = verification.passed
             step.verification_detail = verification.detail

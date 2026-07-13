@@ -10,6 +10,7 @@ from thoth_daemon.core.application_profiles import (
     build_default_application_profiles,
 )
 from thoth_daemon.core.ax_resolver import AXResolutionResult, AXResolver
+from thoth_daemon.macos.app_control import AppControl, default_app_control
 from thoth_daemon.macos.ax_permission import (
     AXPermissionService,
     default_ax_permission_service,
@@ -22,6 +23,8 @@ from thoth_daemon.schemas.ax import (
     AXElementReference,
     AXElementSnapshot,
     AXPrimitive,
+    AXVerificationRequest,
+    AXVerificationResult,
     AXWindowSnapshot,
 )
 
@@ -34,12 +37,14 @@ class AXController:
         profiles: ApplicationProfileRegistry,
         resolver: AXResolver | None = None,
         clock: Callable[[], datetime] | None = None,
+        app_control: AppControl | None = None,
     ) -> None:
         self._adapter = adapter
         self._permissions = permissions
         self._profiles = profiles
         self._resolver = resolver or AXResolver()
         self._clock = clock or (lambda: datetime.now(UTC))
+        self._app_control = app_control
 
     def now(self) -> datetime:
         return self._clock()
@@ -176,6 +181,15 @@ class AXController:
             element, "AX option selection completed; independent verification pending"
         )
 
+    def verify(
+        self,
+        request: AXVerificationRequest,
+        capability: str,
+    ) -> AXVerificationResult:
+        from thoth_daemon.core.ax_verifiers import AXVerifierDispatcher
+
+        return AXVerifierDispatcher(self, self._app_control).verify(request, capability)
+
     def _require_element(
         self,
         bundle_id: str,
@@ -198,9 +212,7 @@ class AXController:
             else None
         )
         if expected_current_value is not None and observed != expected_current_value:
-            raise RuntimeError(
-                f"expected current value {expected_current_value!r}, observed {observed!r}"
-            )
+            raise RuntimeError("expected current value did not match observed state")
         return result.element
 
     def _authorize(self, bundle_id: str, capability: str) -> None:
@@ -233,4 +245,5 @@ def default_ax_controller() -> AXController:
         RealSemanticAXAdapter(permissions),
         permissions,
         build_default_application_profiles(),
+        app_control=default_app_control(),
     )

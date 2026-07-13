@@ -8,6 +8,7 @@ dedicated restricted shell tool in Phase 3).
 """
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Any, ClassVar, Generic, TypeVar
 
 from pydantic import BaseModel
@@ -22,6 +23,13 @@ from thoth_daemon.schemas import (
 
 TInput = TypeVar("TInput", bound=BaseModel)
 TOutput = TypeVar("TOutput", bound=BaseModel)
+
+
+@dataclass(frozen=True)
+class IndependentToolVerification:
+    passed: bool
+    detail: str
+    available: bool = True
 
 
 class UnknownToolError(Exception):
@@ -71,6 +79,15 @@ class ToolDefinition(ABC, Generic[TInput, TOutput]):
 
         Most tools do not target an application. Focus-changing tools must
         override this rather than relying on model-provided target text.
+        """
+        return None
+
+    def verify_independently(self, args: Any) -> IndependentToolVerification | None:
+        """Re-probe state after execution when the tool has a registered verifier.
+
+        Returning ``None`` preserves the existing strategy baseline. Effectful
+        semantic tools override this and must not derive the result from their
+        own action response.
         """
         return None
 

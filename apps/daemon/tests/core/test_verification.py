@@ -5,6 +5,7 @@ from thoth_daemon.schemas import (
     ToolResult,
     VerificationStrategy,
 )
+from thoth_daemon.tools.base import IndependentToolVerification
 
 engine = VerificationEngine()
 
@@ -49,3 +50,26 @@ class TestVerification:
         timed_out = ToolResult(invocation_id="i1", ok=False, timed_out=True)
         vr = engine.verify(step(), timed_out, VerificationStrategy.OUTPUT_ASSERTION)
         assert not vr.passed
+
+    def test_registered_independent_probe_overrides_mock_state_probe_baseline(self) -> None:
+        failed = engine.verify_step(
+            step("ax.set_value"),
+            ok_result(),
+            VerificationStrategy.STATE_PROBE,
+            independent=IndependentToolVerification(
+                passed=False,
+                detail="fresh AX value did not match",
+            ),
+        )
+        passed = engine.verify_step(
+            step("ax.set_value"),
+            ok_result(),
+            VerificationStrategy.STATE_PROBE,
+            independent=IndependentToolVerification(
+                passed=True,
+                detail="fresh AX value matched",
+            ),
+        )
+        assert not failed.passed
+        assert "did not match" in failed.detail
+        assert passed.passed

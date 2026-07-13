@@ -14,6 +14,7 @@ from thoth_daemon.schemas import (
     VerificationResult,
     VerificationStrategy,
 )
+from thoth_daemon.tools.base import IndependentToolVerification
 
 
 class VerificationEngine:
@@ -71,12 +72,21 @@ class VerificationEngine:
         step: PlanStep,
         result: ToolResult,
         strategy: VerificationStrategy,
+        independent: IndependentToolVerification | None = None,
     ) -> VerificationResult:
         """Single verification entry point: the tool's declared strategy is
         the system-enforced MINIMUM (baseline); declared checks can only add
         strictness on top, never replace it. Overall pass requires baseline
         AND every independent check."""
         baseline = self.verify(step, result, strategy)
+        if baseline.passed and independent is not None:
+            baseline = VerificationResult(
+                step_id=step.id,
+                invocation_id=result.invocation_id,
+                strategy=VerificationStrategy.STATE_PROBE,
+                passed=independent.passed and independent.available,
+                detail=independent.detail,
+            )
         if not step.verification_checks:
             return baseline
         checks = self.run_checks(step, result, step.verification_checks)

@@ -96,3 +96,21 @@ uses bounded attribute-value APIs for child lists, suppresses sensitive values
 before constructing raw nodes, and re-finds action targets by identifier or a
 unique role/label match. The deterministic mock is explicitly named and used
 only by tests.
+
+## Independent verification
+
+Semantic mutations register an independent tool verifier with the
+orchestrator. After the action returns, the verifier performs a new permission
+check, re-inspects current AX state, re-resolves the semantic target, and only
+then evaluates the declared postcondition. The action result is never used as
+the observed state. A successful AX API return with a mismatched fresh value
+therefore enters bounded recovery instead of completion.
+
+The verifier set covers element existence, value, enabled, focused, selected,
+window existence, and application-frontmost state. Composite verification
+requires every child. `ax.set_value` and `ax.select_option` require a primary
+`value_equals` verifier bound to the same target and exact requested value.
+Other mutations may not use existence alone as proof. Up to eight additional
+postconditions may make verification stricter. Verification exceptions,
+permission revocation, unavailable probes, redacted values, and target
+ambiguity all fail closed without logging raw expected or observed values.

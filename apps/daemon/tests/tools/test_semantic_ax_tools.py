@@ -286,6 +286,7 @@ class TestMutations:
         assert result.performed
         assert not hasattr(result, "verified")
         assert adapter.mutations == [("set_value", "ref-input", "Aditya")]
+        assert tool.verify_independently(args).passed
 
     async def test_expected_current_state_mismatch_fails_before_mutation(self) -> None:
         registry, adapter = _registry()
@@ -364,7 +365,7 @@ class TestMutations:
                         "application_bundle_id": BUNDLE,
                         "identifier": "ax-save-button",
                     },
-                    "expectation": "exists",
+                    "expectation": "enabled",
                 },
                 "timeout_s": 2,
             }

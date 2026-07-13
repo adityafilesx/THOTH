@@ -23,7 +23,7 @@ from thoth_daemon.schemas.ax import (
     AXVerificationRequest,
     AXWindowSnapshot,
 )
-from thoth_daemon.tools.base import ToolDefinition
+from thoth_daemon.tools.base import IndependentToolVerification, ToolDefinition
 from thoth_daemon.tools.registry import ToolRegistry
 
 
@@ -54,12 +54,22 @@ class _MutationIn(_QueryIn):
     expected_current_value: AXPrimitive | None = None
     expected_result: str = Field(min_length=1, max_length=4096)
     verifier: AXVerificationRequest
+    additional_verifiers: tuple[AXVerificationRequest, ...] = Field(default=(), max_length=8)
     timeout_s: float = Field(gt=0, le=30)
 
     @model_validator(mode="after")
     def _verifier_bundle_matches(self) -> _MutationIn:
         if self.verifier.application_bundle_id != self.bundle_id:
             raise ValueError("AX verifier bundle must match bundle_id")
+        if any(
+            verifier.application_bundle_id != self.bundle_id
+            for verifier in self.additional_verifiers
+        ):
+            raise ValueError("every AX verifier bundle must match bundle_id")
+        if self.verifier.expectation.value == "exists" or any(
+            verifier.expectation.value == "exists" for verifier in self.additional_verifiers
+        ):
+            raise ValueError("AX mutation verification must prove a resulting state, not existence")
         return self
 
 
@@ -73,6 +83,17 @@ class _SemanticTool(ToolDefinition[BaseModel, BaseModel]):
 
     def focus_target(self, args: _AppIn) -> str:
         return args.bundle_id
+
+
+class _MutationTool(_SemanticTool):
+    def verify_independently(self, args: _MutationIn) -> IndependentToolVerification:
+        requests = (args.verifier, *args.additional_verifiers)
+        results = [self._controller.verify(request, args.capability) for request in requests]
+        passed = all(result.passed for result in results)
+        detail = "; ".join(
+            f"{result.expectation.value}={'ok' if result.passed else 'fail'}" for result in results
+        )
+        return IndependentToolVerification(passed=passed, detail=detail)
 
 
 class AXInspectApplicationOut(_Out):
@@ -169,8 +190,18 @@ class AXSetValueIn(_MutationIn):
     capability: Literal["ax_set_value"]
     value: AXPrimitive
 
+    @model_validator(mode="after")
+    def _value_verifier_matches_mutation(self) -> AXSetValueIn:
+        if (
+            self.verifier.expectation.value != "value_equals"
+            or self.verifier.target != self.query
+            or self.verifier.expected_value != self.value
+        ):
+            raise ValueError("ax.set_value requires a matching value_equals verifier")
+        return self
 
-class AXSetValue(_SemanticTool):
+
+class AXSetValue(_MutationTool):
     name = "ax.set_value"
     description = "Set a value on one approved semantic AX element."
     input_model = AXSetValueIn
@@ -203,7 +234,7 @@ class AXPerformActionIn(_MutationIn):
     action_name: str = Field(pattern=r"^AX[A-Za-z]+$", max_length=255)
 
 
-class AXPerformAction(_SemanticTool):
+class AXPerformAction(_MutationTool):
     name = "ax.perform_action"
     description = "Perform one profile-authorized reversible AX action."
     input_model = AXPerformActionIn
@@ -234,8 +265,18 @@ class AXSelectOptionIn(_MutationIn):
     capability: Literal["ax_select_option"]
     option: str = Field(min_length=1, max_length=4096)
 
+    @model_validator(mode="after")
+    def _option_verifier_matches_mutation(self) -> AXSelectOptionIn:
+        if (
+            self.verifier.expectation.value != "value_equals"
+            or self.verifier.target != self.query
+            or self.verifier.expected_value != self.option
+        ):
+            raise ValueError("ax.select_option requires a matching value_equals verifier")
+        return self
 
-class AXSelectOption(_SemanticTool):
+
+class AXSelectOption(_MutationTool):
     name = "ax.select_option"
     description = "Select one declared option on an approved semantic AX element."
     input_model = AXSelectOptionIn
