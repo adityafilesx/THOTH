@@ -55,6 +55,9 @@ beforeEach(() => {
       max_retries_per_step: 2,
       max_retries_per_task: 5,
       trusted_workspaces: ["~/projects/thoth"],
+      inference_provider: "deterministic",
+      inference_model: "qwen3:4b",
+      network_isolation: false,
     },
   };
   vi.stubGlobal(

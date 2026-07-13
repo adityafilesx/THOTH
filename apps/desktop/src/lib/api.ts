@@ -85,6 +85,9 @@ export interface SettingsResponse {
   max_retries_per_step: number;
   max_retries_per_task: number;
   trusted_workspaces: string[];
+  inference_provider: string;
+  inference_model: string;
+  network_isolation: boolean;
 }
 
 export const api = {

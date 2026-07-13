@@ -29,6 +29,8 @@ ignore = [
 "apps/daemon/src/thoth_daemon/core/verifiers/context.py" = ["S603", "S607"]
 # Capstone CLI sets up its own git fixture workspace with fixed argv.
 "apps/daemon/src/thoth_daemon/evals/run_capstones.py" = ["S603", "S607"]
+# The inference HTTP caller's `timeout` param mirrors the real client API.
+"apps/daemon/src/thoth_daemon/inference/llamacpp.py" = ["ASYNC109"]
 
 [tool.mypy]
 python_version = "3.12"

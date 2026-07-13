@@ -26,6 +26,14 @@ class Settings(BaseSettings):
 
     planner: str = "mock"
 
+    # Local inference (Phase 5.0). Default provider is the offline deterministic
+    # floor; "llama.cpp" uses the loopback local server. Cloud is never a
+    # default and never a silent fallback.
+    inference_provider: str = "deterministic"  # deterministic | llama.cpp | mlx
+    inference_model: str = "qwen3:4b"
+    inference_endpoint: str = "http://127.0.0.1:11434"
+    network_isolation: bool = False
+
     session_token: str | None = None
     session_token_path: Path = Path("./data/session.token")
 

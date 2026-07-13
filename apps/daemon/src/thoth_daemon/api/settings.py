@@ -18,4 +18,7 @@ async def get_settings(request: Request) -> dict[str, Any]:
         "max_retries_per_step": cfg.max_retries_per_step,
         "max_retries_per_task": cfg.max_retries_per_task,
         "trusted_workspaces": cfg.trusted_workspaces,
+        "inference_provider": cfg.inference_provider,
+        "inference_model": cfg.inference_model,
+        "network_isolation": cfg.network_isolation,
     }

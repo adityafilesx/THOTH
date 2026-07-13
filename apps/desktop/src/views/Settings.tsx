@@ -61,6 +61,22 @@ export function Settings() {
                   className="w-24 text-right font-mono text-xs"
                 />
               </label>
+              <label className="flex items-center justify-between gap-4 text-xs text-muted">
+                Local inference
+                <Input
+                  readOnly
+                  value={`${data.inference_provider} · ${data.inference_model}`}
+                  className="w-64 text-right font-mono text-xs"
+                />
+              </label>
+              <label className="flex items-center justify-between gap-4 text-xs text-muted">
+                Network isolation
+                <Input
+                  readOnly
+                  value={data.network_isolation ? "on (local-only)" : "off"}
+                  className="w-24 text-right font-mono text-xs"
+                />
+              </label>
               <p className="text-[11px] text-faint">Daemon v{data.version}.</p>
             </CardContent>
           </Card>
