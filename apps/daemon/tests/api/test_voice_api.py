@@ -27,9 +27,7 @@ def _silent_tts(app: FastAPI) -> None:
 
 
 class TestTranscribe:
-    async def test_transcribe_returns_transcript(
-        self, client: AsyncClient, app: FastAPI
-    ) -> None:
+    async def test_transcribe_returns_transcript(self, client: AsyncClient, app: FastAPI) -> None:
         _prime_stt(app, "open my project")
         resp = await client.post(
             "/api/voice/transcribe",
