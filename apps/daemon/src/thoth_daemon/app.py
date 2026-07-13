@@ -4,13 +4,15 @@ from typing import Any
 
 from fastapi import FastAPI
 
-from thoth_daemon.api import health, permissions, skills, tasks, voice, ws
+from thoth_daemon.api import health, intent, permissions, skills, tasks, voice, ws
 from thoth_daemon.api import settings as settings_api
 from thoth_daemon.api.middleware import BearerAuthMiddleware
 from thoth_daemon.audit.store import AuditStore
 from thoth_daemon.config import Settings
 from thoth_daemon.core.approvals import ApprovalEngine
 from thoth_daemon.core.claude_planner import AnthropicPlannerClient, ClaudePlanner
+from thoth_daemon.core.local_plan_client import OllamaPlanClient
+from thoth_daemon.core.local_planner import LocalPlanner
 from thoth_daemon.core.orchestrator import Orchestrator
 from thoth_daemon.core.planner import DeterministicMockPlanner, PlannerAdapter
 from thoth_daemon.core.policy import PolicyEngine
@@ -100,6 +102,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         planner: PlannerAdapter
         if cfg.planner == "claude":
             planner = ClaudePlanner(registry, AnthropicPlannerClient())
+        elif cfg.planner == "local":
+            # Local constrained planner (Phase 5.1): the loopback model's plan
+            # is rejected by the strict validator before any risk review, then
+            # gated by every unchanged Phase 4 boundary. No cloud, ever.
+            planner = LocalPlanner(
+                registry,
+                OllamaPlanClient(
+                    model=cfg.inference_model,
+                    endpoint=cfg.inference_endpoint,
+                    isolation=cfg.network_isolation,
+                ),
+            )
         else:
             planner = DeterministicMockPlanner()
         app.state.orchestrator = Orchestrator(
@@ -132,4 +146,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(skills.router)
     app.include_router(settings_api.router)
     app.include_router(voice.router)
+    app.include_router(intent.router)
     return app

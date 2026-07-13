@@ -93,7 +93,7 @@ async def _run(models: list[str], iterations: int) -> list[ModelBenchmark]:
     # Record the MLX comparison honestly: benchmarked when mlx_lm is present,
     # otherwise a SKIPPED row (spec: compare llama.cpp and MLX when available).
     try:
-        import mlx_lm  # noqa: F401
+        import mlx_lm  # type: ignore[import-not-found]  # noqa: F401
 
         mlx_note = ""  # a real MLX benchmark would be added here when installed
     except ImportError:

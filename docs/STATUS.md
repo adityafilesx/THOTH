@@ -1,6 +1,6 @@
 # THOTH Status
 
-**As of:** 2026-07-13 · **Phases 0–3 complete. All twelve Phase 4 slices built and merged** (plan: `docs/PHASE_4_GAP_REPORT.md`): correlation IDs; independent verification framework (12 fail-closed verifiers); bounded recovery with replan + `FAILED_REQUIRES_USER`; tamper-evident audit hash chain; AX adapter + 6 tools; interactive browser session with two-phase form submission; skill engine + 5 built-ins; voice adapters (interruptible `say` TTS live-verified); planner-eval framework; capstone harness — **five capstone workflows executed against the real OS and independently verified** (`docs/CAPSTONE_REPORT.md`). **Pending live verification, each needing an environment this session lacked:** the live Claude planner + live-planner capstones (ANTHROPIC_API_KEY), AX *element* interaction (Accessibility TCC), STT (model + microphone), and git `push` (a network remote). Maximum claim: *THOTH can safely execute and verify selected multi-step workflows across approved local applications, files, Git repositories and browser environments.*
+**As of:** 2026-07-13 · **Phases 0–4 complete. Phase 5.0 + 5.1 built and merged** (local-first embodiment core): provider-neutral local inference (deterministic floor + loopback llama.cpp — **real qwen3:4b verified**; MLX/cloud optional, cloud disabled by default), hardware+model benchmark (measured default = qwen3:4b, see `docs/LOCAL_MODEL_EVALUATION.md`), reflex/skill/planner intent router (reflex path proven LLM-free), and a local constrained planner with a strict validator (rejects unknown tools / bad args / **risk downgrades** / oversized / no-verifier / unsupported apps) plus a no-cloud fallback ladder. Voice, foreground control, and proactivity are gated until later Phase 5 slices. **Phase 4 recap:** all twelve Phase 4 slices built and merged (plan: `docs/PHASE_4_GAP_REPORT.md`): correlation IDs; independent verification framework (12 fail-closed verifiers); bounded recovery with replan + `FAILED_REQUIRES_USER`; tamper-evident audit hash chain; AX adapter + 6 tools; interactive browser session with two-phase form submission; skill engine + 5 built-ins; voice adapters (interruptible `say` TTS live-verified); planner-eval framework; capstone harness — **five capstone workflows executed against the real OS and independently verified** (`docs/CAPSTONE_REPORT.md`). **Pending live verification, each needing an environment this session lacked:** the live Claude planner + live-planner capstones (ANTHROPIC_API_KEY), AX *element* interaction (Accessibility TCC), STT (model + microphone), and git `push` (a network remote). Maximum claim: *THOTH can safely execute and verify selected multi-step workflows across approved local applications, files, Git repositories and browser environments.*
 
 ## Where we are
 
@@ -13,9 +13,9 @@
 
 | Gate | Result |
 |---|---|
-| `uv run --project apps/daemon pytest` | **551 passed** |
+| `uv run --project apps/daemon pytest` | **624 passed** |
 | `ruff check apps/daemon` | All checks passed |
-| `mypy apps/daemon/src` (strict) | no issues, 75 files |
+| `mypy apps/daemon/src` (strict) | no issues, 89 files |
 | `pnpm -C apps/desktop test` (vitest) | **56 passed** |
 | `pnpm -C apps/desktop lint` (eslint) | clean |
 | `pnpm -C apps/desktop typecheck` (tsc) | clean |
@@ -23,7 +23,7 @@
 | `cargo check` (src-tauri) | Finished |
 | `alembic upgrade head` | applies; single head `0004_hash_chain` |
 
-**Total: 607 automated tests passing.**
+**Total: 680 automated tests passing.**
 
 Also verified end-to-end against a live daemon: R0 task → `COMPLETED`; R3 plan → `FAILED` at policy; R2 task → `WAITING_FOR_APPROVAL` → approve → `COMPLETED`; approval reuse → HTTP 404 (single-use); cancel → `CANCELLED`; audit sequence monotonic; no secrets in JSONL logs.
 
