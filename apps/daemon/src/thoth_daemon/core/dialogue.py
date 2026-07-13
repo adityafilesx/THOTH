@@ -94,10 +94,25 @@ class ApprovalFollowUpRejected(DialogueError):
 
 
 _VAGUE_APPROVAL = re.compile(r"^(yes|approve( it)?|go ahead|do it)[.! ]*$", re.IGNORECASE)
+_NO_PUSH = re.compile(r"\b(?:do not|don't|never)\s+push\b", re.IGNORECASE)
 
 
 def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text.strip().lower().replace("\u2019", "'"))
+
+
+def constraints_from_text(text: str) -> tuple[DialogueConstraint, ...]:
+    """Extract only deterministic, system-recognized hard constraints."""
+    normalized = text.replace("\u2019", "'")
+    return (DialogueConstraint.NO_PUSH,) if _NO_PUSH.search(normalized) else ()
+
+
+def enforce_constraints(constraints: tuple[DialogueConstraint, ...], tool_name: str) -> None:
+    if DialogueConstraint.NO_PUSH in constraints and tool_name in {
+        "git_push",
+        "mock_git_push",
+    }:
+        raise DialogueScopeViolation("no_push constraint forbids this tool")
 
 
 class OperationalDialogueStore:
@@ -134,11 +149,7 @@ class OperationalDialogueStore:
 
     def enforce_tool_constraints(self, task_id: str, tool_name: str, now: datetime) -> None:
         state = self.get(task_id, now)
-        if DialogueConstraint.NO_PUSH in state.constraints and tool_name in {
-            "git_push",
-            "mock_git_push",
-        }:
-            raise DialogueScopeViolation("no_push constraint forbids this tool")
+        enforce_constraints(state.constraints, tool_name)
 
     def resolve_follow_up(
         self,

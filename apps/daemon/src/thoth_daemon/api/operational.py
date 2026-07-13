@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-import re
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
@@ -15,11 +14,11 @@ from thoth_daemon.core.application_profiles import ApplicationProfileRegistry
 from thoth_daemon.core.dialogue import (
     ApprovalFollowUpRejected,
     ArtifactReference,
-    DialogueConstraint,
     DialogueError,
     DialogueExpired,
     DialogueState,
     OperationalDialogueStore,
+    constraints_from_text,
 )
 from thoth_daemon.core.foreground import ForegroundContext, ForegroundContextBroker
 from thoth_daemon.core.orchestrator import Orchestrator
@@ -37,7 +36,6 @@ from thoth_daemon.storage.permissions import PermissionStore
 
 router = APIRouter()
 _DIALOGUE_TTL = timedelta(minutes=5)
-_NO_PUSH = re.compile(r"\b(?:do not|don't|never)\s+push\b", re.IGNORECASE)
 
 
 class PersonaComposeBody(BaseModel):
@@ -104,8 +102,9 @@ def refresh_dialogue(request: Request, task: Task) -> DialogueState:
                     )
 
     constraints = list(previous.constraints if previous else ())
-    if _NO_PUSH.search(task.goal) and DialogueConstraint.NO_PUSH not in constraints:
-        constraints.append(DialogueConstraint.NO_PUSH)
+    for constraint in constraints_from_text(task.goal):
+        if constraint not in constraints:
+            constraints.append(constraint)
     pending = _pending_for(request, task.id)
     state = DialogueState(
         active_task_id=task.id,

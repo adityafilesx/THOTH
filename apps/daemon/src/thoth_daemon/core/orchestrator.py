@@ -26,6 +26,11 @@ from pydantic import ValidationError
 
 from thoth_daemon.audit.store import AuditStore
 from thoth_daemon.core.approvals import ApprovalEngine, ApprovalRequiredError
+from thoth_daemon.core.dialogue import (
+    DialogueScopeViolation,
+    constraints_from_text,
+    enforce_constraints,
+)
 from thoth_daemon.core.focus import FocusManager, FocusPolicy, FocusRestorationResult
 from thoth_daemon.core.planner import PlannerAdapter
 from thoth_daemon.core.policy import PolicyEngine
@@ -52,6 +57,7 @@ from thoth_daemon.tools.registry import ToolRegistry
 Publish = Callable[[str, dict[str, Any]], Awaitable[None]]
 ScopeProvider = Callable[[], Awaitable[ResourceScope]]
 FocusResultSink = Callable[[str, FocusRestorationResult], None]
+ToolConstraintChecker = Callable[[str, str], None]
 
 # Hard cap on tool executions per task (initial plan + retries + replans
 # combined). Exceeding it escalates to FAILED_REQUIRES_USER (slice 8).
@@ -99,6 +105,7 @@ class _TaskRunner:
         planner: PlannerAdapter,
         focus_manager: FocusManager | None,
         focus_result_sink: FocusResultSink | None,
+        constraint_checker: ToolConstraintChecker | None,
     ) -> None:
         self.task = task
         self.plan = plan
@@ -118,6 +125,8 @@ class _TaskRunner:
         self._focus_manager = focus_manager
         self._focus_result_sink = focus_result_sink
         self._focus_result: FocusRestorationResult | None = None
+        self._hard_constraints = constraints_from_text(task.goal)
+        self._constraint_checker = constraint_checker
 
         self._pending: list[tuple[str, dict[str, Any]]] = []
         self.machine = TaskStateMachine(task.id, task.state, emit=self._collect)
@@ -325,6 +334,18 @@ class _TaskRunner:
             arguments=step.arguments,
             effective_risk=effective_risk,
         )
+
+        try:
+            enforce_constraints(self._hard_constraints, step.tool_name)
+            if self._constraint_checker is not None:
+                self._constraint_checker(self.task.id, step.tool_name)
+        except DialogueScopeViolation as exc:
+            await self._audit_only(
+                "constraint.denied",
+                {"step_id": step.id, "tool": step.tool_name, "reason": str(exc)},
+            )
+            await self._fail(f"step '{step.title}' blocked by constraint: {exc}")
+            return "stop"
 
         # Scope gate — deny out-of-scope targets before any move toward
         # EXECUTING. Resolved fresh so a revocation mid-task takes effect now.
@@ -632,6 +653,7 @@ class Orchestrator:
         scope_provider: ScopeProvider | None = None,
         focus_manager: FocusManager | None = None,
         focus_result_sink: FocusResultSink | None = None,
+        constraint_checker: ToolConstraintChecker | None = None,
     ) -> None:
         self._registry = registry
         self._policy = policy
@@ -646,6 +668,7 @@ class Orchestrator:
         self._scope_provider = scope_provider or _empty_scope
         self._focus_manager = focus_manager
         self._focus_result_sink = focus_result_sink
+        self._constraint_checker = constraint_checker
         self._runners: dict[str, _TaskRunner] = {}
         self._tasks: dict[str, Task] = {}
         self._background: set[asyncio.Task[None]] = set()
@@ -690,6 +713,7 @@ class Orchestrator:
             planner=self._planner,
             focus_manager=self._focus_manager,
             focus_result_sink=self._focus_result_sink,
+            constraint_checker=self._constraint_checker,
         )
         self._runners[task.id] = runner
         background = asyncio.ensure_future(runner.run())
@@ -731,6 +755,7 @@ class Orchestrator:
             planner=self._planner,
             focus_manager=self._focus_manager,
             focus_result_sink=self._focus_result_sink,
+            constraint_checker=self._constraint_checker,
         )
         self._runners[task.id] = runner
         background = asyncio.ensure_future(runner.run())

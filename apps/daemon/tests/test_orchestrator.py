@@ -156,6 +156,19 @@ class TestBlockedFlow:
         )
         assert not any(e.event_type == "tool.result" for e in audit)
 
+    async def test_dont_push_is_a_hard_task_constraint(self, trusted_orch: Orchestrator) -> None:
+        task = await trusted_orch.submit("Inspect git, but don't push")
+        settled = await trusted_orch.settle(task.id)
+
+        assert settled.state is TaskState.FAILED
+        assert trusted_orch.pending_approvals() == []
+        audit = await trusted_orch.task_audit(task.id)
+        assert any(event.event_type == "constraint.denied" for event in audit)
+        assert not any(
+            event.event_type == "tool.result" and event.payload.get("tool") == "mock_git_push"
+            for event in audit
+        )
+
 
 class TestRecoveryFlow:
     async def test_flaky_tool_recovers_within_budget(self, trusted_orch: Orchestrator) -> None:

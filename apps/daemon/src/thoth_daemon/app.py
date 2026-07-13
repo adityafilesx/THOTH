@@ -1,5 +1,5 @@
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from datetime import UTC, datetime
 from typing import Any
 
@@ -13,7 +13,7 @@ from thoth_daemon.config import Settings
 from thoth_daemon.core.application_profiles import build_default_application_profiles
 from thoth_daemon.core.approvals import ApprovalEngine
 from thoth_daemon.core.claude_planner import AnthropicPlannerClient, ClaudePlanner
-from thoth_daemon.core.dialogue import OperationalDialogueStore
+from thoth_daemon.core.dialogue import DialogueExpired, OperationalDialogueStore
 from thoth_daemon.core.focus import FocusManager
 from thoth_daemon.core.foreground import ForegroundContext, ForegroundContextBroker
 from thoth_daemon.core.local_plan_client import OllamaPlanClient
@@ -161,6 +161,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         async def scope_provider() -> ResourceScope:
             return await permissions_store.effective_scope(default_ws.id)
 
+        def constraint_checker(task_id: str, tool_name: str) -> None:
+            # No live follow-up state means there is no dynamic dialogue
+            # constraint. Goal-derived constraints remain enforced by the
+            # orchestrator itself.
+            with suppress(DialogueExpired):
+                app.state.dialogue.enforce_tool_constraints(
+                    task_id,
+                    tool_name,
+                    datetime.now(UTC),
+                )
+
         registry = build_registry()
         register_fs_tools(registry)  # real, scoped filesystem tools (slice 3)
         register_shell_tool(registry)  # restricted shell (slice 4)
@@ -207,6 +218,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             scope_provider=scope_provider,
             focus_manager=focus_manager,
             focus_result_sink=app.state.focus_results.__setitem__,
+            constraint_checker=constraint_checker,
         )
         log.info("daemon_started", extra={"data": {"host": cfg.host, "port": cfg.port}})
         yield
