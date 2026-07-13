@@ -10,6 +10,7 @@ verification did not pass.
 import pytest
 
 from thoth_daemon.core.persona import (
+    AccessibilityOutcome,
     PersonaResponseComposer,
     ResponseFact,
     ResponseIntent,
@@ -37,6 +38,89 @@ def _fact(**kw) -> ResponseFact:
 
 
 class TestDeterministicTemplates:
+    @pytest.mark.parametrize(
+        ("outcome", "intent", "expected"),
+        [
+            (
+                AccessibilityOutcome.PERMISSION_MISSING,
+                ResponseIntent.FAILED,
+                "permission is not granted",
+            ),
+            (
+                AccessibilityOutcome.PERMISSION_REVOKED,
+                ResponseIntent.FAILED,
+                "permission was revoked",
+            ),
+            (
+                AccessibilityOutcome.ELEMENT_NOT_FOUND,
+                ResponseIntent.FAILED,
+                "could not find",
+            ),
+            (
+                AccessibilityOutcome.MULTIPLE_ELEMENTS,
+                ResponseIntent.NEEDS_CLARIFICATION,
+                "multiple matching elements",
+            ),
+            (
+                AccessibilityOutcome.ELEMENT_DISABLED,
+                ResponseIntent.FAILED,
+                "is disabled",
+            ),
+            (
+                AccessibilityOutcome.UNSUPPORTED_CAPABILITY,
+                ResponseIntent.POLICY_REFUSAL,
+                "not supported",
+            ),
+            (
+                AccessibilityOutcome.ACTION_VERIFIED,
+                ResponseIntent.VERIFIED_COMPLETION,
+                "independently verified",
+            ),
+            (
+                AccessibilityOutcome.PARTIAL_COMPLETION,
+                ResponseIntent.PARTIAL_COMPLETION,
+                "remaining Accessibility action",
+            ),
+            (
+                AccessibilityOutcome.FOCUS_RESTORATION_FAILED,
+                ResponseIntent.PARTIAL_COMPLETION,
+                "focus restoration failed",
+            ),
+            (
+                AccessibilityOutcome.APPLICATION_CLOSED,
+                ResponseIntent.FAILED,
+                "application closed",
+            ),
+            (
+                AccessibilityOutcome.STALE_REFERENCE,
+                ResponseIntent.FAILED,
+                "reference was stale",
+            ),
+            (
+                AccessibilityOutcome.ACTION_CANCELLED,
+                ResponseIntent.INTERRUPTED,
+                "action was cancelled",
+            ),
+        ],
+    )
+    def test_accessibility_outcomes_are_deterministic_and_model_free(
+        self,
+        outcome: AccessibilityOutcome,
+        intent: ResponseIntent,
+        expected: str,
+    ) -> None:
+        response = COMPOSER.compose(
+            _fact(
+                intent=intent,
+                verified=(intent is ResponseIntent.VERIFIED_COMPLETION),
+                accessibility_outcome=outcome,
+                application_name="TextEdit",
+            )
+        )
+        assert expected in response.display.text
+        assert response.used_model is False
+        assert len(response.spoken.text) < len(response.display.text)
+
     def test_acknowledgement(self) -> None:
         r = COMPOSER.compose(_fact(intent=ResponseIntent.ACKNOWLEDGEMENT))
         assert r.display.text == "Understood."

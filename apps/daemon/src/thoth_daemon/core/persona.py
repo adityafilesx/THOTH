@@ -49,6 +49,21 @@ class ResponseIntent(StrEnum):
     RESUMABLE_TASK = "resumable_task"
 
 
+class AccessibilityOutcome(StrEnum):
+    PERMISSION_MISSING = "permission_missing"
+    PERMISSION_REVOKED = "permission_revoked"
+    ELEMENT_NOT_FOUND = "element_not_found"
+    MULTIPLE_ELEMENTS = "multiple_elements"
+    ELEMENT_DISABLED = "element_disabled"
+    UNSUPPORTED_CAPABILITY = "unsupported_capability"
+    ACTION_VERIFIED = "action_verified"
+    PARTIAL_COMPLETION = "partial_completion"
+    FOCUS_RESTORATION_FAILED = "focus_restoration_failed"
+    APPLICATION_CLOSED = "application_closed"
+    STALE_REFERENCE = "stale_reference"
+    ACTION_CANCELLED = "action_cancelled"
+
+
 class ResponseFact(BaseModel):
     """Immutable, verified facts the composer may phrase but never change."""
 
@@ -65,6 +80,8 @@ class ResponseFact(BaseModel):
     clarification_question: str | None = None
     resumable_step: str | None = None
     step_progress: str | None = None
+    accessibility_outcome: AccessibilityOutcome | None = None
+    application_name: str | None = None
 
 
 class SpokenResponse(BaseModel):
@@ -229,6 +246,8 @@ class PersonaResponseComposer:
 
     # -- deterministic templates -----------------------------------------
     def _template(self, fact: ResponseFact) -> str:
+        if fact.accessibility_outcome is not None:
+            return self._accessibility_template(fact)
         intent = fact.intent
         if intent is ResponseIntent.ACKNOWLEDGEMENT:
             return "Understood."
@@ -266,10 +285,80 @@ class PersonaResponseComposer:
             return f"A task can be resumed from {step}. Resume it?"
         return fact.summary or "Understood."  # pragma: no cover - exhaustive above
 
+    @staticmethod
+    def _accessibility_template(fact: ResponseFact) -> str:
+        outcome = fact.accessibility_outcome
+        if outcome is None:  # guarded by _template; keeps this helper total
+            raise ValueError("an Accessibility outcome is required")
+        app = fact.application_name or "the application"
+        templates = {
+            AccessibilityOutcome.PERMISSION_MISSING: (
+                f"Accessibility permission is not granted. I did not interact with {app}."
+            ),
+            AccessibilityOutcome.PERMISSION_REVOKED: (
+                f"Accessibility permission was revoked. I did not interact with {app}."
+            ),
+            AccessibilityOutcome.ELEMENT_NOT_FOUND: (
+                f"I could not find the requested element in {app}. No action was taken."
+            ),
+            AccessibilityOutcome.MULTIPLE_ELEMENTS: (
+                f"I found multiple matching elements in {app}. No action was taken."
+            ),
+            AccessibilityOutcome.ELEMENT_DISABLED: (
+                f"The requested element in {app} is disabled. No action was taken."
+            ),
+            AccessibilityOutcome.UNSUPPORTED_CAPABILITY: (
+                f"That Accessibility capability is not supported for {app}. No action was taken."
+            ),
+            AccessibilityOutcome.ACTION_VERIFIED: (
+                f"The Accessibility action in {app} was independently verified."
+            ),
+            AccessibilityOutcome.PARTIAL_COMPLETION: (
+                "The verified substep was completed, but the remaining Accessibility action "
+                "could not be verified."
+            ),
+            AccessibilityOutcome.FOCUS_RESTORATION_FAILED: (
+                "The Accessibility action was verified, but focus restoration failed."
+            ),
+            AccessibilityOutcome.APPLICATION_CLOSED: (
+                f"The application closed during the Accessibility action. No further action "
+                f"was taken in {app}."
+            ),
+            AccessibilityOutcome.STALE_REFERENCE: (
+                f"The Accessibility element reference was stale in {app}. No action was taken."
+            ),
+            AccessibilityOutcome.ACTION_CANCELLED: (
+                "The Accessibility action was cancelled. No further action was taken."
+            ),
+        }
+        return templates[outcome]
+
     # -- spoken form ------------------------------------------------------
     def _spoken(self, fact: ResponseFact, display_text: str, mode: ResponseMode) -> str:
         if mode is ResponseMode.AMBIENT and fact.intent is ResponseIntent.EXECUTION_PROGRESS:
             return ""  # ambient does not speak routine progress
+        if fact.accessibility_outcome is not None:
+            spoken_templates = {
+                AccessibilityOutcome.PERMISSION_MISSING: "Accessibility permission is missing.",
+                AccessibilityOutcome.PERMISSION_REVOKED: "Accessibility permission was revoked.",
+                AccessibilityOutcome.ELEMENT_NOT_FOUND: "The element was not found.",
+                AccessibilityOutcome.MULTIPLE_ELEMENTS: "Multiple elements matched.",
+                AccessibilityOutcome.ELEMENT_DISABLED: "The element is disabled.",
+                AccessibilityOutcome.UNSUPPORTED_CAPABILITY: "That capability is not supported.",
+                AccessibilityOutcome.ACTION_VERIFIED: "The UI result was verified.",
+                AccessibilityOutcome.PARTIAL_COMPLETION: (
+                    "The UI action was only partially verified."
+                ),
+                AccessibilityOutcome.FOCUS_RESTORATION_FAILED: (
+                    "The action was verified, but focus was not restored."
+                ),
+                AccessibilityOutcome.APPLICATION_CLOSED: (
+                    "The application closed during the action."
+                ),
+                AccessibilityOutcome.STALE_REFERENCE: "The element reference was stale.",
+                AccessibilityOutcome.ACTION_CANCELLED: "The action was cancelled.",
+            }
+            return spoken_templates[fact.accessibility_outcome]
         # Suppress technical detail (paths/ports/hashes) in the spoken form.
         spoken = _TECHNICAL.sub("", display_text)
         spoken = re.sub(r"\s{2,}", " ", spoken).replace(" .", ".").replace(" ,", ",").strip()

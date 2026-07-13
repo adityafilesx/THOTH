@@ -163,3 +163,20 @@ Other mutations may not use existence alone as proof. Up to eight additional
 postconditions may make verification stricter. Verification exceptions,
 permission revocation, unavailable probes, redacted values, and target
 ambiguity all fail closed without logging raw expected or observed values.
+
+## Persona boundary
+
+Terminal AX outcomes are mapped to a closed deterministic response enum after
+execution and verification. Missing or revoked permission, missing, ambiguous,
+disabled, stale, or unsupported elements, application closure, cancellation,
+partial completion, failed focus restoration, and verified completion each
+have fixed display and shorter spoken wording. Raw planner titles, element
+labels, descriptions, values, and failure prose are not presentation facts.
+Known bundle identifiers map to local display names; unknown identifiers use
+the neutral phrase `the approved application`.
+
+An AX API return is never sufficient for success language. A task in
+`COMPLETED` receives verified AX wording only when every AX step has an
+independent passing verification result and any required focus result passed.
+All AX failure, refusal, clarification, cancellation, and routine response
+paths remain model-free.

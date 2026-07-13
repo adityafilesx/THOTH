@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict
 from thoth_daemon.core.focus import FocusPolicy, FocusRestorationResult
 from thoth_daemon.core.foreground import ForegroundContext
 from thoth_daemon.core.persona import (
+    AccessibilityOutcome,
     PersonaResponse,
     PersonaResponseComposer,
     ResponseFact,
@@ -23,7 +24,7 @@ from thoth_daemon.core.persona import (
     ResponsePolicyViolation,
 )
 from thoth_daemon.core.runtime_status import LocalRuntimeStatus
-from thoth_daemon.schemas import ApprovalRequest, RiskLevel, StepStatus, Task, TaskState
+from thoth_daemon.schemas import ApprovalRequest, PlanStep, RiskLevel, StepStatus, Task, TaskState
 
 
 class ApprovalStage(StrEnum):
@@ -119,6 +120,14 @@ class TaskPresentationComposer:
         steps = task.plan.steps if task.plan else []
         succeeded = [step.title for step in steps if step.status is StepStatus.SUCCEEDED]
         failed_steps = [step for step in steps if step.status is StepStatus.FAILED]
+
+        accessibility_fact = TaskPresentationComposer._accessibility_fact(
+            task,
+            steps,
+            focus_result,
+        )
+        if accessibility_fact is not None:
+            return accessibility_fact
 
         if state in {TaskState.RECEIVED, TaskState.UNDERSTANDING}:
             return ResponseFact(intent=ResponseIntent.ACKNOWLEDGEMENT)
@@ -223,6 +232,115 @@ class TaskPresentationComposer:
                 verified=False,
             )
         return ResponseFact(intent=ResponseIntent.ACKNOWLEDGEMENT)
+
+    @staticmethod
+    def _accessibility_fact(
+        task: Task,
+        steps: list[PlanStep],
+        focus_result: FocusRestorationResult | None,
+    ) -> ResponseFact | None:
+        """Map authoritative AX execution state to fixed persona outcomes.
+
+        Planner-authored titles and expected-result prose are deliberately not
+        used. The error text is classified into a closed enum and is never
+        echoed. Application names come only from this local bundle allowlist.
+        """
+        ax_steps = [step for step in steps if step.tool_name.startswith("ax.")]
+        if not ax_steps or task.state not in {
+            TaskState.COMPLETED,
+            TaskState.FAILED,
+            TaskState.FAILED_REQUIRES_USER,
+            TaskState.CANCELLED,
+        }:
+            return None
+
+        ax_step = ax_steps[-1]
+        bundle_id = ax_step.arguments.get("bundle_id")
+        application_names = {
+            "com.apple.finder": "Finder",
+            "com.apple.TextEdit": "TextEdit",
+            "com.microsoft.VSCode": "Visual Studio Code",
+            "com.apple.Terminal": "Terminal",
+            "me.adityalabs.thoth.axtest": "THOTH Accessibility Test App",
+            "com.google.Chrome": "Chromium",
+            "org.chromium.Chromium": "Chromium",
+        }
+        application_name = (
+            application_names.get(bundle_id, "the approved application")
+            if isinstance(bundle_id, str)
+            else "the approved application"
+        )
+
+        def fact(intent: ResponseIntent, outcome: AccessibilityOutcome) -> ResponseFact:
+            return ResponseFact(
+                intent=intent,
+                accessibility_outcome=outcome,
+                application_name=application_name,
+                verified=outcome is AccessibilityOutcome.ACTION_VERIFIED,
+            )
+
+        if task.state is TaskState.CANCELLED:
+            return fact(ResponseIntent.INTERRUPTED, AccessibilityOutcome.ACTION_CANCELLED)
+
+        if task.state is TaskState.COMPLETED:
+            if focus_result is not None and not focus_result.verified:
+                return fact(
+                    ResponseIntent.PARTIAL_COMPLETION,
+                    AccessibilityOutcome.FOCUS_RESTORATION_FAILED,
+                )
+            if not all(step.verification_passed is True for step in ax_steps):
+                return fact(
+                    ResponseIntent.PARTIAL_COMPLETION,
+                    AccessibilityOutcome.PARTIAL_COMPLETION,
+                )
+            return fact(
+                ResponseIntent.VERIFIED_COMPLETION,
+                AccessibilityOutcome.ACTION_VERIFIED,
+            )
+
+        evidence = " ".join(
+            part for part in (task.error, ax_step.verification_detail) if isinstance(part, str)
+        ).lower()
+        if "revoked" in evidence:
+            return fact(ResponseIntent.FAILED, AccessibilityOutcome.PERMISSION_REVOKED)
+        if any(
+            token in evidence
+            for token in (
+                "axpermissionerror",
+                "permission",
+                "not_determined",
+                "not determined",
+                "tcc",
+            )
+        ):
+            return fact(ResponseIntent.FAILED, AccessibilityOutcome.PERMISSION_MISSING)
+        if any(token in evidence for token in ("multiple", "ambiguous", "clarification")):
+            return fact(
+                ResponseIntent.NEEDS_CLARIFICATION,
+                AccessibilityOutcome.MULTIPLE_ELEMENTS,
+            )
+        if "disabled" in evidence:
+            return fact(ResponseIntent.FAILED, AccessibilityOutcome.ELEMENT_DISABLED)
+        if "stale" in evidence:
+            return fact(ResponseIntent.FAILED, AccessibilityOutcome.STALE_REFERENCE)
+        if any(token in evidence for token in ("application closed", "not running", "terminated")):
+            return fact(ResponseIntent.FAILED, AccessibilityOutcome.APPLICATION_CLOSED)
+        if any(
+            token in evidence
+            for token in ("capability", "unauthorized", "unsupported", "forbidden")
+        ):
+            return fact(
+                ResponseIntent.POLICY_REFUSAL,
+                AccessibilityOutcome.UNSUPPORTED_CAPABILITY,
+            )
+        if any(token in evidence for token in ("not found", "did not resolve", "no match")):
+            return fact(ResponseIntent.FAILED, AccessibilityOutcome.ELEMENT_NOT_FOUND)
+        if any(step.status is StepStatus.SUCCEEDED for step in ax_steps):
+            return fact(
+                ResponseIntent.PARTIAL_COMPLETION,
+                AccessibilityOutcome.PARTIAL_COMPLETION,
+            )
+        return None
 
     @staticmethod
     def _safe_fact(task: Task, original: ResponseFact) -> ResponseFact:

@@ -43,6 +43,28 @@ def _step(
     )
 
 
+def _ax_step(
+    *,
+    status: StepStatus,
+    verified: bool | None,
+    detail: str | None = None,
+) -> PlanStep:
+    return PlanStep(
+        index=0,
+        title="Update fixture field",
+        tool_name="ax.set_value",
+        arguments={
+            "bundle_id": "me.adityalabs.thoth.axtest",
+            "capability": "ax_set_value",
+        },
+        declared_risk=RiskLevel.R1,
+        focus_policy=FocusPolicy.RESTORE_PREVIOUS_FOCUS,
+        status=status,
+        verification_passed=verified,
+        verification_detail=detail,
+    )
+
+
 def _task(state: TaskState, steps: list[PlanStep] | None = None, error: str | None = None) -> Task:
     task = Task(goal="Run the checks", source=TaskSource.TEXT, state=state, error=error)
     if steps is not None:
@@ -128,6 +150,66 @@ class TestLifecycleIntents:
 
 
 class TestOperationalFacts:
+    def test_verified_ax_completion_uses_deterministic_ax_wording(self) -> None:
+        view = COMPOSER.compose(
+            _task(
+                TaskState.COMPLETED,
+                [_ax_step(status=StepStatus.SUCCEEDED, verified=True)],
+            )
+        )
+        assert view.response.intent is ResponseIntent.VERIFIED_COMPLETION
+        assert view.response.used_model is False
+        assert "independently verified" in view.display_response
+
+    def test_ax_permission_and_ambiguity_fail_without_success_language(self) -> None:
+        permission = COMPOSER.compose(
+            _task(
+                TaskState.FAILED,
+                [_ax_step(status=StepStatus.FAILED, verified=False)],
+                error="execution authority unavailable: AXPermissionError",
+            )
+        )
+        ambiguous = COMPOSER.compose(
+            _task(
+                TaskState.FAILED_REQUIRES_USER,
+                [
+                    _ax_step(
+                        status=StepStatus.FAILED,
+                        verified=False,
+                        detail="multiple plausible AX elements require clarification",
+                    )
+                ],
+                error="multiple plausible AX elements require clarification",
+            )
+        )
+        assert "permission is not granted" in permission.display_response
+        assert permission.response.used_model is False
+        assert ambiguous.response.intent is ResponseIntent.NEEDS_CLARIFICATION
+        assert "No action was taken" in ambiguous.display_response
+
+    def test_cancelled_ax_action_has_specific_deterministic_response(self) -> None:
+        view = COMPOSER.compose(
+            _task(
+                TaskState.CANCELLED,
+                [_ax_step(status=StepStatus.RUNNING, verified=None)],
+            )
+        )
+        assert view.response.intent is ResponseIntent.INTERRUPTED
+        assert "Accessibility action was cancelled" in view.display_response
+
+    def test_ax_api_success_cannot_become_verified_persona_success(self) -> None:
+        task = _task(
+            TaskState.COMPLETED,
+            [_ax_step(status=StepStatus.SUCCEEDED, verified=False)],
+        ).model_copy(update={"result_summary": "Model says all Accessibility work succeeded."})
+
+        view = COMPOSER.compose(task)
+
+        assert view.response.intent is ResponseIntent.PARTIAL_COMPLETION
+        assert view.response.facts.verified is False
+        assert "independently verified" not in view.display_response
+        assert "Model says" not in view.display_response
+
     def test_model_runtime_failure_uses_deterministic_degraded_response(self) -> None:
         task = _task(
             TaskState.FAILED,
