@@ -24,6 +24,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Protocol
+from urllib.parse import urlparse
 from uuid import uuid4
 
 
@@ -65,7 +66,9 @@ class BrowserSession(Protocol):
     async def download(self, url: str, dest_dir: str, timeout_s: float) -> str: ...
     async def screenshot(self, dest_path: str) -> str: ...
     async def prepare_submission(self, form_selector: str) -> PreparedSubmission: ...
-    async def submit(self, submission_id: str, timeout_s: float) -> PageState: ...
+    async def submit(
+        self, submission_id: str, timeout_s: float, expected_action_url: str | None = None
+    ) -> PageState: ...
 
 
 class _SubmissionLedger:
@@ -78,7 +81,12 @@ class _SubmissionLedger:
     def add(self, prepared: PreparedSubmission) -> None:
         self._prepared[prepared.submission_id] = prepared
 
-    def take(self, submission_id: str, current_fields: dict[str, str]) -> PreparedSubmission:
+    def take(
+        self,
+        submission_id: str,
+        current_fields: dict[str, str],
+        expected_action_url: str | None = None,
+    ) -> PreparedSubmission:
         if submission_id in self._consumed:
             raise SubmissionError("submission already consumed (single-use)")
         prepared = self._prepared.get(submission_id)
@@ -86,6 +94,15 @@ class _SubmissionLedger:
             raise SubmissionError("unknown submission id; call browser_prepare_submission first")
         if current_fields != prepared.fields:
             raise SubmissionError("form state changed since preparation; re-prepare and re-approve")
+        if expected_action_url is not None:
+            prepared_host = urlparse(prepared.action_url).hostname or ""
+            expected_host = urlparse(expected_action_url).hostname or ""
+            if prepared_host != expected_host:
+                raise SubmissionError(
+                    f"prepared action host {prepared_host!r} does not match the approved "
+                    f"action_url host {expected_host!r}; the approval would not describe "
+                    "the real submission"
+                )
         self._consumed.add(submission_id)
         return prepared
 
@@ -211,13 +228,15 @@ class MockBrowserSession:
         self._ledger.add(prepared)
         return prepared
 
-    async def submit(self, submission_id: str, timeout_s: float) -> PageState:
+    async def submit(
+        self, submission_id: str, timeout_s: float, expected_action_url: str | None = None
+    ) -> PageState:
         # Locate the prepared form to recapture current fields.
         prepared_meta = self._ledger._prepared.get(submission_id)
         current = (
             self._form_fields(prepared_meta.form_selector) if prepared_meta is not None else {}
         )
-        prepared = self._ledger.take(submission_id, current)
+        prepared = self._ledger.take(submission_id, current, expected_action_url)
         self.submitted.append(prepared)
         # Navigate to the form's action URL if it is a known page.
         if prepared.action_url in self._pages:
@@ -332,12 +351,14 @@ class PlaywrightSession:
         self._ledger.add(prepared)
         return prepared
 
-    async def submit(self, submission_id: str, timeout_s: float) -> PageState:
+    async def submit(
+        self, submission_id: str, timeout_s: float, expected_action_url: str | None = None
+    ) -> PageState:
         prepared_meta = self._ledger._prepared.get(submission_id)
         current: dict[str, str] = {}
         if prepared_meta is not None:
             _, current = await self._capture_fields(prepared_meta.form_selector)
-        prepared = self._ledger.take(submission_id, current)
+        prepared = self._ledger.take(submission_id, current, expected_action_url)
         page = await self._ensure()
         await page.eval_on_selector(prepared.form_selector, "f => f.submit()")
         await page.wait_for_load_state("domcontentloaded", timeout=int(timeout_s * 1000))

@@ -8,7 +8,11 @@ THOTH is not a chatbot, a note-taking app, a generic second brain, or a voice-co
 
 ## Status
 
-**Phase 2 complete.** The safety core (state machine, risk policy, approvals, tool registry, verification, recovery, audit) is implemented and tested against **mock tools only**. THOTH cannot yet control your computer: real macOS automation, browser control, and voice are Phase 3+ and currently exist as interfaces and mocks. See [docs/STATUS.md](docs/STATUS.md).
+**Phases 0–3 complete; Phase 4 built (live-planner runs pending an API key).** The deterministic safety core is real and enforced end-to-end: risk policy (R0–R3, no downgrades), single-use invocation-bound approvals, scoped tool execution only in `EXECUTING`, twelve independent post-execution verifiers (fail-closed when a probe is unavailable), bounded recovery (retries → replans → `FAILED_REQUIRES_USER`), and a tamper-evident audit hash chain. Real capabilities behind the same contracts: scoped filesystem, restricted shell, git, macOS app launch/focus, Accessibility element tools (element interaction pending the TCC permission), interactive browser sessions with two-phase form submission (`prepare` → explicit R2 approval of the exact payload → `submit`), a planning-only skill engine with five built-in skills, and push-to-talk voice adapters (STT pending a model + microphone; interruptible `say` TTS verified).
+
+Five capstone workflows ran against the real OS and were **independently verified** — real file and git state, a real `https://example.com` fetch, a real single-use approval, a real TextEdit launch ([docs/CAPSTONE_REPORT.md](docs/CAPSTONE_REPORT.md)). Those runs used scripted reference plans; the same goals through the **live Claude planner are pending live verification** (requires `ANTHROPIC_API_KEY`).
+
+Maximum supported claim: **THOTH can safely execute and verify selected multi-step workflows across approved local applications, files, Git repositories and browser environments.** It does not claim general autonomous computer control. See [docs/STATUS.md](docs/STATUS.md).
 
 ## Principles (priority order)
 

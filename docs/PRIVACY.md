@@ -4,8 +4,8 @@
 
 - All task processing, planning state, approvals, and audit data live on the user's machine (SQLite + JSONL under user-owned paths).
 - The daemon binds to `127.0.0.1` only. No telemetry, no analytics, no cloud sync.
-- Voice is push-to-talk only; no always-on recording, no wake word. Transcription runs locally (whisper.cpp / faster-whisper adapters, Phase 3). Audio buffers are discarded after transcription; they are never persisted.
-- Cloud model calls (Phase 3 planner via claude-agent-sdk) send only: the normalized user goal, typed plan/tool context, and redacted tool results. Never raw credential material, Keychain content, or unredacted file dumps. Local processing is preferred where practical.
+- Voice is push-to-talk only; no always-on recording, no wake word. Capture is client-side — the daemon never touches the microphone. Transcription runs locally (faster-whisper adapter; mock until a model is installed). Audio bytes are never logged; the whisper adapter writes them to a private temp file deleted immediately after transcription.
+- Cloud model calls (the planning-only Anthropic Messages call — ADR-019; NOT a tool-executing agent loop) send only the normalized user goal and the tool catalog (names, risks, descriptions). Tool results, file contents, and Keychain material are never sent. The API key lives in the environment only — never in SQLite, logs, prompts, audit payloads, or frontend state. Planner-evaluation and capstone reports are redacted by construction (tool names + risk levels only; step inputs excluded).
 
 ## Data inventory
 

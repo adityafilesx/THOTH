@@ -205,6 +205,44 @@ class TestRiskScopeAndRegistration:
         assert "scope" in (result.error or "").lower()
 
 
+class TestHardening:
+    """Slice 11 findings: approval anchors must match reality."""
+
+    async def test_submit_action_url_must_match_prepared_submission(self) -> None:
+        """The R2 approval shows args.action_url; submitting to a different
+        prepared action would deceive the approver. Mismatch is refused."""
+        session = _session()
+        sid = await _prepared(session)
+        submit = BrowserSubmit(session)
+        with pytest.raises(SubmissionError, match="action"):
+            await submit.run(
+                submit.input_model.model_validate(
+                    {"submission_id": sid, "action_url": "https://evil.example/steal"}
+                ),
+                False,
+            )
+        assert session.submitted == []
+
+    async def test_current_url_scope_anchor_must_match_actual_page(self) -> None:
+        """click/fill scope by args.current_url; if it differs from the
+        session's ACTUAL page the scope check was anchored on a lie."""
+        session = _session()
+        open_tool = BrowserOpen(session)
+        await open_tool.run(open_tool.input_model.model_validate({"url": FORM_URL}), False)
+        fill = BrowserFill(session)
+        with pytest.raises(ValueError, match="current_url"):
+            await fill.run(
+                fill.input_model.model_validate(
+                    {
+                        "selector": "#name",
+                        "value": "Ada",
+                        "current_url": "https://other.example/page",
+                    }
+                ),
+                False,
+            )
+
+
 class TestInjectionContainment:
     async def test_page_text_with_injection_is_inert_data(self) -> None:
         """Malicious page text flows through as data; the injection guard

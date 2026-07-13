@@ -46,4 +46,21 @@ Phases 1–2: safety core + daemon + frontend rendering. All tests run locally a
 
 ## Out of scope until Phase 3
 
-Real macOS automation, browser control, restricted shell, voice pipeline; their contracts are frozen (TOOL_CONTRACTS.md) and mocked here.
+~~Real macOS automation, browser control, restricted shell, voice pipeline; their contracts are frozen (TOOL_CONTRACTS.md) and mocked here.~~ **Delivered in Phases 3–4** (below).
+
+## Phase 4 additions (2026-07-13)
+
+| Area | Coverage |
+|---|---|
+| Correlation | one id threaded task→plan→steps→invocations→results→verifications→approvals→audit (3 tests) |
+| Independent verifiers | 12 verifiers unit-tested with injected probes; fail-closed availability (composite-any + EXIT_CODE self-certification regressions); malformed params fail closed; orchestrator integration: tool-ok + failed probe ⇒ never verified |
+| Bounded recovery | retry/replan/escalate budgets, depth cap, denials untouched; replan cycle re-enters policy review; 25-execution cap; `FAILED_REQUIRES_USER` terminal |
+| Audit hash chain | linkage, deterministic recompute, raw-SQL tamper + deletion detection, per-task independence, API manifest |
+| AX | mock adapter ops, TCC permission gate, tool risks/scopes, dry-run inertness, registry scope backstop |
+| Browser interaction | two-phase submission (single-use, unknown, stale-form, stale-action-host), current_url anchor check, injection containment, off-domain refusal, REAL Playwright file:// round-trip |
+| Skill engine | expansion/substitution, input rejection, **no-downgrade** pipeline proof, seed idempotency, run endpoint E2E |
+| Voice | STT mock + typed unavailable error, TTS interrupt timing + new-speak-interrupts, LIVE `say -o` render, transcript-cannot-approve isolation |
+| Planner evals | expectation checks, exception-as-failure, redaction-by-construction reports |
+| Capstones | harness completion + independent final-state verification, failure reporting, R2 approval recording; five REAL runs (docs/CAPSTONE_REPORT.md) |
+
+Gate at Phase 4 close: **daemon 551 passed, desktop 56 passed; ruff, mypy --strict, eslint, tsc, vite build clean; alembic single head (0004).**

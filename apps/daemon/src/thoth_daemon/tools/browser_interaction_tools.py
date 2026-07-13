@@ -53,6 +53,17 @@ def _host(url: str) -> str:
     return urlparse(url).hostname or ""
 
 
+async def _require_on_page(session: BrowserSession, current_url: str) -> None:
+    """The scope anchor (args.current_url) must describe the session's ACTUAL
+    page — otherwise the scope check was anchored on a lie (slice 11)."""
+    state = await session.state()
+    if _host(state.url) != _host(current_url):
+        raise ValueError(
+            f"current_url host {_host(current_url)!r} does not match the session's "
+            f"actual page host {_host(state.url)!r}"
+        )
+
+
 def _require_http(url: str) -> None:
     scheme = urlparse(url).scheme
     if scheme not in ("http", "https", "file"):
@@ -150,6 +161,7 @@ class BrowserClick(_SessionTool, ToolDefinition[ClickIn, PageView]):
         if dry_run:
             state = await self._session.state()
             return _view(state)
+        await _require_on_page(self._session, args.current_url)
         return _view(await self._session.click(args.selector, self.timeout_s))
 
 
@@ -176,6 +188,7 @@ class BrowserFill(_SessionTool, ToolDefinition[FillIn, PageView]):
     async def run(self, args: FillIn, dry_run: bool) -> PageView:
         if dry_run:
             return _view(await self._session.state())
+        await _require_on_page(self._session, args.current_url)
         return _view(await self._session.fill(args.selector, args.value))
 
 
@@ -202,6 +215,7 @@ class BrowserSelect(_SessionTool, ToolDefinition[SelectIn, PageView]):
     async def run(self, args: SelectIn, dry_run: bool) -> PageView:
         if dry_run:
             return _view(await self._session.state())
+        await _require_on_page(self._session, args.current_url)
         return _view(await self._session.select(args.selector, args.option))
 
 
@@ -294,6 +308,7 @@ class BrowserPrepareSubmission(_SessionTool, ToolDefinition[PrepareIn, PrepareOu
         return ResourceScope(domains=[_host(args.current_url)])
 
     async def run(self, args: PrepareIn, dry_run: bool) -> PrepareOut:
+        await _require_on_page(self._session, args.current_url)
         prepared = await self._session.prepare_submission(args.form_selector)
         return PrepareOut(
             submission_id=prepared.submission_id,
@@ -329,7 +344,11 @@ class BrowserSubmit(_SessionTool, ToolDefinition[SubmitIn, PageView]):
     async def run(self, args: SubmitIn, dry_run: bool) -> PageView:
         if dry_run:
             return _view(await self._session.state())
-        return _view(await self._session.submit(args.submission_id, self.timeout_s))
+        return _view(
+            await self._session.submit(
+                args.submission_id, self.timeout_s, expected_action_url=args.action_url
+            )
+        )
 
 
 def register_browser_interaction_tools(
