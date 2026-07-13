@@ -5,9 +5,18 @@ from thoth_daemon.schemas import SkillDefinition
 from thoth_daemon.storage.skills import SkillStore
 
 
-async def test_skills_empty_by_default(client: AsyncClient) -> None:
+async def test_skills_seeded_with_builtins(client: AsyncClient) -> None:
+    # Phase 4 slice 5: the five built-in skills are seeded idempotently.
     r = await client.get("/api/skills")
-    assert r.status_code == 200 and r.json() == []
+    assert r.status_code == 200
+    names = {s["name"] for s in r.json()}
+    assert {
+        "continue-project",
+        "project-health-check",
+        "research-and-save",
+        "prepare-git-commit",
+        "organize-workspace",
+    } <= names
 
 
 async def test_skills_requires_auth(client: AsyncClient) -> None:
@@ -23,11 +32,13 @@ async def test_patch_toggles_and_persists(client: AsyncClient, app: FastAPI) -> 
     await store.add_skill(sk)
 
     listed = (await client.get("/api/skills")).json()
-    assert len(listed) == 1 and listed[0]["enabled"] is True
+    mine = next(s for s in listed if s["id"] == sk.id)
+    assert mine["enabled"] is True
 
     r = await client.patch(f"/api/skills/{sk.id}", json={"enabled": False})
     assert r.status_code == 200 and r.json()["enabled"] is False
-    assert (await client.get("/api/skills")).json()[0]["enabled"] is False
+    listed = (await client.get("/api/skills")).json()
+    assert next(s for s in listed if s["id"] == sk.id)["enabled"] is False
 
 
 async def test_patch_unknown_404(client: AsyncClient) -> None:

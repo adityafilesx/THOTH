@@ -208,12 +208,33 @@ class RecoveryDecision(StrictModel):
     reason: str
 
 
+class SkillStep(StrictModel):
+    """One parameterized step of a skill template. String arguments may
+    contain ``{input}`` placeholders bound at run time. Declared risk is
+    copied verbatim into the plan — effective risk is still
+    max(tool default, declared), so a skill can never lower risk."""
+
+    title: str
+    tool_name: str
+    arguments: dict[str, Any] = Field(default_factory=dict)
+    declared_risk: RiskLevel
+    verification_checks: list[VerificationCheck] = Field(default_factory=list)
+
+
 class SkillDefinition(StrictModel):
+    """A declarative, parameterized plan template (Phase 4 slice 5).
+    Running a skill expands ``steps`` into an ExecutionPlan that flows
+    through the NORMAL pipeline — validation, policy risk review,
+    approvals, scoped execution, independent verification, bounded
+    recovery. The engine is planning-only. ``workflow`` remains the
+    human-readable summary shown in the Skills view."""
+
     id: str = Field(default_factory=_new_id)
     name: str
     description: str
     workflow: list[str] = Field(default_factory=list)
     inputs: list[str] = Field(default_factory=list)
+    steps: list[SkillStep] = Field(default_factory=list)
     enabled: bool = True
 
 

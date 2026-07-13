@@ -606,6 +606,45 @@ class Orchestrator:
         background.add_done_callback(self._background.discard)
         return task
 
+    async def submit_plan(
+        self, goal: str, plan: ExecutionPlan, source: TaskSource = TaskSource.TEXT
+    ) -> Task:
+        """Submit a task with a PRE-BUILT plan (skill engine, slice 5). The
+        plan enters the exact same pipeline as a planner-produced one:
+        registry validation, policy risk review, approvals, scoped
+        execution, independent verification, bounded recovery. Replans (if
+        recovery requests one) use the normal planner."""
+        task = Task(goal=goal, source=source, state=TaskState.RECEIVED)
+        self._tasks[task.id] = task
+        corr = task.correlation_id
+        await self._audit.append(
+            task.id,
+            "task.created",
+            {"goal": goal, "source": source.value, "planned_by": "skill"},
+            correlation_id=corr,
+        )
+        await self._publish("task.created", {"task": task.model_dump(mode="json")})
+        runner = _TaskRunner(
+            task,
+            plan.model_copy(update={"task_id": task.id}, deep=True),
+            registry=self._registry,
+            policy=self._policy,
+            approvals=self._approvals,
+            verifier=self._verifier,
+            recovery=self._recovery,
+            audit=self._audit,
+            publish=self._publish,
+            workspace=self._workspace,
+            enforcer=self._enforcer,
+            scope_provider=self._scope_provider,
+            planner=self._planner,
+        )
+        self._runners[task.id] = runner
+        background = asyncio.ensure_future(runner.run())
+        self._background.add(background)
+        background.add_done_callback(self._background.discard)
+        return task
+
     async def settle(self, task_id: str, timeout: float = 3.0) -> Task:  # noqa: ASYNC109
         """Await until the task reaches a terminal state or pauses for
         approval. Returns the current task snapshot."""

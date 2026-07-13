@@ -60,12 +60,21 @@ export interface PermissionsResponse {
   grants: Grant[];
 }
 
+export interface SkillStepDef {
+  title: string;
+  tool_name: string;
+  arguments: Record<string, unknown>;
+  declared_risk: string;
+  verification_checks: unknown[];
+}
+
 export interface SkillDef {
   id: string;
   name: string;
   description: string;
   workflow: string[];
   inputs: string[];
+  steps: SkillStepDef[];
   enabled: boolean;
 }
 

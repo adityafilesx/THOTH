@@ -1,5 +1,114 @@
 {
+  "$defs": {
+    "RiskLevel": {
+      "description": "R0 read-only \u00b7 R1 reversible local \u00b7 R2 external side effect \u00b7\nR3 destructive/highly sensitive (blocked by default).\n\nTotally ordered so that ``max()`` expresses the no-downgrade rule.",
+      "enum": [
+        "R0",
+        "R1",
+        "R2",
+        "R3"
+      ],
+      "title": "RiskLevel",
+      "type": "string"
+    },
+    "SkillStep": {
+      "additionalProperties": false,
+      "description": "One parameterized step of a skill template. String arguments may\ncontain ``{input}`` placeholders bound at run time. Declared risk is\ncopied verbatim into the plan \u2014 effective risk is still\nmax(tool default, declared), so a skill can never lower risk.",
+      "properties": {
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "tool_name": {
+          "title": "Tool Name",
+          "type": "string"
+        },
+        "arguments": {
+          "additionalProperties": true,
+          "title": "Arguments",
+          "type": "object"
+        },
+        "declared_risk": {
+          "$ref": "#/$defs/RiskLevel"
+        },
+        "verification_checks": {
+          "items": {
+            "$ref": "#/$defs/VerificationCheck"
+          },
+          "title": "Verification Checks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "title",
+        "tool_name",
+        "declared_risk"
+      ],
+      "title": "SkillStep",
+      "type": "object"
+    },
+    "VerificationCheck": {
+      "additionalProperties": false,
+      "description": "A single independent postcondition probe. ``params`` are\nverifier-specific (see core/verifiers). For COMPOSITE, ``children`` are\ncombined per ``require`` (all|any) and ``params`` is ignored.\n\nChecks AUGMENT the tool's own verification strategy, never replace it:\n``VerificationEngine.verify_step`` always runs the tool-declared\nbaseline first and ANDs it with these checks, so the planner can only\nmake verification stricter \u2014 removing checks falls back to the\nsystem-enforced baseline, it never disables verification.",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/VerifierKind"
+        },
+        "params": {
+          "additionalProperties": true,
+          "title": "Params",
+          "type": "object"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "require": {
+          "default": "all",
+          "enum": [
+            "all",
+            "any"
+          ],
+          "title": "Require",
+          "type": "string"
+        },
+        "children": {
+          "items": {
+            "$ref": "#/$defs/VerificationCheck"
+          },
+          "title": "Children",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "VerificationCheck",
+      "type": "object"
+    },
+    "VerifierKind": {
+      "description": "Independent state probes (Phase 4 slice 7). Each confirms a real\npostcondition after a tool runs \u2014 never trusting the tool's own\nsuccess flag. COMPOSITE combines children with all/any semantics.",
+      "enum": [
+        "file_exists",
+        "file_content",
+        "process_running",
+        "port_listening",
+        "http_health",
+        "git_state",
+        "application_running",
+        "accessibility_value",
+        "browser_url",
+        "browser_element",
+        "exit_code",
+        "composite"
+      ],
+      "title": "VerifierKind",
+      "type": "string"
+    }
+  },
   "additionalProperties": false,
+  "description": "A declarative, parameterized plan template (Phase 4 slice 5).\nRunning a skill expands ``steps`` into an ExecutionPlan that flows\nthrough the NORMAL pipeline \u2014 validation, policy risk review,\napprovals, scoped execution, independent verification, bounded\nrecovery. The engine is planning-only. ``workflow`` remains the\nhuman-readable summary shown in the Skills view.",
   "properties": {
     "id": {
       "title": "Id",
@@ -25,6 +134,13 @@
         "type": "string"
       },
       "title": "Inputs",
+      "type": "array"
+    },
+    "steps": {
+      "items": {
+        "$ref": "#/$defs/SkillStep"
+      },
+      "title": "Steps",
       "type": "array"
     },
     "enabled": {

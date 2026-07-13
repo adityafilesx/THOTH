@@ -33,6 +33,11 @@ class SkillStore:
             await session.commit()
             return skill
 
+    async def get_skill(self, skill_id: str) -> SkillDefinition | None:
+        async with self._session_factory() as session:
+            row = await session.get(SkillRow, skill_id)
+            return SkillDefinition.model_validate(row.definition_json) if row else None
+
     async def set_enabled(self, skill_id: str, enabled: bool) -> SkillDefinition | None:
         async with self._session_factory() as session:
             row = await session.get(SkillRow, skill_id)

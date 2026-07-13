@@ -16,6 +16,7 @@ from thoth_daemon.core.planner import DeterministicMockPlanner, PlannerAdapter
 from thoth_daemon.core.policy import PolicyEngine
 from thoth_daemon.core.recovery import RecoveryController
 from thoth_daemon.core.scope import ScopeEnforcer
+from thoth_daemon.core.skill_engine import seed_builtin_skills
 from thoth_daemon.core.verification import VerificationEngine
 from thoth_daemon.events.bus import EventBus
 from thoth_daemon.logging_setup import configure_logging, get_logger
@@ -72,6 +73,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             await permissions_store.upsert_workspace(default_ws)
         app.state.permissions = permissions_store
         app.state.skills = SkillStore(session_factory)
+        await seed_builtin_skills(app.state.skills)  # idempotent (Phase 4 slice 5)
 
         audit_store = AuditStore(session_factory)
         app.state.audit = audit_store
