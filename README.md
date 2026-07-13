@@ -8,7 +8,7 @@ THOTH is not a chatbot, a note-taking app, a generic second brain, or a voice-co
 
 ## Status
 
-**Phases 0–4 and 5.0–5.3 are built.** The deterministic safety core is enforced end to end: no tool execution outside `EXECUTING`, no risk downgrade, invocation-bound single-use approvals, scoped tools, independent verification, bounded recovery, and tamper-evident audit. Local inference, reflex/skill/planner routing, a post-verification persona, snapshot foreground context, explicit focus policy, six application profiles, authoritative workspace association, and short-lived dialogue now sit around that unchanged core.
+**Phases 0–4 and 5.0–5.3 are built. Phase 5.4 is implemented but pending real Accessibility capstones.** The deterministic safety core is enforced end to end: no tool execution outside `EXECUTING`, no risk downgrade, invocation-bound single-use approvals, scoped tools, independent verification, bounded recovery, and tamper-evident audit. Phase 5.4 adds a packaged native fixture, fresh permission boundary, bounded semantic AX tools, application-specific authority, independent UI verifiers, focus/cancellation ordering, live diagnostics, and deterministic persona outcomes. The current host has no Accessibility trust, so real UI capabilities remain experimental and are not claimed.
 
 Five capstone workflows ran against the real OS and were **independently verified** — real file and git state, a real `https://example.com` fetch, a real single-use approval, a real TextEdit launch ([docs/CAPSTONE_REPORT.md](docs/CAPSTONE_REPORT.md)). Those runs used scripted reference plans; the same goals through the **live Claude planner are pending live verification** (requires `ANTHROPIC_API_KEY`).
 
@@ -91,6 +91,8 @@ No planner or tool may downgrade its own risk level. See [docs/THREAT_MODEL.md](
 - [docs/STATUS.md](docs/STATUS.md) — honest current state
 - [docs/PERSONA_EVALUATION.md](docs/PERSONA_EVALUATION.md) — persona safety/evaluation evidence
 - [docs/APPLICATION_PROFILES.md](docs/APPLICATION_PROFILES.md) — supported app capability authority
+- [docs/ACCESSIBILITY_ARCHITECTURE.md](docs/ACCESSIBILITY_ARCHITECTURE.md) — semantic AX authority, bounds, and responsibilities
+- [docs/PHASE_5_4_CAPSTONE.md](docs/PHASE_5_4_CAPSTONE.md) — real permission/fixture evidence and blocked capstones
 
 ## Security
 

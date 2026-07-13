@@ -2,7 +2,7 @@
 
 **As of:** 2026-07-14
 
-Phases 0–4, 5.0, 5.1, 5.2, and 5.3 are implemented. Phase 5.2 adds the post-verification persona layer and optional fact-checked local summaries. Phase 5.3 adds snapshot foreground context, execution-bound focus policy, six immutable application profiles, authoritative workspace association, expiring operational dialogue, live task presentation APIs, and desktop status rendering.
+Phases 0–4, 5.0, 5.1, 5.2, and 5.3 are implemented. Phase 5.4's packaged native fixture, typed permission boundary, bounded semantic AX contracts/resolver/tools, independent verifiers, application-profile enforcement, focus/cancellation integration, desktop diagnostics, deterministic persona outcomes, and adversarial hardening are implemented. Phase 5.4 remains pending real TCC-backed UI capstones.
 
 ## Current verified capability
 
@@ -13,20 +13,21 @@ Phases 0–4, 5.0, 5.1, 5.2, and 5.3 are implemented. Phase 5.2 adds the post-ve
 - Six versioned application profiles exist. Unknown/forbidden/undeclared capabilities fail closed. VS Code workspace association is verified through the real running bundle plus authoritative THOTH path evidence; editor read/edit remain experimental.
 - Operational dialogue is in-memory, task-isolated, and expiring. It resolves only authoritative recent objects, cannot approve or expand scope, and enforces `no_push` before approval or execution.
 - The desktop renders authoritative persona, foreground, workspace, focus, runtime, dialogue-expiry, and proposed/approved/executed/verified status without hidden reasoning.
+- Production exposes ten dotted semantic AX tools with exact bundle/capability/target/action/verifier authority, bounded untrusted snapshots, no coordinates, fresh TCC checks, independent UI verification, modal-aware resolution, and one non-persistent diagnostic summary. All real AX capabilities remain experimental because current trust is `not_determined`.
 
 ## Verification
 
 | Gate | Result |
 |---|---|
-| `uv run --project apps/daemon pytest apps/daemon/tests` | **782 passed, 1 skipped** |
+| `uv run --project apps/daemon pytest apps/daemon/tests` | **887 passed, 1 skipped** |
 | Unlocked focus rerun | 6 foreground/focus live tests passed; no skip |
-| Ruff check / format | clean / 181 files formatted |
-| `mypy apps/daemon/src` (strict) | clean, 99 source files |
-| `pnpm -C apps/desktop test` | **65 passed** |
+| Ruff check / format | clean / 199 files formatted |
+| `mypy apps/daemon/src` (strict) | clean, 108 source files |
+| `pnpm -C apps/desktop test` | **68 passed** |
 | Desktop ESLint / TypeScript / Vite | clean / clean / built |
 | `cargo check` | passed |
-| Fresh `alembic upgrade head` | passed through `0004_hash_chain` |
-| `make test` | passed: **847 tests**, plus 1 environment skip |
+| `alembic upgrade head` | passed through `0004_hash_chain` |
+| `make test` | passed: **955 tests** (887 daemon + 68 desktop), plus 1 environment skip |
 
 Host context is required for Chromium Mach ports, loopback sockets, hardware `sysctl`, NSWorkspace, and local Ollama. Sandbox-denied results are not counted as product evidence.
 
@@ -47,15 +48,15 @@ Host context is required for Chromium Mach ports, loopback sockets, hardware `sy
 
 See `docs/PHASE_5_2_5_3_CAPSTONE.md` for the complete matrix.
 
+Phase 5.4 real evidence is in `docs/PHASE_5_4_CAPSTONE.md`. The fixture packaged, signed, launched, and reported its unique bundle identifier. The current real TCC probe returned false / `not_determined`, and the current desktop was locked (`loginwindow`); AX-dependent capstones therefore failed closed and no profile capability was promoted.
+
 ## Residual limits
 
 - No voice interaction, wake word, proactivity, Gmail/Calendar control, universal app control, continuous visual awareness, or long-term memory claim.
 - AX editor/document manipulation remains experimental until Accessibility permission and real evidence exist.
 - Chromium foreground presentation and form operations remain experimental; only separately verified read-only/background capabilities are marked verified.
 - Dialogue is process-local and intentionally disappears on restart.
-- Narrow semantic Accessibility control remains unverified until the Phase 5.4
-  packaged-app, permission, capability, resolver, action, and independent
-  verifier gates pass.
+- Narrow semantic Accessibility control is implemented and automated-test green but remains unverified against real UI state until explicit TCC trust and the packaged-app/TextEdit capstones pass.
 
 ## Honest capability statement
 
@@ -63,4 +64,4 @@ See `docs/PHASE_5_2_5_3_CAPSTONE.md` for the complete matrix.
 
 ## Recommended next phase
 
-Phase 5.4 should be an unlocked-desktop interaction validation slice: rerun the skipped focus capstones, package the AX test app with a unique bundle identifier, obtain explicit Accessibility permission, and verify only narrowly profiled AX capabilities. Do not start voice, proactivity, or long-term memory until those gates pass.
+Complete the Phase 5.4 real-evidence gate on an unlocked desktop after the user explicitly grants Accessibility trust: run the packaged-app form/delayed/ambiguity/moving workflows, exact TextEdit read-back, VS Code final-focus check, and real permission-revocation case. Promote only capabilities with independent evidence. Do not start voice, proactivity, or long-term memory first.
