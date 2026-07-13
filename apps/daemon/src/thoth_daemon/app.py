@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi import FastAPI
 
-from thoth_daemon.api import health, permissions, skills, tasks, ws
+from thoth_daemon.api import health, permissions, skills, tasks, voice, ws
 from thoth_daemon.api import settings as settings_api
 from thoth_daemon.api.middleware import BearerAuthMiddleware
 from thoth_daemon.audit.store import AuditStore
@@ -33,6 +33,8 @@ from thoth_daemon.tools.fs_tools import register_fs_tools
 from thoth_daemon.tools.git_tools import register_git_tools
 from thoth_daemon.tools.mock_tools import build_registry
 from thoth_daemon.tools.shell_tool import register_shell_tool
+from thoth_daemon.voice.stt import default_stt_adapter
+from thoth_daemon.voice.tts import TTSSpeaker
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -75,6 +77,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.skills = SkillStore(session_factory)
         await seed_builtin_skills(app.state.skills)  # idempotent (Phase 4 slice 5)
 
+        app.state.stt = default_stt_adapter()  # mock unless THOTH_STT=whisper
+        app.state.tts = TTSSpeaker()
         audit_store = AuditStore(session_factory)
         app.state.audit = audit_store
 
@@ -127,4 +131,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(permissions.router)
     app.include_router(skills.router)
     app.include_router(settings_api.router)
+    app.include_router(voice.router)
     return app
