@@ -76,7 +76,7 @@ class TaskPresentationComposer:
         mode: ResponseMode = ResponseMode.STANDARD,
     ) -> TaskPresentation:
         approvals = [a for a in (pending_approvals or []) if a.task_id == task.id]
-        fact = self._fact(task, approvals, focus_result)
+        fact = self._fact(task, approvals, focus_result, runtime_status)
         try:
             response = self._persona.compose(fact, mode)
         except ResponsePolicyViolation:
@@ -113,6 +113,7 @@ class TaskPresentationComposer:
         task: Task,
         approvals: list[ApprovalRequest],
         focus_result: FocusRestorationResult | None,
+        runtime_status: LocalRuntimeStatus,
     ) -> ResponseFact:
         state = task.state
         steps = task.plan.steps if task.plan else []
@@ -193,6 +194,23 @@ class TaskPresentationComposer:
             )
         if state is TaskState.FAILED:
             error = task.error or "an error occurred"
+            runtime_failed = runtime_status.persona_intent() is ResponseIntent.DEGRADED_MODE
+            model_dependent_failure = any(
+                token in error.lower()
+                for token in (
+                    "inference",
+                    "local model",
+                    "local plan",
+                    "model endpoint",
+                    "ollama",
+                )
+            )
+            if runtime_failed and model_dependent_failure:
+                return ResponseFact(
+                    intent=ResponseIntent.DEGRADED_MODE,
+                    failure_reason=error,
+                    verified=False,
+                )
             if "blocked by policy" in error.lower() or "blocked by scope" in error.lower():
                 return ResponseFact(
                     intent=ResponseIntent.POLICY_REFUSAL,

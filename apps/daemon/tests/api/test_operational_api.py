@@ -27,6 +27,23 @@ async def test_pending_approval_response_is_deterministic(client: AsyncClient) -
     assert presentation["stages"]["approval"] == "pending"
 
 
+async def test_denied_later_substep_produces_live_partial_completion(
+    client: AsyncClient,
+) -> None:
+    await client.post("/api/tasks", json={"goal": "send the email"})
+    pending = (await client.get("/api/approvals/pending")).json()
+    response = await client.post(
+        f"/api/approvals/{pending[0]['id']}/decision",
+        json={"approved": False},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["state"] == "FAILED"
+    assert body["presentation"]["response"]["intent"] == "partial_completion"
+    assert "Read the draft" in body["presentation"]["display_response"]
+    assert "approval denied" in body["presentation"]["display_response"]
+
+
 async def test_operational_status_exposes_live_context_fields(client: AsyncClient) -> None:
     task = (await client.post("/api/tasks", json={"goal": "read notes"})).json()
     response = await client.get(f"/api/operational-status/{task['id']}")

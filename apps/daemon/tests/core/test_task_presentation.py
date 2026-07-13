@@ -128,6 +128,16 @@ class TestLifecycleIntents:
 
 
 class TestOperationalFacts:
+    def test_model_runtime_failure_uses_deterministic_degraded_response(self) -> None:
+        task = _task(
+            TaskState.FAILED,
+            error="planning failed: local model inference endpoint unavailable",
+        )
+        view = COMPOSER.compose(task, runtime_status=LocalRuntimeStatus.UNAVAILABLE)
+        assert view.response.intent is ResponseIntent.DEGRADED_MODE
+        assert view.response.used_model is False
+        assert "local model" in view.display_response.lower()
+
     def test_focus_restoration_failure_makes_completion_partial(self) -> None:
         task = _task(TaskState.COMPLETED, [_step(status=StepStatus.SUCCEEDED, verified=True)])
         focus = FocusRestorationResult(
