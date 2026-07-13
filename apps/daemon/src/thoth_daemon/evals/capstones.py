@@ -20,6 +20,7 @@ outcomes only).
 from __future__ import annotations
 
 import asyncio
+import logging
 from pathlib import Path
 from typing import Any, Literal
 
@@ -52,7 +53,9 @@ from thoth_daemon.tools.git_tools import register_git_tools
 from thoth_daemon.tools.registry import ToolRegistry
 from thoth_daemon.tools.shell_tool import register_shell_tool
 
-WORKSPACE_TOKEN = "{workspace}"
+logger = logging.getLogger(__name__)
+
+WORKSPACE_PLACEHOLDER = "{workspace}"
 
 
 class CapstoneWorkflow(BaseModel):
@@ -102,7 +105,7 @@ class _ScriptedPlanner(PlannerAdapter):
 
 def _bind(value: Any, workspace: Path) -> Any:
     if isinstance(value, str):
-        return value.replace(WORKSPACE_TOKEN, str(workspace))
+        return value.replace(WORKSPACE_PLACEHOLDER, str(workspace))
     if isinstance(value, dict):
         return {k: _bind(v, workspace) for k, v in value.items()}
     if isinstance(value, list):
@@ -122,8 +125,8 @@ def _final_context() -> VerifierContext:
 
         control = default_app_control()
         ctx.application_running = lambda name: any(a.name == name for a in control.list_running())
-    except Exception:  # pragma: no cover - non-mac environments
-        pass
+    except Exception as exc:  # pragma: no cover - non-mac environments
+        logger.debug("application probe unavailable: %s", exc)
     return ctx
 
 
@@ -270,14 +273,14 @@ def render_capstone_report(results: list[CapstoneResult], planner: str) -> str:
 CAPSTONES: list[CapstoneWorkflow] = [
     CapstoneWorkflow(
         name="create-project-note",
-        goal=f"Create a note file at {WORKSPACE_TOKEN}/idea.txt saying 'phase four capstone'",
+        goal=f"Create a note file at {WORKSPACE_PLACEHOLDER}/idea.txt saying 'phase four capstone'",
         reference_steps=[
             PlanStep(
                 index=0,
                 title="Write the note",
                 tool_name="fs_write_file",
                 arguments={
-                    "path": f"{WORKSPACE_TOKEN}/idea.txt",
+                    "path": f"{WORKSPACE_PLACEHOLDER}/idea.txt",
                     "content": "phase four capstone",
                 },
                 declared_risk=RiskLevel.R1,
@@ -285,12 +288,12 @@ CAPSTONES: list[CapstoneWorkflow] = [
         ],
         final_checks=[
             VerificationCheck(
-                kind=VerifierKind.FILE_EXISTS, params={"path": f"{WORKSPACE_TOKEN}/idea.txt"}
+                kind=VerifierKind.FILE_EXISTS, params={"path": f"{WORKSPACE_PLACEHOLDER}/idea.txt"}
             ),
             VerificationCheck(
                 kind=VerifierKind.FILE_CONTENT,
                 params={
-                    "path": f"{WORKSPACE_TOKEN}/idea.txt",
+                    "path": f"{WORKSPACE_PLACEHOLDER}/idea.txt",
                     "contains": "phase four capstone",
                 },
             ),
@@ -298,43 +301,44 @@ CAPSTONES: list[CapstoneWorkflow] = [
     ),
     CapstoneWorkflow(
         name="continue-project",
-        goal=f"Re-orient in the project at {WORKSPACE_TOKEN}: listing, git state, README",
+        goal=f"Re-orient in the project at {WORKSPACE_PLACEHOLDER}: listing, git state, README",
         reference_steps=[
             PlanStep(
                 index=0,
                 title="List the project",
                 tool_name="fs_list_dir",
-                arguments={"path": WORKSPACE_TOKEN},
+                arguments={"path": WORKSPACE_PLACEHOLDER},
                 declared_risk=RiskLevel.R0,
             ),
             PlanStep(
                 index=1,
                 title="Git status",
                 tool_name="git_status",
-                arguments={"cwd": WORKSPACE_TOKEN},
+                arguments={"cwd": WORKSPACE_PLACEHOLDER},
                 declared_risk=RiskLevel.R0,
             ),
             PlanStep(
                 index=2,
                 title="Read the README",
                 tool_name="fs_read_file",
-                arguments={"path": f"{WORKSPACE_TOKEN}/README.md"},
+                arguments={"path": f"{WORKSPACE_PLACEHOLDER}/README.md"},
                 declared_risk=RiskLevel.R0,
             ),
         ],
         final_checks=[
             VerificationCheck(
                 kind=VerifierKind.GIT_STATE,
-                params={"repo": WORKSPACE_TOKEN, "branch": "main", "clean": True},
+                params={"repo": WORKSPACE_PLACEHOLDER, "branch": "main", "clean": True},
             ),
             VerificationCheck(
-                kind=VerifierKind.FILE_EXISTS, params={"path": f"{WORKSPACE_TOKEN}/README.md"}
+                kind=VerifierKind.FILE_EXISTS, params={"path": f"{WORKSPACE_PLACEHOLDER}/README.md"}
             ),
         ],
     ),
     CapstoneWorkflow(
         name="research-and-save",
-        goal=f"Read https://example.com and save research notes to {WORKSPACE_TOKEN}/research.md",
+        goal="Read https://example.com and save research notes to "
+        f"{WORKSPACE_PLACEHOLDER}/research.md",
         approved_domains=["example.com"],
         needs="network egress to example.com",
         reference_steps=[
@@ -350,7 +354,7 @@ CAPSTONES: list[CapstoneWorkflow] = [
                 title="Save the research notes",
                 tool_name="fs_write_file",
                 arguments={
-                    "path": f"{WORKSPACE_TOKEN}/research.md",
+                    "path": f"{WORKSPACE_PLACEHOLDER}/research.md",
                     "content": "# Research: example.com\n\nCaptured by THOTH capstone run.",
                 },
                 declared_risk=RiskLevel.R1,
@@ -359,20 +363,20 @@ CAPSTONES: list[CapstoneWorkflow] = [
         final_checks=[
             VerificationCheck(
                 kind=VerifierKind.FILE_CONTENT,
-                params={"path": f"{WORKSPACE_TOKEN}/research.md", "contains": "example.com"},
+                params={"path": f"{WORKSPACE_PLACEHOLDER}/research.md", "contains": "example.com"},
             ),
         ],
     ),
     CapstoneWorkflow(
         name="prepare-commit",
-        goal=f"Record a change in {WORKSPACE_TOKEN} and stage it for my review (no commit)",
+        goal=f"Record a change in {WORKSPACE_PLACEHOLDER} and stage it for my review (no commit)",
         reference_steps=[
             PlanStep(
                 index=0,
                 title="Write the change",
                 tool_name="fs_write_file",
                 arguments={
-                    "path": f"{WORKSPACE_TOKEN}/CHANGES.txt",
+                    "path": f"{WORKSPACE_PLACEHOLDER}/CHANGES.txt",
                     "content": "capstone change",
                 },
                 declared_risk=RiskLevel.R2,  # elevated: exercises the approval flow
@@ -381,16 +385,17 @@ CAPSTONES: list[CapstoneWorkflow] = [
                 index=1,
                 title="Stage the change",
                 tool_name="git_add",
-                arguments={"cwd": WORKSPACE_TOKEN, "paths": ["CHANGES.txt"]},
+                arguments={"cwd": WORKSPACE_PLACEHOLDER, "paths": ["CHANGES.txt"]},
                 declared_risk=RiskLevel.R1,
             ),
         ],
         final_checks=[
             VerificationCheck(
-                kind=VerifierKind.GIT_STATE, params={"repo": WORKSPACE_TOKEN, "clean": False}
+                kind=VerifierKind.GIT_STATE, params={"repo": WORKSPACE_PLACEHOLDER, "clean": False}
             ),
             VerificationCheck(
-                kind=VerifierKind.FILE_EXISTS, params={"path": f"{WORKSPACE_TOKEN}/CHANGES.txt"}
+                kind=VerifierKind.FILE_EXISTS,
+                params={"path": f"{WORKSPACE_PLACEHOLDER}/CHANGES.txt"},
             ),
         ],
     ),
