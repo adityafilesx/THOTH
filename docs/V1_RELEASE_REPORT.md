@@ -50,8 +50,8 @@ Stop, retention, crash, and offline boundaries pass.
 
 ## Accessibility result
 
-The exact helper executable SHA-256 was
-`552d626495f6b732ce67c06bd34b4a70bfb397370756805b4f71a0d907687371`.
+The final exact helper executable SHA-256 is
+`ae0908575ab2ad2d88cdfb91f3879ded90f0ae7f221a0961863810f5dbb8054b`.
 It ran as the packaged background app with a current-user mode-0600 socket and
 parent PID 1. THOTH opened the Settings pane only through an explicit requested
 API action; the user did not grant trust during the run. Fresh state is
@@ -66,10 +66,18 @@ promoted.
   tests; complete real microphone-to-action offline operation was not run.
 - Partial resource measurements are in `V1_RESOURCE_REPORT.md`; installed
   workflow, battery, thermal, and sustained concurrency remain open.
-- Zero Developer ID identities exist. The app is ad-hoc, strict code-sign
-  verification fails, Gatekeeper rejects it, and no notarization ticket exists.
-- The DMG contains only the desktop shell. Clean installation and all 20
-  first-run/upgrade/uninstall checks were not run.
+- Zero Developer ID identities exist. The rebuilt 217 MB app and 196 MB DMG are
+  ad-hoc signed; deep strict code-sign verification now passes, but Gatekeeper
+  rejects the app and no notarization ticket exists.
+- The DMG now contains the frozen daemon, exact helper, whisper.cpp executable,
+  base.en model, and SHA-256/size manifest. The app live-started and
+  authenticated its own daemon/helper without repository services. Normal Quit
+  and forced desktop termination both cleaned up children. Clean-account
+  installation and all 20 first-run/upgrade/uninstall checks remain unrun.
+- A second packaged-app launch fails closed before replacing the running
+  helper or daemon; the original authenticated runtime remains healthy.
+- Ollama/Qwen and the Playwright Chromium payload remain explicit host
+  prerequisites rather than silently downloaded or cloud-backed dependencies.
 
 ## Security and automated gates
 
@@ -82,15 +90,16 @@ remain manual blockers.
 
 | Gate | Result |
 |---|---|
-| Daemon | 958 passed, 1 dependency warning, no skip |
-| Desktop | 75 passed across 12 files |
-| Aggregate `make test` | 1,033 passed, no skip |
-| Ruff / format | clean / 219 files |
-| Strict mypy | clean, 118 source files |
+| Daemon | 999 passed, no skip |
+| Desktop | 95 passed across 14 files |
+| Aggregate daemon + desktop | 1,094 passed, no skip |
+| Ruff / format | clean / 225 files |
+| Strict mypy | clean, 120 source files |
 | ESLint / TypeScript / Vite | clean / clean / built |
-| Cargo / Rust | check passed / 1 test passed |
+| Cargo / Rust | check passed / 7 tests passed |
 | Swift helper | release build/package passed |
 | Alembic | fresh DB upgraded through `0004_hash_chain` |
+| App / DMG | built, manifest matched, strict ad-hoc signature passed |
 
 ## Mandatory blockers
 
@@ -100,16 +109,15 @@ remain manual blockers.
 4. Accessibility trust is denied for the exact helper; real AX capstones and
    revocation remain unrun.
 5. No Developer ID, notarization, staple, or Gatekeeper-accepted app.
-6. The package omits daemon/helper/models/onboarding and is not clean-install
-   capable; no clean-account validation exists.
+6. The package still lacks Ollama/Qwen and Playwright Chromium onboarding and
+   has no clean-account validation.
 7. Installed-build resource, daily-workflow, upgrade, and uninstall evidence is
    absent.
 
 ## Exact capability claim
 
 THOTH is a local-first release candidate with a deterministic safety core,
-verified local planning, an integrity-pinned local speech runtime, and
+verified local planning, a packaged integrity-pinned daemon/speech/helper core, and
 automated coverage for voice, focus, Accessibility boundaries, approvals,
 verification, recovery, and audit. Real broad speech accuracy, TCC-backed UI
 control, notarized distribution, and clean installation are not yet validated.
-

@@ -79,6 +79,7 @@ New attack surfaces and their mitigations; the §4 invariants all still hold and
 | Local speech supply chain | replaced runtime/model weights, filename spoof, silent provider substitution | optional expected SHA-256 for executable and model is recomputed before transcription; mismatch fails typed unavailable; registry is inert data; no cloud/mock fallback |
 | Audit tampering (around the store) | direct SQLite edits rewriting history | per-task hash chain over prev-hash+task+correlation+seq+type+payload+timestamp; `verify_chain` detects mutation, deletion (seq gap), reorder; store still has no update/delete surface |
 | Recovery loops | runaway retry/replan cycles | ≤2 retries/step, ≤2 replans, depth ≤3 episodes, ≤25 executions/task; exhaustion ⇒ terminal `FAILED_REQUIRES_USER` |
+| Packaged local runtime | replaced daemon/helper/model, inherited secrets, orphaned services, unauthenticated loopback peer | signed app resources plus versioned size/SHA-256 manifest; fail-closed Rust validation; fresh mode-0600 bearer token; minimal child environments; authenticated readiness probe; explicit normal-exit shutdown plus child parent-loss monitors |
 
 ### Residual risks (accepted for Phase 4)
 
@@ -117,8 +118,10 @@ New attack surfaces and their mitigations; the §4 invariants all still hold and
 - The AX helper development artifact is ad-hoc signed. Release packaging needs
   a stable Developer ID signature before manual TCC approval is production
   evidence.
-- The current desktop DMG is ad-hoc, fails strict verification/Gatekeeper, and
-  omits the daemon/helper/models. It is not installable release evidence.
+- The current desktop DMG is ad-hoc and Gatekeeper rejects it. Strict bundle
+  and manifest verification now pass and the core daemon/helper/base.en assets
+  are present, but Developer ID/notarization and clean-account evidence remain
+  mandatory. Ollama/Qwen and Playwright Chromium are still host prerequisites.
 - Unix socket peer-UID authentication prevents other users but not a malicious
   same-user process. The helper's deliberately tiny protocol and upstream
   profile/policy gates reduce impact; code-signature-bound XPC remains a future

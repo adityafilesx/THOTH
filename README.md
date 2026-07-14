@@ -8,7 +8,7 @@ THOTH is not a chatbot, a note-taking app, a generic second brain, or a voice-co
 
 ## Status
 
-**THOTH is a v1.0 release candidate, not a validated release.** The deterministic safety core is enforced end to end: no tool execution outside `EXECUTING`, no risk downgrade, invocation-bound single-use approvals, scoped tools, independent verification, bounded recovery, and tamper-evident audit. A local SHA-256-pinned whisper.cpp v1.8.6 runtime plus tiny.en/base.en/small.en candidates are installed on the validation host, and bundled-sample transcription works. Real microphone accuracy, acoustic Stop/barge-in, TCC-backed AX mutations, notarized packaging, and clean installation remain unvalidated.
+**THOTH is a v1.0 release candidate, not a validated release.** The deterministic safety core is enforced end to end: no tool execution outside `EXECUTING`, no risk downgrade, invocation-bound single-use approvals, scoped tools, independent verification, bounded recovery, and tamper-evident audit. The macOS app now owns an integrity-checked frozen daemon, Accessibility helper, whisper.cpp v1.8.6 executable, and base.en model. Real microphone accuracy, acoustic Stop/barge-in, TCC-backed AX mutations, Developer-ID/notarized distribution, and clean installation remain unvalidated.
 
 Five capstone workflows ran against the real OS and were **independently verified** — real file and git state, a real `https://example.com` fetch, a real single-use approval, a real TextEdit launch ([docs/CAPSTONE_REPORT.md](docs/CAPSTONE_REPORT.md)). Those runs used scripted reference plans; the same goals through the **live Claude planner are pending live verification** (requires `ANTHROPIC_API_KEY`).
 
@@ -70,7 +70,10 @@ make desktop    # Vite dev server (browser) — or: cd apps/desktop && pnpm taur
 make test       # daemon (pytest) + desktop (vitest)
 make lint       # ruff + eslint
 make typecheck  # mypy + tsc
+make bundle     # build integrity-checked THOTH.app + arm64 DMG
 ```
+
+The release bundle requires the locally pinned whisper.cpp/base.en inputs at the paths documented in [docs/PACKAGING.md](docs/PACKAGING.md). Novel local-model planning currently expects loopback Ollama with `qwen3:4b`; browser automation expects a local Playwright Chromium payload. Missing optional runtimes degrade explicitly and never trigger cloud fallback.
 
 ## Risk model (summary)
 
@@ -100,6 +103,7 @@ No planner or tool may downgrade its own risk level. See [docs/THREAT_MODEL.md](
 - [docs/PHASE_5_4_CAPSTONE.md](docs/PHASE_5_4_CAPSTONE.md) — real permission/fixture evidence and blocked capstones
 - [docs/VOICE_ARCHITECTURE.md](docs/VOICE_ARCHITECTURE.md) — local voice, Stop, presence, and retention boundaries
 - [docs/PHASE_5_5_CAPSTONE.md](docs/PHASE_5_5_CAPSTONE.md) — automated evidence and remaining real voice gates
+- [docs/PACKAGING.md](docs/PACKAGING.md) — packaged runtime contents, build, verification, and remaining distribution gates
 
 ## Security
 

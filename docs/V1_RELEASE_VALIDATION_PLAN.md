@@ -62,7 +62,7 @@ Integrity mismatch must prevent use.
 | Helper path | `apps/ax-helper/dist/THOTH Accessibility Helper.app` |
 | Bundle identifier | `me.adityalabs.thoth.axhelper` |
 | Executable | `THOTHAXHelper` |
-| Executable SHA-256 | `552d626495f6b732ce67c06bd34b4a70bfb397370756805b4f71a0d907687371` |
+| Executable SHA-256 | `ae0908575ab2ad2d88cdfb91f3879ded90f0ae7f221a0961863810f5dbb8054b` |
 | Signature | valid ad-hoc hardened-runtime signature; no TeamIdentifier |
 | Gatekeeper | rejected as an unnotarized/ad-hoc artifact |
 | Socket | `~/Library/Application Support/THOTH/ax-helper.sock` |
@@ -146,4 +146,3 @@ Until every mandatory item is evidenced, the only permitted decision is
   environment distinct from this developer checkout.
 - A 30-command acoustic corpus, noisy-room variants, and physical distance
   variations require user participation and cannot be simulated or inferred.
-
