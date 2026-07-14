@@ -18,12 +18,25 @@ async def test_app_launch_success_with_state_probe() -> None:
     tool = AppLaunch(ac)
     out = await tool.run(tool.input_model(app="Safari"), dry_run=False)
     assert out.launched is True and "Safari" in [a.name for a in ac.list_running()]
+    assert ac.frontmost() is not None and ac.frontmost().name == "Safari"
+    verification = tool.verify_independently(tool.input_model(app="Safari"))
+    assert verification is not None and verification.passed is True
 
 
 async def test_app_launch_probe_failure_raises() -> None:
     ac = MockAppControl(add_on_launch=False)  # launch returns True but app never appears
     tool = AppLaunch(ac)
     with pytest.raises(RuntimeError):
+        await tool.run(tool.input_model(app="Safari"), dry_run=False)
+
+
+async def test_app_launch_activation_failure_raises() -> None:
+    class _CannotActivate(MockAppControl):
+        def activate(self, name: str) -> bool:
+            return False
+
+    tool = AppLaunch(_CannotActivate())
+    with pytest.raises(RuntimeError, match="activate"):
         await tool.run(tool.input_model(app="Safari"), dry_run=False)
 
 
@@ -44,6 +57,8 @@ async def test_app_focus_sets_frontmost() -> None:
     tool = AppFocus(ac)
     out = await tool.run(tool.input_model(app="Safari"), dry_run=False)
     assert out.focused is True and ac.frontmost().name == "Safari"
+    verification = tool.verify_independently(tool.input_model(app="Safari"))
+    assert verification is not None and verification.passed is True
 
 
 async def test_app_focus_unknown_raises() -> None:

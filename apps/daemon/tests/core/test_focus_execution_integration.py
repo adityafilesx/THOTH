@@ -148,7 +148,11 @@ async def _orchestrator(
             policy=PolicyEngine(),
             approvals=ApprovalEngine(ttl_seconds=60),
             verifier=VerificationEngine(),
-            recovery=RecoveryController(max_retries_per_step=0, max_retries_per_task=0),
+            recovery=RecoveryController(
+                max_retries_per_step=0,
+                max_retries_per_task=0,
+                max_replans_per_task=0,
+            ),
             audit=AuditStore(make_session_factory(engine)),
             planner=_Plan(),
             publish=publish,
@@ -167,10 +171,11 @@ async def test_background_focus_theft_is_detected_and_audited(tmp_path: Path) ->
     task = await orch.submit("run background probe")
     settled = await orch.settle(task.id)
 
-    assert settled.state is TaskState.COMPLETED
+    assert settled.state is TaskState.FAILED_REQUIRES_USER
     assert tool.runs == 1
     assert results[task.id].verified is False
     assert results[task.id].detail == "focus was stolen unexpectedly"
+    assert "focus postcondition failed" in (settled.error or "")
     audit = await orch.task_audit(task.id)
     assert any(event.event_type == "focus.result" for event in audit)
 

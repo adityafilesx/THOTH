@@ -117,6 +117,7 @@ class _TaskRunner:
         enforcer: ScopeEnforcer,
         scope_provider: ScopeProvider,
         planner: PlannerAdapter,
+        allow_replan: bool,
         focus_manager: FocusManager | None,
         focus_result_sink: FocusResultSink | None,
         constraint_checker: ToolConstraintChecker | None,
@@ -125,6 +126,7 @@ class _TaskRunner:
         self.plan = plan
         self._corr = task.correlation_id
         self._planner = planner
+        self._allow_replan = allow_replan
         self._executions = 0
         self._registry = registry
         self._policy = policy
@@ -139,6 +141,8 @@ class _TaskRunner:
         self._focus_manager = focus_manager
         self._focus_result_sink = focus_result_sink
         self._focus_result: FocusRestorationResult | None = None
+        self._focus_result_key: tuple[str, FocusPolicy] | None = None
+        self._focus_baselines: dict[tuple[str, FocusPolicy], FocusSnapshot] = {}
         self._pending_focus: _PendingFocus | None = None
         self._hard_constraints = constraints_from_text(task.goal)
         self._constraint_checker = constraint_checker
@@ -238,6 +242,11 @@ class _TaskRunner:
                 await self._goto(TaskState.COMPLETED, "all steps verified")
                 self.task.result_summary = f"Completed {len(self.plan.steps)} step(s)."
                 await self._audit_only("task.completed", {"steps": len(self.plan.steps)})
+                return
+            if not self._allow_replan:
+                await self._escalate(
+                    f"authoritative plan failed; model-generated recovery is disabled: {outcome}"
+                )
                 return
             # Bounded replan: the RecoveryController approved a replan and
             # ``outcome`` carries the failure context. The machine is in
@@ -548,7 +557,14 @@ class _TaskRunner:
                     ),
                 },
             )
-            await self._finalize_pending_focus(cancelled=False)
+            final_focus = await self._finalize_pending_focus(cancelled=False)
+            if final_focus is not None and result.ok and not final_focus.verified:
+                result = result.model_copy(
+                    update={
+                        "ok": False,
+                        "error": f"focus postcondition failed: {final_focus.detail}",
+                    }
+                )
             verification = self._verifier.verify_step(
                 step,
                 result,
@@ -653,13 +669,18 @@ class _TaskRunner:
         if self._focus_manager is not None:
             try:
                 target_app = tool.focus_target(parsed) or invocation.tool_name
-                before = self._focus_manager.snapshot(datetime.now(UTC))
+                focus_key = (target_app, policy)
+                captured = self._focus_manager.snapshot(datetime.now(UTC))
+                # A failed focus postcondition must compare retries/replans
+                # with the same original foreground state. Otherwise the
+                # first stolen focus becomes the next attempt's false baseline.
+                before = self._focus_baselines.setdefault(focus_key, captured)
                 await self._audit_only("focus.snapshot", before.model_dump(mode="json"))
             except Exception as exc:
                 focus = FocusRestorationResult(
                     detail=f"focus snapshot unavailable: {type(exc).__name__}"
                 )
-                await self._record_focus(focus)
+                await self._record_focus(focus, target_app=target_app, policy=policy)
                 return ToolResult(
                     invocation_id=invocation.id,
                     ok=False,
@@ -694,7 +715,7 @@ class _TaskRunner:
             try:
                 if policy is FocusPolicy.ASK_IF_AMBIGUOUS:
                     focus = self._focus_manager.reconcile(before, target_app, policy)
-                    await self._record_focus(focus)
+                    await self._record_focus(focus, target_app=target_app, policy=policy)
                     return ToolResult(
                         invocation_id=invocation.id,
                         ok=False,
@@ -712,7 +733,7 @@ class _TaskRunner:
                             final_bundle_id=transition.to_bundle_id,
                             detail=transition.detail,
                         )
-                        await self._record_focus(focus)
+                        await self._record_focus(focus, target_app=target_app, policy=policy)
                         return ToolResult(
                             invocation_id=invocation.id,
                             ok=False,
@@ -723,7 +744,7 @@ class _TaskRunner:
                 focus = FocusRestorationResult(
                     detail=f"focus transition unavailable: {type(exc).__name__}"
                 )
-                await self._record_focus(focus)
+                await self._record_focus(focus, target_app=target_app, policy=policy)
                 return ToolResult(invocation_id=invocation.id, ok=False, error=focus.detail)
 
         exec_task = asyncio.ensure_future(
@@ -745,7 +766,14 @@ class _TaskRunner:
                     focus = FocusRestorationResult(
                         detail=f"focus verification unavailable: {type(exc).__name__}"
                     )
-                await self._record_focus(focus)
+                await self._record_focus(focus, target_app=target_app, policy=policy)
+                if result.ok and not focus.verified:
+                    result = result.model_copy(
+                        update={
+                            "ok": False,
+                            "error": f"focus postcondition failed: {focus.detail}",
+                        }
+                    )
             return result
         # Cancellation won the race.
         exec_task.cancel()
@@ -765,14 +793,14 @@ class _TaskRunner:
                     cancelled=True,
                     detail=f"focus verification unavailable: {type(exc).__name__}",
                 )
-            await self._record_focus(focus)
+            await self._record_focus(focus, target_app=target_app, policy=policy)
         return ToolResult(invocation_id=invocation.id, ok=False, cancelled=True, error="cancelled")
 
-    async def _finalize_pending_focus(self, *, cancelled: bool) -> None:
+    async def _finalize_pending_focus(self, *, cancelled: bool) -> FocusRestorationResult | None:
         pending = self._pending_focus
         self._pending_focus = None
         if pending is None or self._focus_manager is None:
-            return
+            return None
         try:
             focus = self._focus_manager.reconcile(
                 pending.before,
@@ -785,14 +813,33 @@ class _TaskRunner:
                 cancelled=cancelled,
                 detail=f"focus verification unavailable: {type(exc).__name__}",
             )
-        await self._record_focus(focus)
+        await self._record_focus(
+            focus,
+            target_app=pending.target_app,
+            policy=pending.policy,
+        )
+        return focus
 
-    async def _record_focus(self, result: FocusRestorationResult) -> None:
+    async def _record_focus(
+        self,
+        result: FocusRestorationResult,
+        *,
+        target_app: str | None = None,
+        policy: FocusPolicy | None = None,
+    ) -> None:
         # A later background read must never hide an earlier failed focus
-        # postcondition. Retain the most recent failure; otherwise retain the
-        # latest verified result.
-        if self._focus_result is None or not result.verified:
+        # postcondition. A successful retry of the same target/policy may
+        # replace its earlier failure; a different background operation may not.
+        key = (target_app, policy) if target_app is not None and policy is not None else None
+        if (
+            self._focus_result is None
+            or not result.verified
+            or (key is not None and key == self._focus_result_key)
+        ):
             self._focus_result = result
+            self._focus_result_key = key
+        if key is not None and (result.verified or result.cancelled or result.requires_user):
+            self._focus_baselines.pop(key, None)
         if self._focus_result_sink is not None:
             self._focus_result_sink(self.task.id, self._focus_result)
         await self._audit_only("focus.result", result.model_dump(mode="json"))
@@ -905,6 +952,7 @@ class Orchestrator:
             enforcer=self._enforcer,
             scope_provider=self._scope_provider,
             planner=self._planner,
+            allow_replan=True,
             focus_manager=self._focus_manager,
             focus_result_sink=self._focus_result_sink,
             constraint_checker=self._constraint_checker,
@@ -921,8 +969,8 @@ class Orchestrator:
         """Submit a task with a PRE-BUILT plan (skill engine, slice 5). The
         plan enters the exact same pipeline as a planner-produced one:
         registry validation, policy risk review, approvals, scoped
-        execution, independent verification, bounded recovery. Replans (if
-        recovery requests one) use the normal planner."""
+        execution, independent verification, and bounded same-step retries.
+        A model may not replace this authoritative plan during recovery."""
         task = Task(goal=goal, source=source, state=TaskState.RECEIVED)
         self._tasks[task.id] = task
         corr = task.correlation_id
@@ -947,6 +995,7 @@ class Orchestrator:
             enforcer=self._enforcer,
             scope_provider=self._scope_provider,
             planner=self._planner,
+            allow_replan=False,
             focus_manager=self._focus_manager,
             focus_result_sink=self._focus_result_sink,
             constraint_checker=self._constraint_checker,
@@ -973,10 +1022,14 @@ class Orchestrator:
             asyncio.ensure_future(asyncio.shield(runner.done)),
         ]
         try:
-            await asyncio.wait_for(
-                asyncio.wait(waiters, return_when=asyncio.FIRST_COMPLETED),
-                timeout=timeout,
-            )
+            # A bounded HTTP wait is not a task failure. Return the current
+            # authoritative snapshot while execution continues and WS events
+            # deliver later progress.
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(
+                    asyncio.wait(waiters, return_when=asyncio.FIRST_COMPLETED),
+                    timeout=timeout,
+                )
         finally:
             for waiter in waiters:
                 waiter.cancel()

@@ -62,13 +62,16 @@ class AppKitAppControl:
 
     def activate(self, name: str) -> bool:
         """Activate by localized application name or exact bundle identifier."""
-        from AppKit import NSApplicationActivateIgnoringOtherApps
+        from AppKit import NSApplicationActivateAllWindows, NSApplicationActivateIgnoringOtherApps
+
+        options = NSApplicationActivateIgnoringOtherApps | NSApplicationActivateAllWindows
 
         for app in self._ws().runningApplications():
             localized = str(app.localizedName()) if app.localizedName() else None
             bundle = str(app.bundleIdentifier()) if app.bundleIdentifier() else None
             if localized == name or bundle == name:
-                return bool(app.activateWithOptions_(NSApplicationActivateIgnoringOtherApps))
+                app.unhide()
+                return bool(app.activateWithOptions_(options))
         return False
 
 

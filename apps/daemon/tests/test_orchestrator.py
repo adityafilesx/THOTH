@@ -15,7 +15,14 @@ from thoth_daemon.core.policy import PolicyEngine
 from thoth_daemon.core.recovery import RecoveryController
 from thoth_daemon.core.state_machine import TaskStateMachine
 from thoth_daemon.core.verification import VerificationEngine
-from thoth_daemon.schemas import RiskLevel, TaskState, ToolInvocation, WorkspaceProfile
+from thoth_daemon.schemas import (
+    ExecutionPlan,
+    PlanStep,
+    RiskLevel,
+    TaskState,
+    ToolInvocation,
+    WorkspaceProfile,
+)
 from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
 from thoth_daemon.tools.mock_tools import build_registry
 
@@ -195,6 +202,32 @@ class TestCancellation:
         assert settled.state is TaskState.WAITING_FOR_APPROVAL
         final = await trusted_orch.cancel(task.id)
         assert final.state is TaskState.CANCELLED
+
+
+class TestSettlement:
+    async def test_timeout_returns_current_snapshot_instead_of_http_500(
+        self, trusted_orch: Orchestrator
+    ) -> None:
+        plan = ExecutionPlan(
+            task_id="pending",
+            summary="bounded slow task",
+            steps=[
+                PlanStep(
+                    index=0,
+                    title="slow read",
+                    tool_name="mock_slow",
+                    arguments={"sleep_s": 0.1},
+                    declared_risk=RiskLevel.R0,
+                )
+            ],
+        )
+        task = await trusted_orch.submit_plan("slow snapshot", plan)
+
+        snapshot = await trusted_orch.settle(task.id, timeout=0.001)
+
+        assert snapshot.id == task.id
+        assert snapshot.state not in {TaskState.FAILED, TaskState.FAILED_REQUIRES_USER}
+        await trusted_orch.cancel(task.id)
 
 
 class TestAuditOrdering:

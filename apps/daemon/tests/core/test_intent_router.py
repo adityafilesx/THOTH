@@ -41,6 +41,8 @@ class TestReflexTier:
             ("what is the current status", ReflexKind.STATUS),
             ("Thoth, read the current task status.", ReflexKind.STATUS),
             ("Thoth, what am I working on?", ReflexKind.STATUS),
+            ("Thoth, check the daemon.", ReflexKind.DAEMON_STATUS),
+            ("Thoth, start the backend.", ReflexKind.START_BACKEND),
             ("mute", ReflexKind.MUTE),
             ("interrupt", ReflexKind.INTERRUPT),
             ("be quiet", ReflexKind.INTERRUPT),
@@ -122,6 +124,24 @@ class TestPlannerTier:
         assert intent.reflex_kind is not ReflexKind.STOP
 
 
+class TestClarificationTier:
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Approve the pending action.",
+            "Thoth, approve it.",
+            "Go ahead.",
+        ],
+    )
+    def test_approval_language_never_reaches_the_planner(self, text: str) -> None:
+        intent = ROUTER.route(text)
+
+        assert intent.tier is RouteTier.CLARIFY
+        assert intent.reflex_kind is None
+        assert intent.planner_goal is None
+        assert intent.clarification == "Use the visible invocation-bound approval control."
+
+
 class _SpyPlanner:
     """Records whether the planner (the only LLM-touching tier) was invoked."""
 
@@ -145,6 +165,14 @@ class TestNoLlmOnReflexOrSkill:
         result = await dispatch_intent(ROUTER, "run project-health-check", planner=spy)
         assert spy.calls == []
         assert result.tier is RouteTier.REFLEX
+
+    async def test_approval_language_never_touches_the_planner(self) -> None:
+        spy = _SpyPlanner()
+
+        result = await dispatch_intent(ROUTER, "Approve the pending action.", planner=spy)
+
+        assert spy.calls == []
+        assert result.tier is RouteTier.CLARIFY
 
     async def test_planner_tier_invokes_the_planner_once(self) -> None:
         spy = _SpyPlanner()

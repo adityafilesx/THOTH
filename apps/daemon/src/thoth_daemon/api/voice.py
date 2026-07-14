@@ -20,6 +20,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict
 
 from thoth_daemon.api.operational import build_task_payload, refresh_dialogue
+from thoth_daemon.core.command_dispatch import CommandDispatcher, CommandDispatchResult
 from thoth_daemon.core.dialogue import (
     ApprovalFollowUpRejected,
     DialogueConstraint,
@@ -89,6 +90,10 @@ def _commands(request: Request) -> VoiceCommandService:
     return cast(VoiceCommandService, request.app.state.voice_commands)
 
 
+def _dispatcher(request: Request) -> CommandDispatcher:
+    return cast(CommandDispatcher, request.app.state.command_dispatcher)
+
+
 def _stop(request: Request) -> GlobalStopAuthority:
     return cast(GlobalStopAuthority, request.app.state.global_stop)
 
@@ -133,7 +138,7 @@ def _dialogue_goal(
         path = store.authoritative_artifact_path(resolution, now)
         return f"Open the authoritative recent artifact at {path}."
     if resolution.intent is DialogueIntent.RUN_TESTS:
-        return "Run the tests in the current approved workspace."
+        return "Run the tests."
     if resolution.intent is DialogueIntent.COMMIT_CHANGES:
         suffix = " Do not push." if DialogueConstraint.NO_PUSH in resolution.constraints else ""
         return f"Commit the verified changes in the current approved workspace.{suffix}"
@@ -198,10 +203,23 @@ async def _submit_recent_follow_up(
         }
 
     goal = _dialogue_goal(store, resolution, now)
-    task = await orch.submit(goal, TaskSource.VOICE)
-    settled = await orch.settle(task.id)
-    refresh_dialogue(request, settled)
-    payload = await build_task_payload(request, settled)
+    dispatched = await _dispatcher(request).dispatch(goal, TaskSource.VOICE)
+    if dispatched.task is None:
+        response = dispatched.response or PersonaResponseComposer().compose(
+            ResponseFact(intent=ResponseIntent.NEEDS_CLARIFICATION)
+        )
+        if dispatched.control != "speech_interrupted":
+            await _speak_safely(request, response.spoken)
+        return {
+            "stopped": dispatched.control == "stopped",
+            "task": None,
+            "stop": _serialize_stop(dispatched),
+            "control": dispatched.control,
+            "response": response.model_dump(mode="json"),
+            "dialogue": resolution.model_dump(mode="json"),
+        }
+    refresh_dialogue(request, dispatched.task)
+    payload = await build_task_payload(request, dispatched.task)
     spoken = SpokenResponse.model_validate(payload["presentation"]["response"]["spoken"])
     await _speak_safely(request, spoken)
     return {
@@ -210,6 +228,13 @@ async def _submit_recent_follow_up(
         "stop": None,
         "dialogue": resolution.model_dump(mode="json"),
     }
+
+
+def _serialize_stop(result: CommandDispatchResult) -> dict[str, Any] | None:
+    model_dump = getattr(result.control_result, "model_dump", None)
+    if result.control != "stopped" or not callable(model_dump):
+        return None
+    return cast(dict[str, Any], model_dump(mode="json"))
 
 
 @router.post("/api/voice/transcribe")
@@ -221,14 +246,26 @@ async def transcribe(request: Request) -> dict[str, Any]:
 @router.post("/api/voice/task")
 async def voice_task(request: Request) -> dict[str, Any]:
     transcript = await _transcribe(request)
-    orch = cast(Orchestrator, request.app.state.orchestrator)
-    task = await orch.submit(transcript.text, TaskSource.VOICE)
-    settled = await orch.settle(task.id)
-    refresh_dialogue(request, settled)
-    payload = await build_task_payload(request, settled)
-    spoken = SpokenResponse.model_validate(payload["presentation"]["response"]["spoken"])
-    await _speak_safely(request, spoken)
-    return payload
+    dispatched = await _dispatcher(request).dispatch(transcript.text, TaskSource.VOICE)
+    if dispatched.task is not None:
+        refresh_dialogue(request, dispatched.task)
+        payload = await build_task_payload(request, dispatched.task)
+        spoken = SpokenResponse.model_validate(payload["presentation"]["response"]["spoken"])
+        await _speak_safely(request, spoken)
+        return payload
+
+    response = dispatched.response or PersonaResponseComposer().compose(
+        ResponseFact(intent=ResponseIntent.NEEDS_CLARIFICATION)
+    )
+    if dispatched.control != "speech_interrupted":
+        await _speak_safely(request, response.spoken)
+    return {
+        "stopped": dispatched.control == "stopped",
+        "task": None,
+        "stop": _serialize_stop(dispatched),
+        "control": dispatched.control,
+        "response": response.model_dump(mode="json"),
+    }
 
 
 @router.post("/api/voice/say")

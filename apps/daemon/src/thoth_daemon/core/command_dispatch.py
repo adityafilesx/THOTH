@@ -100,6 +100,20 @@ class CommandDispatcher:
         )
         intent = router.route(text)
 
+        if intent.tier is RouteTier.CLARIFY:
+            return CommandDispatchResult(
+                intent=intent,
+                control="clarification_required",
+                response=PersonaResponseComposer().compose(
+                    ResponseFact(
+                        intent=ResponseIntent.NEEDS_CLARIFICATION,
+                        clarification_question=(
+                            intent.clarification or "I need more specific authoritative context."
+                        ),
+                    )
+                ),
+            )
+
         if intent.tier is RouteTier.PLANNER:
             task = await self._orchestrator.submit(text.strip(), source)
             settled = await self._orchestrator.settle(task.id)
@@ -152,6 +166,23 @@ class CommandDispatcher:
                 ),
             )
 
+        if kind in {ReflexKind.DAEMON_STATUS, ReflexKind.START_BACKEND}:
+            already_running = kind is ReflexKind.START_BACKEND
+            return CommandDispatchResult(
+                intent=intent,
+                control="backend_already_running" if already_running else "daemon_running",
+                response=PersonaResponseComposer().compose(
+                    ResponseFact(
+                        intent=ResponseIntent.ACKNOWLEDGEMENT,
+                        summary=(
+                            "The daemon is already running."
+                            if already_running
+                            else "The daemon is running."
+                        ),
+                    )
+                ),
+            )
+
         if kind in {ReflexKind.OPEN_APP, ReflexKind.FOCUS_APP} and intent.target:
             tool_name = "app_launch" if kind is ReflexKind.OPEN_APP else "app_focus"
             verb = "Open" if kind is ReflexKind.OPEN_APP else "Focus"
@@ -200,7 +231,9 @@ class CommandDispatcher:
             response=PersonaResponseComposer().compose(
                 ResponseFact(
                     intent=ResponseIntent.NEEDS_CLARIFICATION,
-                    clarification_question="I need more specific authoritative context.",
+                    clarification_question=(
+                        intent.clarification or "I need more specific authoritative context."
+                    ),
                 )
             ),
         )

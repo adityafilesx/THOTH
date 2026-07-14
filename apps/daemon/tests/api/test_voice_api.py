@@ -52,12 +52,11 @@ class TestTranscribe:
 
 
 class TestTranscriptIsolation:
-    async def test_transcript_cannot_approve_pending_action(
+    async def test_transcript_cannot_approve_or_create_an_approval_task(
         self, client: AsyncClient, app: FastAPI
     ) -> None:
-        """A pending R2 approval + a voice transcript saying 'approve the
-        pending action' => a NEW task is created with that goal; the
-        approval stays pending and unconsumed."""
+        """Approval language is rejected before planning and leaves the
+        invocation-bound approval pending and unconsumed."""
         # Create an R2 task that halts for approval.
         task = (await client.post("/api/tasks", json={"goal": "send the email"})).json()
         assert task["state"] == "WAITING_FOR_APPROVAL"
@@ -72,17 +71,39 @@ class TestTranscriptIsolation:
             headers={"Content-Type": "audio/wav"},
         )
         assert resp.status_code == 200
-        voice_task = resp.json()
-        assert voice_task["source"] == "voice"
-        assert voice_task["id"] != task["id"]
-        # The mock STT transcript text became a GOAL, nothing else.
-        assert "approve the pending action" in voice_task["goal"]
+        body = resp.json()
+        assert body["task"] is None
+        assert body["control"] == "clarification_required"
+        assert "visible invocation-bound approval" in body["response"]["display"]["text"]
+
+        tasks = (await client.get("/api/tasks")).json()
+        assert [item["id"] for item in tasks] == [task["id"]]
 
         # The original approval is still pending — untouched.
         pending_after = (await client.get("/api/approvals/pending")).json()
         assert len(pending_after) == 1
         assert pending_after[0]["id"] == pending_before[0]["id"]
         assert pending_after[0]["status"] == "pending"
+
+    async def test_legacy_voice_task_stop_uses_global_stop_without_creating_task(
+        self, client: AsyncClient, app: FastAPI
+    ) -> None:
+        pending_task = (await client.post("/api/tasks", json={"goal": "send the email"})).json()
+        assert pending_task["state"] == "WAITING_FOR_APPROVAL"
+
+        _prime_stt(app, "Thoth, stop.")
+        response = await client.post(
+            "/api/voice/task",
+            content=b"fake-audio-bytes",
+            headers={"Content-Type": "audio/wav"},
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["stopped"] is True
+        assert body["task"] is None
+        assert body["stop"]["approvals_invalidated"] == 1
+        assert (await client.get("/api/approvals/pending")).json() == []
 
 
 class TestSayEndpoints:

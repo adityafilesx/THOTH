@@ -296,7 +296,13 @@ class TestVoiceDialogueContinuity:
         assert body["dialogue"]["intent"] == "run_tests"
         assert body["dialogue"]["active_task_id"] == original["id"]
         assert body["task"]["source"] == "voice"
-        assert body["task"]["goal"] == "Run the tests in the current approved workspace."
+        assert body["task"]["goal"] == "Run the tests."
+        assert body["task"]["state"] == "WAITING_FOR_APPROVAL"
+        assert body["task"]["plan"]["steps"][0]["tool_name"] == "shell_run"
+        assert body["task"]["plan"]["steps"][0]["arguments"] == {
+            "command": "make test",
+            "cwd": app.state.default_workspace.root_path,
+        }
 
     async def test_multiple_recent_tasks_require_clarification(
         self,

@@ -140,6 +140,24 @@ async def test_speech_interrupt_is_a_model_free_no_task_control(tmp_path: Path) 
     assert orchestrator.submitted == []
 
 
+async def test_daemon_service_commands_are_truthful_model_free_controls(tmp_path: Path) -> None:
+    dispatcher, orchestrator, _ = _dispatcher(tmp_path)
+
+    health = await dispatcher.dispatch("Thoth, check the daemon.", TaskSource.VOICE)
+    start = await dispatcher.dispatch("Thoth, start the backend.", TaskSource.VOICE)
+
+    assert health.intent.reflex_kind is ReflexKind.DAEMON_STATUS
+    assert health.control == "daemon_running"
+    assert health.response is not None
+    assert health.response.display.text == "The daemon is running."
+    assert start.intent.reflex_kind is ReflexKind.START_BACKEND
+    assert start.control == "backend_already_running"
+    assert start.response is not None
+    assert start.response.display.text == "The daemon is already running."
+    assert orchestrator.submitted == []
+    assert orchestrator.plans == []
+
+
 async def test_novel_command_enters_planner_once(tmp_path: Path) -> None:
     dispatcher, orchestrator, _ = _dispatcher(tmp_path)
 
@@ -170,3 +188,17 @@ async def test_natural_test_command_uses_authoritative_skill_plan(tmp_path: Path
     assert step.tool_name == "shell_run"
     assert step.arguments == {"command": "make test", "cwd": str(tmp_path)}
     assert step.declared_risk is RiskLevel.R2
+
+
+async def test_approval_language_returns_safe_clarification_without_task(tmp_path: Path) -> None:
+    dispatcher, orchestrator, _ = _dispatcher(tmp_path)
+
+    result = await dispatcher.dispatch("Approve the pending action.", TaskSource.VOICE)
+
+    assert result.intent.tier is RouteTier.CLARIFY
+    assert result.task is None
+    assert result.control == "clarification_required"
+    assert result.response is not None
+    assert "visible invocation-bound approval" in result.response.display.text
+    assert orchestrator.submitted == []
+    assert orchestrator.plans == []

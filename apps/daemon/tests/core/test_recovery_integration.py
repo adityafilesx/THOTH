@@ -107,6 +107,33 @@ async def test_replan_recovers_and_completes(tmp_path: Path) -> None:
     assert types.count("policy.decision") >= 2
 
 
+async def test_authoritative_submit_plan_never_replans_via_model(tmp_path: Path) -> None:
+    missing = tmp_path / "missing.txt"
+    present = tmp_path / "present.txt"
+    present.write_text("here")
+    authoritative = ExecutionPlan(
+        task_id="pending",
+        summary="authoritative",
+        steps=[_step_probing(missing)],
+    )
+    planner = _SequencePlanner(
+        [ExecutionPlan(task_id="x", summary="model replacement", steps=[_step_probing(present)])]
+    )
+    recovery = RecoveryController(
+        max_retries_per_step=0,
+        max_retries_per_task=0,
+        max_replans_per_task=2,
+    )
+    orch = await _orch(tmp_path, planner, recovery)
+
+    task = await orch.submit_plan("authoritative operation", authoritative)
+    settled = await _settle_terminal(orch, task.id)
+
+    assert settled.state is TaskState.FAILED_REQUIRES_USER
+    assert "authoritative plan" in (settled.error or "")
+    assert planner.calls == []
+
+
 async def test_budget_exhaustion_ends_in_failed_requires_user(tmp_path: Path) -> None:
     missing = tmp_path / "never.txt"
     bad = ExecutionPlan(task_id="x", summary="bad", steps=[_step_probing(missing)])

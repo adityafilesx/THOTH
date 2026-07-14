@@ -224,8 +224,12 @@ class VoiceCommandService:
 
     async def submit(self, session_id: str) -> VoiceSubmissionResult:
         text = self._sessions.consume(session_id)
-        dispatched = await self._dispatcher.dispatch(text, TaskSource.VOICE)
-        self._sessions.finish_submission(session_id)
+        try:
+            dispatched = await self._dispatcher.dispatch(text, TaskSource.VOICE)
+        finally:
+            # The transcript is single-use. Remove the in-memory session on
+            # every dispatch outcome so an exception cannot retain it.
+            self._sessions.finish_submission(session_id)
         if dispatched.control == "stopped":
             stop = (
                 dispatched.control_result

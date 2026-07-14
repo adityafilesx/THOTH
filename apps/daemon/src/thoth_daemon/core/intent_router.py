@@ -1,7 +1,7 @@
 """Reflex / skill / local-reasoning intent router (Phase 5 slice 3).
 
 Not every request goes through an LLM. The router classifies an incoming
-text (typed or transcribed) into one of three tiers:
+text (typed or transcribed) into one of four tiers:
 
 - REFLEX — deterministic commands (stop, cancel, status, open/focus an
   APPROVED app, run a KNOWN skill, continue a KNOWN workspace, mute,
@@ -10,6 +10,8 @@ text (typed or transcribed) into one of three tiers:
 - SKILL — reserved for installed workflows resolved deterministically
   (the RUN_SKILL reflex covers the common case; richer input extraction
   belongs to the planner tier).
+- CLARIFY — safety-sensitive or recognized input that requires an explicit
+  authoritative UI action rather than model reinterpretation.
 - PLANNER — novel or ambiguous requests; the ONLY tier that may touch an
   inference provider (the local constrained planner, slice 4).
 
@@ -17,8 +19,8 @@ Reflex matching is anchored (exact / prefix / explicit verb + argument),
 never arbitrary substring, so a sentence that merely CONTAINS "stop" is
 not forged into a reflex. All reflex actions are themselves safe
 (stop/cancel/status/mute) or scope-gated (open only APPROVED apps); a
-hostile string cannot use this path to bypass a gate, and there is no
-"approve" reflex at all.
+hostile string cannot use this path to bypass a gate, and approval language
+is routed to CLARIFY rather than a reflex or planner.
 """
 
 from __future__ import annotations
@@ -41,6 +43,8 @@ class ReflexKind(StrEnum):
     STOP = "stop"
     CANCEL = "cancel"
     STATUS = "status"
+    DAEMON_STATUS = "daemon_status"
+    START_BACKEND = "start_backend"
     OPEN_APP = "open_app"
     FOCUS_APP = "focus_app"
     RUN_SKILL = "run_skill"
@@ -80,6 +84,14 @@ _BARE = [
         ReflexKind.STATUS,
         re.compile(r"^what am i working on[?.! ]*$"),
     ),
+    (
+        ReflexKind.DAEMON_STATUS,
+        re.compile(r"^check (the )?daemon[?.! ]*$"),
+    ),
+    (
+        ReflexKind.START_BACKEND,
+        re.compile(r"^(start|launch) (the )?backend[?.! ]*$"),
+    ),
     (ReflexKind.MUTE, re.compile(r"^(thoth[ ,]*)?mute( thoth| yourself)?[.! ]*$")),
     (
         ReflexKind.INTERRUPT,
@@ -93,6 +105,9 @@ _FOCUS = re.compile(rf"^(focus|switch to|bring up|go to)\s+(?P<arg>{_WORD}+?)[.!
 _BRING_FORWARD = re.compile(rf"^bring\s+(?P<arg>{_WORD}+?)\s+forward[.! ]*$")
 _RUN = re.compile(rf"^(run|start|execute)\s+(the\s+)?(?P<arg>{_WORD}+?)( skill)?[.! ]*$")
 _CONTINUE = re.compile(rf"^continue\s+(the\s+)?(?P<arg>{_WORD}+?)( workspace| project)?[.! ]*$")
+_APPROVAL_LANGUAGE = re.compile(
+    r"^(please )?(yes|approve( it| the pending action)?|go ahead|do it)[.! ]*$"
+)
 
 
 class IntentRouter:
@@ -112,6 +127,15 @@ class IntentRouter:
         norm = " ".join(text.strip().split())
         low = norm.lower()
         command = re.sub(r"^thoth(?:[ ,]+)", "", low)
+
+        # Voice and ordinary command text are never an approval channel.
+        # Refuse exact approval language before any model can reinterpret it.
+        if _APPROVAL_LANGUAGE.match(command):
+            return RoutedIntent(
+                tier=RouteTier.CLARIFY,
+                raw=text,
+                clarification="Use the visible invocation-bound approval control.",
+            )
 
         for kind, rx in _BARE:
             if rx.match(low) or rx.match(command):
