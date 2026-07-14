@@ -5,9 +5,29 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from thoth_daemon.app import create_app
 from thoth_daemon.config import Settings
+from thoth_daemon.storage import db as storage_db
+
+
+@pytest.fixture(autouse=True)
+async def dispose_test_engines(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[None]:
+    """Close every per-test SQLite engine before its event loop is torn down."""
+
+    engines: list[AsyncEngine] = []
+    create_async_engine = storage_db.create_async_engine
+
+    def tracked_create_async_engine(*args: object, **kwargs: object) -> AsyncEngine:
+        engine = create_async_engine(*args, **kwargs)
+        engines.append(engine)
+        return engine
+
+    monkeypatch.setattr(storage_db, "create_async_engine", tracked_create_async_engine)
+    yield
+    for engine in reversed(engines):
+        await engine.dispose()
 
 
 @pytest.fixture()
