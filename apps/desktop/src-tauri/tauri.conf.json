@@ -12,12 +12,27 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "THOTH",
         "width": 1180,
         "height": 780,
         "minWidth": 900,
         "minHeight": 600,
         "theme": "Dark"
+      },
+      {
+        "label": "voice-overlay",
+        "title": "THOTH Voice",
+        "width": 420,
+        "height": 260,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "focus": false,
+        "visible": false,
+        "shadow": true
       }
     ],
     "security": {

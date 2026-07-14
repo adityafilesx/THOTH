@@ -19,13 +19,7 @@ export function StopButton() {
   const tasks = useTasksStore((s) => s.tasks);
   const active = Object.values(tasks).filter((t) => ACTIVE_STATES.includes(t.state));
 
-  const stopAll = () => {
-    for (const task of active) {
-      void api.cancelTask(task.id).catch(() => {
-        // Daemon unreachable: nothing running that we could stop.
-      });
-    }
-  };
+  const stopAll = () => void api.globalStop("global_button").catch(() => {});
 
   return (
     <button

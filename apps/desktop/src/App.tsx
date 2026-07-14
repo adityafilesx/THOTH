@@ -1,8 +1,11 @@
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { ExecutionHUD } from "@/components/ExecutionHUD";
 import { Layout } from "@/components/Layout";
+import { VoiceOverlay } from "@/components/VoiceOverlay";
 import { api } from "@/lib/api";
+import { buildPresenceState } from "@/lib/presence";
 import { WsClient } from "@/lib/ws";
 import { useConnectionStore } from "@/stores/connection";
 import { useTasksStore } from "@/stores/tasks";
@@ -47,6 +50,73 @@ function DaemonBridge() {
   return null;
 }
 
+function PresenceBridge() {
+  const tasks = useTasksStore((state) => state.tasks);
+  const activeTaskId = useTasksStore((state) => state.activeTaskId);
+  const approvals = useTasksStore((state) => state.pendingApprovals);
+  const runtime = useQuery({
+    queryKey: ["runtime"],
+    queryFn: api.runtime,
+    refetchInterval: 5_000,
+  });
+  const accessibility = useQuery({
+    queryKey: ["accessibility"],
+    queryFn: api.accessibility,
+    refetchInterval: 15_000,
+  });
+  const active = activeTaskId ? tasks[activeTaskId] : null;
+
+  useEffect(() => {
+    if (!runtime.data) return;
+    const presence = buildPresenceState({
+      taskState: active?.state ?? null,
+      hasPendingApproval: approvals.length > 0,
+      microphoneEnabled: true,
+      voiceState: "idle",
+      plannerState: runtime.data.components.planner.state,
+      sttState: runtime.data.components.speech_recognition.state,
+      ttsState: runtime.data.components.text_to_speech.state,
+      accessibilityState: accessibility.data?.permission.status ?? "unavailable",
+      privacyMode: "ephemeral",
+    });
+    void import("@tauri-apps/api/core")
+      .then(({ invoke }) =>
+        invoke("update_presence", {
+          presence: {
+            status: presence.status,
+            current_task: presence.currentTask,
+            pending_approval: presence.pendingApproval,
+            microphone_enabled: presence.microphoneEnabled,
+            planner_status: presence.plannerStatus,
+            stt_status: presence.sttStatus,
+            tts_status: presence.ttsStatus,
+            accessibility_status: presence.accessibilityStatus,
+            privacy_mode: presence.privacyMode,
+          },
+        }),
+      )
+      .catch(() => {});
+  }, [accessibility.data?.permission.status, active?.state, approvals.length, runtime.data]);
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    void import("@tauri-apps/api/event")
+      .then(async ({ listen }) => {
+        unlisten = await listen("thoth://stop", () => void api.globalStop("menu_bar"));
+      })
+      .catch(() => {});
+    return () => unlisten?.();
+  }, []);
+
+  return null;
+}
+
+function ActiveExecutionHUD() {
+  const tasks = useTasksStore((state) => state.tasks);
+  const activeTaskId = useTasksStore((state) => state.activeTaskId);
+  return <ExecutionHUD task={activeTaskId ? (tasks[activeTaskId] ?? null) : null} />;
+}
+
 function CurrentView() {
   const view = useUiStore((s) => s.view);
   switch (view) {
@@ -68,13 +138,32 @@ function CurrentView() {
 }
 
 export default function App() {
+  const [windowLabel, setWindowLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    void import("@tauri-apps/api/window")
+      .then(({ getCurrentWindow }) => setWindowLabel(getCurrentWindow().label))
+      .catch(() => setWindowLabel("main"));
+  }, []);
+
+  if (windowLabel === null) return null;
+  if (windowLabel === "voice-overlay") {
+    return (
+      <div className="p-3">
+        <VoiceOverlay />
+      </div>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <DaemonBridge />
+      <PresenceBridge />
       <Layout>
         <CurrentView />
       </Layout>
       <ApprovalDrawer />
+      <ActiveExecutionHUD />
     </QueryClientProvider>
   );
 }

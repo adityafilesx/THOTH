@@ -19,6 +19,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.59.0
         version: 5.101.2(react@18.3.1)
+      '@tauri-apps/api':
+        specifier: ^2.9.1
+        version: 2.11.1
       '@thoth/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens
@@ -788,6 +791,9 @@ packages:
     resolution: {integrity: sha512-seDkr6kzGzX1okaaTtZPtgA688CDPlXUz1C6xSg0ESqn04Vuc8tlrYms1s3de+znBqhPVxFRfpAfUf+6XvfPWg==}
     peerDependencies:
       react: ^18 || ^19
+
+  '@tauri-apps/api@2.11.1':
+    resolution: {integrity: sha512-M2FPuYND2m+wh5hfW9ZpSdxMPdEJovPBWwoHJmwUpysTYNHaOkVFN419m/K0LIgjb/7KU2vBgsUepJWugQCvAA==}
 
   '@tauri-apps/cli-darwin-arm64@2.11.4':
     resolution: {integrity: sha512-1ryOF3ZhpZ/nemHV5zVwBQBz9jDGKmKPvWPADOhc83ig0P4bMc2iER4NbC6r9sjeIZ6RVQ4g3RZIYvezhcl4TQ==}
@@ -2745,6 +2751,8 @@ snapshots:
     dependencies:
       '@tanstack/query-core': 5.101.2
       react: 18.3.1
+
+  '@tauri-apps/api@2.11.1': {}
 
   '@tauri-apps/cli-darwin-arm64@2.11.4':
     optional: true

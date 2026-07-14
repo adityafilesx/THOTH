@@ -107,6 +107,47 @@ export type ResponseIntent =
 export type LocalRuntimeStatus =
   "unavailable" | "starting" | "ready" | "generating" | "degraded" | "failed";
 
+export type RuntimeState =
+  | "unloaded"
+  | "loading"
+  | "ready"
+  | "busy"
+  | "idle_cached"
+  | "evicting"
+  | "degraded"
+  | "failed";
+
+export interface RuntimeComponentStatus {
+  display_name: string;
+  state: RuntimeState;
+  memory_estimate_bytes: number;
+  integrity_verified: boolean | null;
+  heavy: boolean;
+  detail: string;
+}
+
+export interface LocalRuntimeSnapshot {
+  components: Record<"planner" | "speech_recognition" | "text_to_speech", RuntimeComponentStatus>;
+  memory_limit_bytes: number;
+  estimated_loaded_bytes: number;
+  battery_saver: boolean;
+  offline: boolean;
+  reflex_available: boolean;
+}
+
+export interface VoiceSessionSnapshot {
+  session_id: string;
+  mode: "hold" | "toggle";
+  activity: "idle" | "listening" | "speaking" | "silence" | "finalising" | "complete" | "cancelled" | "failed";
+  microphone_visible: boolean;
+  local_processing: true;
+  partial: { text: string; stable_text: string; sequence: number } | null;
+  final: { text: string; confidence: number; language: string; duration_s: number } | null;
+  editable_text: string | null;
+  correction_expires_at: string | null;
+  submitted: boolean;
+}
+
 export interface ForegroundContext {
   captured_at: string;
   reason: string;
@@ -274,4 +315,50 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ text }),
     }),
+  runtime: () => request<LocalRuntimeSnapshot>("/api/runtime"),
+  startVoiceSession: (mode: "hold" | "toggle" = "hold") =>
+    request<VoiceSessionSnapshot>("/api/voice/sessions", {
+      method: "POST",
+      body: JSON.stringify({ mode }),
+    }),
+  appendVoiceAudio: (sessionId: string, audio: Blob) =>
+    request<VoiceSessionSnapshot>(`/api/voice/sessions/${sessionId}/audio`, {
+      method: "PUT",
+      headers: { "Content-Type": audio.type || "application/octet-stream" },
+      body: audio,
+    }),
+  voicePartial: (sessionId: string) =>
+    request<VoiceSessionSnapshot>(`/api/voice/sessions/${sessionId}/partial`, {
+      method: "POST",
+    }),
+  finaliseVoiceSession: (sessionId: string) =>
+    request<VoiceSessionSnapshot>(`/api/voice/sessions/${sessionId}/finalise`, {
+      method: "POST",
+    }),
+  editVoiceTranscript: (sessionId: string, text: string) =>
+    request<VoiceSessionSnapshot>(`/api/voice/sessions/${sessionId}/transcript`, {
+      method: "PATCH",
+      body: JSON.stringify({ text }),
+    }),
+  submitVoiceSession: (sessionId: string) =>
+    request<{ stopped: boolean; task: TaskPayload | null }>(
+      `/api/voice/sessions/${sessionId}/submit`,
+      { method: "POST" },
+    ),
+  cancelVoiceSession: (sessionId: string) =>
+    request<VoiceSessionSnapshot>(`/api/voice/sessions/${sessionId}`, {
+      method: "DELETE",
+    }),
+  interruptSpeech: () =>
+    request<{ interrupted: boolean }>("/api/voice/interrupt", { method: "POST" }),
+  globalStop: (reason: "global_button" | "escape" | "menu_bar") =>
+    request<Record<string, unknown>>("/api/stop", {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }),
+  routeIntent: (text: string) =>
+    request<{ tier: "reflex" | "skill" | "planner" | "clarify" }>(
+      "/api/intent/route",
+      { method: "POST", body: JSON.stringify({ text }) },
+    ),
 };

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
+import { native } from "@/lib/native";
 import { useTasksStore } from "@/stores/tasks";
 
 export function CommandCenter() {
@@ -103,9 +104,21 @@ export function CommandCenter() {
         <Button
           variant="outline"
           size="icon"
-          aria-label="Push to talk (voice arrives in Phase 3)"
-          disabled
-          title="Push-to-talk voice arrives in Phase 3"
+          aria-label="Push to talk"
+          title="Hold to talk · Option+Space globally"
+          onPointerDown={() => void native.beginPushToTalk()}
+          onPointerUp={() => void native.endPushToTalk()}
+          onPointerCancel={() => void native.endPushToTalk()}
+          onKeyDown={(event) => {
+            if (!event.repeat && (event.key === " " || event.key === "Enter")) {
+              void native.beginPushToTalk();
+            }
+          }}
+          onKeyUp={(event) => {
+            if (event.key === " " || event.key === "Enter") {
+              void native.endPushToTalk();
+            }
+          }}
         >
           <Mic size={14} />
         </Button>
