@@ -4,8 +4,10 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
 
 from thoth_daemon.api import (
+    commands,
     health,
     intent,
     operational,
@@ -25,6 +27,7 @@ from thoth_daemon.core.approvals import ApprovalEngine
 from thoth_daemon.core.ax_controller import AXController
 from thoth_daemon.core.ax_diagnostics import AXDiagnosticsStore
 from thoth_daemon.core.claude_planner import AnthropicPlannerClient, ClaudePlanner
+from thoth_daemon.core.command_dispatch import CommandDispatcher
 from thoth_daemon.core.dialogue import DialogueExpired, OperationalDialogueStore
 from thoth_daemon.core.focus import FocusManager
 from thoth_daemon.core.foreground import ForegroundContext, ForegroundContextBroker
@@ -336,10 +339,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             orchestrator=app.state.orchestrator,
             metrics=app.state.voice_metrics,
         )
+        app.state.command_dispatcher = CommandDispatcher(
+            orchestrator=app.state.orchestrator,
+            stop=app.state.global_stop,
+            speech=app.state.speech_synthesis,
+            skills=app.state.skills,
+            workspace=default_ws,
+            known_apps={profile.display_name for profile in app.state.application_profiles.all()},
+        )
         app.state.voice_commands = VoiceCommandService(
             sessions=app.state.voice_sessions,
-            stop=app.state.global_stop,
-            orchestrator=app.state.orchestrator,
+            dispatcher=app.state.command_dispatcher,
             tts=app.state.speech_synthesis,
         )
         log.info("daemon_started", extra={"data": {"host": cfg.host, "port": cfg.port}})
@@ -349,7 +359,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="THOTH Daemon", lifespan=lifespan)
     app.add_middleware(BearerAuthMiddleware)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=(
+            r"^(?:tauri://localhost|https?://(?:localhost|127\.0\.0\.1)(?::\d{1,5})?)$"
+        ),
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
     app.include_router(health.router)
+    app.include_router(commands.router)
     app.include_router(tasks.router)
     app.include_router(ws.router)
     app.include_router(permissions.router)

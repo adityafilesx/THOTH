@@ -14,6 +14,7 @@ export function CommandCenter() {
   const [goal, setGoal] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [controlResponse, setControlResponse] = useState<string | null>(null);
   const tasks = useTasksStore((s) => s.tasks);
   const activeTaskId = useTasksStore((s) => s.activeTaskId);
   const setActiveTask = useTasksStore((s) => s.setActiveTask);
@@ -26,10 +27,14 @@ export function CommandCenter() {
     if (!trimmed || submitting) return;
     setSubmitting(true);
     setError(null);
+    setControlResponse(null);
     try {
-      const task = await api.createTask(trimmed, "text");
-      upsertTask(task);
-      setActiveTask(task.id);
+      const result = await api.dispatchCommand(trimmed, "text");
+      setControlResponse(result.response?.display.text ?? null);
+      if (result.task) {
+        upsertTask(result.task);
+        setActiveTask(result.task.id);
+      }
       setGoal("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not reach the daemon");
@@ -42,6 +47,17 @@ export function CommandCenter() {
     <div className="mx-auto flex h-full max-w-3xl flex-col gap-4">
       {active?.presentation && (
         <OperationalSummary presentation={active.presentation} />
+      )}
+
+      {controlResponse && (
+        <Card aria-label="THOTH control response">
+          <CardContent>
+            <div className="eyebrow mb-1">THOTH</div>
+            <p className="text-sm text-ink" aria-live="polite">
+              {controlResponse}
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       <div className="flex min-h-0 flex-1 gap-4">

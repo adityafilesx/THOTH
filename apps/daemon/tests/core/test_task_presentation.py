@@ -142,6 +142,20 @@ class TestLifecycleIntents:
         assert failed.response.intent is ResponseIntent.FAILED
         assert stopped.response.intent is ResponseIntent.INTERRUPTED
 
+    def test_invalid_model_plan_does_not_expose_internal_validation_errors(self) -> None:
+        error = (
+            "planning failed: bad_arguments: app_focus: 2 validation errors for AppFocusIn "
+            "app Field required [type=missing] https://errors.pydantic.dev/2.13/v/missing"
+        )
+
+        view = COMPOSER.compose(_task(TaskState.FAILED, error=error))
+
+        assert view.response.intent is ResponseIntent.FAILED
+        assert "could not build a valid plan" in view.display_response.lower()
+        assert "No action was taken" in view.display_response
+        assert "pydantic" not in view.display_response
+        assert "AppFocusIn" not in view.spoken_response_preview
+
     def test_resumable_task(self) -> None:
         view = COMPOSER.compose(
             _task(TaskState.FAILED_REQUIRES_USER, [_step()], error="retry budget exhausted")

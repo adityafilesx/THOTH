@@ -1,9 +1,62 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { VoiceOverlayView } from "./VoiceOverlay";
+import {
+  captureStopDelay,
+  flushAndStopRecorder,
+  shouldRequestPartial,
+  VoiceOverlay,
+  VoiceOverlayView,
+} from "./VoiceOverlay";
+
+describe("push-to-talk recorder release", () => {
+  it("delays an early release until the minimum capture window", () => {
+    expect(captureStopDelay(1_000, 1_100)).toBe(400);
+    expect(captureStopDelay(1_000, 1_500)).toBe(0);
+    expect(captureStopDelay(1_000, 2_000)).toBe(0);
+  });
+
+  it("requests pending audio before stopping the recorder", () => {
+    const calls: string[] = [];
+    const fakeRecorder = {
+      state: "recording" as RecordingState,
+      requestData: () => calls.push("requestData"),
+      stop: () => calls.push("stop"),
+    };
+
+    expect(flushAndStopRecorder(fakeRecorder)).toBe(true);
+    expect(calls).toEqual(["requestData", "stop"]);
+  });
+
+  it("does not stop an inactive recorder", () => {
+    const requestData = vi.fn();
+    const stop = vi.fn();
+
+    expect(
+      flushAndStopRecorder({ state: "inactive", requestData, stop }),
+    ).toBe(false);
+    expect(requestData).not.toHaveBeenCalled();
+    expect(stop).not.toHaveBeenCalled();
+  });
+});
+
+describe("partial transcription cadence", () => {
+  it("requests an initial partial and then throttles local whisper work", () => {
+    expect(shouldRequestPartial(null, 100)).toBe(true);
+    expect(shouldRequestPartial(100, 849)).toBe(false);
+    expect(shouldRequestPartial(100, 850)).toBe(true);
+  });
+});
 
 describe("VoiceOverlayView", () => {
+  it("can stay mounted for browser PTT without showing an idle panel", () => {
+    const { container } = render(
+      <VoiceOverlay listenForNativeEvents={false} hideWhenIdle />,
+    );
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it("shows visible local listening and partial transcript state", () => {
     render(
       <VoiceOverlayView

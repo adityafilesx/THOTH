@@ -11,7 +11,9 @@ from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict
 
+from thoth_daemon.core.command_dispatch import CommandDispatcher
 from thoth_daemon.core.local_runtime import LocalAIRuntimeManager, RuntimeComponent
+from thoth_daemon.core.persona import PersonaResponse
 from thoth_daemon.schemas import Task, TaskSource
 from thoth_daemon.voice.contracts import (
     AudioCaptureMode,
@@ -23,17 +25,11 @@ from thoth_daemon.voice.contracts import (
 )
 from thoth_daemon.voice.metrics import VoiceLatencyMetrics, VoiceLatencyStage
 from thoth_daemon.voice.session import AudioCaptureSession
-from thoth_daemon.voice.stop import GlobalStopAuthority, GlobalStopResult, StopPhraseDetector
+from thoth_daemon.voice.stop import GlobalStopResult
 
 
 def _now() -> datetime:
     return datetime.now(UTC)
-
-
-class _Orchestrator(Protocol):
-    async def submit(self, goal: str, source: TaskSource = TaskSource.TEXT) -> Task: ...
-
-    async def settle(self, task_id: str) -> Task: ...
 
 
 class _SpeechInterruptor(Protocol):
@@ -53,6 +49,8 @@ class VoiceSubmissionResult(BaseModel):
     stopped: bool
     task: Task | None = None
     stop: GlobalStopResult | None = None
+    control: str | None = None
+    response: PersonaResponse | None = None
 
 
 class VoiceSessionRegistry:
@@ -211,16 +209,12 @@ class VoiceCommandService:
         self,
         *,
         sessions: VoiceSessionRegistry,
-        stop: GlobalStopAuthority,
-        orchestrator: _Orchestrator,
+        dispatcher: CommandDispatcher,
         tts: _SpeechInterruptor,
-        detector: StopPhraseDetector | None = None,
     ) -> None:
         self._sessions = sessions
-        self._stop = stop
-        self._orchestrator = orchestrator
+        self._dispatcher = dispatcher
         self._tts = tts
-        self._detector = detector or StopPhraseDetector()
 
     async def start(self, mode: AudioCaptureMode) -> VoiceSessionSnapshot:
         # Push-to-talk is authoritative user presence. Interrupt local speech
@@ -230,14 +224,26 @@ class VoiceCommandService:
 
     async def submit(self, session_id: str) -> VoiceSubmissionResult:
         text = self._sessions.consume(session_id)
-        if self._detector.matches(text, push_to_talk_active=True, tts_playing=False):
-            stop = await self._stop.stop(reason="voice_phrase")
-            self._sessions.finish_submission(session_id)
-            return VoiceSubmissionResult(stopped=True, stop=stop)
-        task = await self._orchestrator.submit(text, TaskSource.VOICE)
-        settled = await self._orchestrator.settle(task.id)
+        dispatched = await self._dispatcher.dispatch(text, TaskSource.VOICE)
         self._sessions.finish_submission(session_id)
-        return VoiceSubmissionResult(stopped=False, task=settled)
+        if dispatched.control == "stopped":
+            stop = (
+                dispatched.control_result
+                if isinstance(dispatched.control_result, GlobalStopResult)
+                else None
+            )
+            return VoiceSubmissionResult(
+                stopped=True,
+                stop=stop,
+                control=dispatched.control,
+                response=dispatched.response,
+            )
+        return VoiceSubmissionResult(
+            stopped=False,
+            task=dispatched.task,
+            control=dispatched.control,
+            response=dispatched.response,
+        )
 
 
 def _stable_prefix(previous: str, current: str) -> str:

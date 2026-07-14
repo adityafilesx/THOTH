@@ -13,24 +13,39 @@ function tauriInternals(): TauriInternals | null {
 }
 
 let cached: string | null | undefined;
+let pending: Promise<string | null> | null = null;
 
-export async function getSessionToken(): Promise<string | null> {
-  if (cached !== undefined) return cached;
+async function resolveSessionToken(): Promise<string | null> {
   const internals = tauriInternals();
+  const explicitDevToken =
+    (import.meta.env.VITE_THOTH_TOKEN as string | undefined) ?? null;
   if (internals) {
     try {
-      cached =
-        ((await internals.invoke("session_token")) as string | null) ?? null;
+      const nativeToken = (await internals.invoke("session_token", {})) as
+        | string
+        | null;
+      return nativeToken || explicitDevToken;
     } catch {
-      cached = null;
+      return explicitDevToken;
     }
-  } else {
-    cached = (import.meta.env.VITE_THOTH_TOKEN as string | undefined) ?? null;
   }
-  return cached;
+  return explicitDevToken;
+}
+
+export function getSessionToken(): Promise<string | null> {
+  if (cached !== undefined) return Promise.resolve(cached);
+  if (!pending) {
+    pending = resolveSessionToken().then((token) => {
+      cached = token;
+      pending = null;
+      return token;
+    });
+  }
+  return pending;
 }
 
 /** Test-only: clear the in-memory cache. */
 export function __resetTokenCache(): void {
   cached = undefined;
+  pending = null;
 }

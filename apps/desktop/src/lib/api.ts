@@ -201,6 +201,34 @@ export interface TaskPresentation {
 
 export type TaskPayload = Task & { presentation?: TaskPresentation };
 
+export interface RoutedIntentResponse {
+  tier: "reflex" | "skill" | "planner" | "clarify";
+  reflex_kind?:
+    | "stop"
+    | "cancel"
+    | "status"
+    | "open_app"
+    | "focus_app"
+    | "run_skill"
+    | "continue_workspace"
+    | "mute"
+    | "interrupt";
+  target?: string;
+}
+
+export interface CommandDispatchResponse {
+  route: RoutedIntentResponse;
+  control: "stopped" | "speech_interrupted" | "status" | "clarification_required" | null;
+  control_result: unknown;
+  response: {
+    intent: ResponseIntent;
+    display: { text: string };
+    spoken: { text: string; max_chars: number };
+    used_model: boolean;
+  } | null;
+  task: TaskPayload | null;
+}
+
 export interface ApplicationProfile {
   bundle_id: string;
   display_name: string;
@@ -268,6 +296,11 @@ export const api = {
     request<TaskPayload>("/api/tasks", {
       method: "POST",
       body: JSON.stringify({ goal, source }),
+    }),
+  dispatchCommand: (text: string, source: "text" | "voice" = "text") =>
+    request<CommandDispatchResponse>("/api/commands", {
+      method: "POST",
+      body: JSON.stringify({ text, source }),
     }),
   listTasks: () => request<TaskPayload[]>("/api/tasks"),
   getTask: (id: string) => request<TaskPayload>(`/api/tasks/${id}`),
@@ -351,13 +384,13 @@ export const api = {
     }),
   interruptSpeech: () =>
     request<{ interrupted: boolean }>("/api/voice/interrupt", { method: "POST" }),
-  globalStop: (reason: "global_button" | "escape" | "menu_bar") =>
+  globalStop: (reason: "global_button" | "escape" | "menu_bar" | "typed_command") =>
     request<Record<string, unknown>>("/api/stop", {
       method: "POST",
       body: JSON.stringify({ reason }),
     }),
   routeIntent: (text: string) =>
-    request<{ tier: "reflex" | "skill" | "planner" | "clarify" }>(
+    request<RoutedIntentResponse>(
       "/api/intent/route",
       { method: "POST", body: JSON.stringify({ text }) },
     ),

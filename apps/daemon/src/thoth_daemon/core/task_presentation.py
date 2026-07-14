@@ -26,6 +26,26 @@ from thoth_daemon.core.persona import (
 from thoth_daemon.core.runtime_status import LocalRuntimeStatus
 from thoth_daemon.schemas import ApprovalRequest, PlanStep, RiskLevel, StepStatus, Task, TaskState
 
+_UNSAFE_PLAN_FAILURE_MARKERS = (
+    "bad_arguments",
+    "malformed",
+    "missing_verifier",
+    "risk_downgrade",
+    "unknown_tool",
+    "unsupported_app",
+    "validation error",
+    "pydantic.dev",
+)
+
+
+def _user_safe_failure_reason(error: str) -> str:
+    lowered = error.lower()
+    if lowered.startswith("planning failed:") and any(
+        marker in lowered for marker in _UNSAFE_PLAN_FAILURE_MARKERS
+    ):
+        return "I could not build a valid plan. No action was taken."
+    return error
+
 
 class ApprovalStage(StrEnum):
     NOT_REQUIRED = "not_required"
@@ -228,7 +248,7 @@ class TaskPresentationComposer:
                 )
             return ResponseFact(
                 intent=ResponseIntent.FAILED,
-                failure_reason=error,
+                failure_reason=_user_safe_failure_reason(error),
                 verified=False,
             )
         return ResponseFact(intent=ResponseIntent.ACKNOWLEDGEMENT)

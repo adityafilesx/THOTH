@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import io
+import wave
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -260,6 +262,38 @@ class TestWhisperCppProvider:
         assert str(model) in argv
         assert not audio_path.exists()
         assert all(";" not in arg for arg in argv)
+
+    async def test_pcm16_browser_audio_is_wrapped_as_private_wav(self, tmp_path: Path) -> None:
+        executable = tmp_path / "whisper-cli"
+        executable.write_text("binary placeholder")
+        executable.chmod(0o700)
+        model = tmp_path / "ggml-base.en.bin"
+        model.write_bytes(b"model")
+        observed: list[bytes] = []
+
+        async def run(argv: list[str], audio_path: Path) -> tuple[int, str, str]:
+            del argv
+            assert audio_path.suffix == ".wav"
+            observed.append(audio_path.read_bytes())
+            return 0, "thoth stop", ""
+
+        provider = WhisperCppSpeechRecognitionProvider(
+            executable=executable,
+            model_path=model,
+            runner=run,
+            clock=lambda: NOW,
+        )
+
+        await provider.transcribe(
+            b"\x00\x00\xff\x7f",
+            "audio/pcm;format=s16le;rate=16000;channels=1",
+        )
+
+        with wave.open(io.BytesIO(observed[0]), "rb") as wav:
+            assert wav.getnchannels() == 1
+            assert wav.getsampwidth() == 2
+            assert wav.getframerate() == 16_000
+            assert wav.readframes(2) == b"\x00\x00\xff\x7f"
 
     async def test_cancellation_removes_audio(self, tmp_path: Path) -> None:
         executable = tmp_path / "whisper-cli"

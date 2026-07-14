@@ -250,7 +250,7 @@ class PersonaResponseComposer:
             return self._accessibility_template(fact)
         intent = fact.intent
         if intent is ResponseIntent.ACKNOWLEDGEMENT:
-            return "Understood."
+            return fact.summary or "Understood."
         if intent is ResponseIntent.PLAN_READY:
             return fact.summary or "A plan is ready for review."
         if intent is ResponseIntent.APPROVAL_REQUIRED:

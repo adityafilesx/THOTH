@@ -35,9 +35,11 @@ class TestReflexTier:
             ("cancel the task", ReflexKind.CANCEL),
             ("status", ReflexKind.STATUS),
             ("what is the current status", ReflexKind.STATUS),
+            ("Thoth, read the current task status.", ReflexKind.STATUS),
             ("mute", ReflexKind.MUTE),
             ("interrupt", ReflexKind.INTERRUPT),
             ("be quiet", ReflexKind.INTERRUPT),
+            ("Thoth, stop speaking.", ReflexKind.INTERRUPT),
         ],
     )
     def test_bare_commands(self, text: str, kind: ReflexKind) -> None:
@@ -46,16 +48,18 @@ class TestReflexTier:
         assert intent.reflex_kind is kind
 
     def test_open_approved_app(self) -> None:
-        intent = ROUTER.route("open Safari")
-        assert intent.tier is RouteTier.REFLEX
-        assert intent.reflex_kind is ReflexKind.OPEN_APP
-        assert intent.target == "Safari"
+        for text in ("open Safari", "Thoth, open Safari."):
+            intent = ROUTER.route(text)
+            assert intent.tier is RouteTier.REFLEX
+            assert intent.reflex_kind is ReflexKind.OPEN_APP
+            assert intent.target == "Safari"
 
     def test_focus_approved_app(self) -> None:
-        intent = ROUTER.route("switch to Terminal")
-        assert intent.tier is RouteTier.REFLEX
-        assert intent.reflex_kind is ReflexKind.FOCUS_APP
-        assert intent.target == "Terminal"
+        for text in ("switch to Terminal", "Thoth, bring Terminal forward."):
+            intent = ROUTER.route(text)
+            assert intent.tier is RouteTier.REFLEX
+            assert intent.reflex_kind is ReflexKind.FOCUS_APP
+            assert intent.target == "Terminal"
 
     def test_open_unknown_app_is_not_reflex(self) -> None:
         # An app with no profile / not approved must not be a reflex open.
@@ -63,10 +67,11 @@ class TestReflexTier:
         assert intent.tier is not RouteTier.REFLEX
 
     def test_continue_known_workspace(self) -> None:
-        intent = ROUTER.route("continue THOTH")
-        assert intent.tier is RouteTier.REFLEX
-        assert intent.reflex_kind is ReflexKind.CONTINUE_WORKSPACE
-        assert intent.target == "THOTH"
+        for text in ("continue THOTH", "Thoth, continue the THOTH project."):
+            intent = ROUTER.route(text)
+            assert intent.tier is RouteTier.REFLEX
+            assert intent.reflex_kind is ReflexKind.CONTINUE_WORKSPACE
+            assert intent.target == "THOTH"
 
     def test_run_known_skill_by_name(self) -> None:
         intent = ROUTER.route("run project-health-check")

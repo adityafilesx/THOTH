@@ -960,7 +960,14 @@ class Orchestrator:
     async def settle(self, task_id: str, timeout: float = 3.0) -> Task:  # noqa: ASYNC109
         """Await until the task reaches a terminal state or pauses for
         approval. Returns the current task snapshot."""
-        runner = self._runners[task_id]
+        runner = self._runners.get(task_id)
+        if runner is None:
+            task = self._tasks.get(task_id)
+            if task is None:
+                raise KeyError(task_id)
+            if task.state in TERMINAL_STATES:
+                return task
+            raise RuntimeError(f"task {task_id!r} has no execution runner")
         waiters: list[asyncio.Future[Any]] = [
             asyncio.ensure_future(runner.paused.wait()),
             asyncio.ensure_future(asyncio.shield(runner.done)),
@@ -1012,7 +1019,7 @@ class Orchestrator:
         return runner.task if runner else self._tasks.get(task_id)
 
     def list_tasks(self) -> list[Task]:
-        return [r.task for r in self._runners.values()]
+        return list(self._tasks.values())
 
     def pending_approvals(self) -> list[Any]:
         return self._approvals.pending()

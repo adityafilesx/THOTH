@@ -16,7 +16,9 @@ class FakeWebSocket {
   send(data: string) {
     this.sent.push(data);
   }
-  close() {}
+  close() {
+    this.onclose?.();
+  }
 }
 
 afterEach(() => {
@@ -39,5 +41,22 @@ describe("WsClient auth", () => {
       type: "auth",
       token: "dev-token",
     });
+  });
+
+  it("does not publish a false disconnection when intentionally disposed", async () => {
+    vi.stubEnv("VITE_THOTH_TOKEN", "dev-token");
+    vi.stubGlobal("WebSocket", FakeWebSocket as unknown as typeof WebSocket);
+    const statuses: string[] = [];
+    const client = new WsClient({
+      onEvent: () => {},
+      onStatus: (status) => statuses.push(status),
+    });
+    client.connect();
+    await vi.waitFor(() => expect(FakeWebSocket.instances.length).toBe(1));
+    FakeWebSocket.instances[0].onopen?.();
+
+    client.close();
+
+    expect(statuses).toEqual(["connecting", "connected"]);
   });
 });

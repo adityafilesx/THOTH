@@ -70,7 +70,7 @@ class EditTranscriptBody(BaseModel):
 class StopBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    reason: Literal["global_button", "escape", "menu_bar"]
+    reason: Literal["global_button", "escape", "menu_bar", "typed_command"]
 
 
 def _stt(request: Request) -> STTAdapter:
@@ -313,7 +313,7 @@ async def submit_voice_session(session_id: str, request: Request) -> dict[str, A
     except Exception as exc:
         raise _voice_error(exc) from exc
     if result.stopped:
-        response = PersonaResponseComposer().compose(
+        response = result.response or PersonaResponseComposer().compose(
             ResponseFact(intent=ResponseIntent.INTERRUPTED)
         )
         await _speak_safely(request, response.spoken)
@@ -321,9 +321,23 @@ async def submit_voice_session(session_id: str, request: Request) -> dict[str, A
             "stopped": True,
             "task": None,
             "stop": result.stop.model_dump(mode="json") if result.stop else None,
+            "control": result.control,
+            "response": response.model_dump(mode="json"),
         }
     if result.task is None:
-        raise HTTPException(status_code=409, detail="voice submission produced no task")
+        if result.response is None:
+            raise HTTPException(status_code=409, detail="voice submission produced no task")
+        # A command to interrupt speech must not immediately start a new
+        # utterance. Other deterministic no-task responses may be read back.
+        if result.control != "speech_interrupted":
+            await _speak_safely(request, result.response.spoken)
+        return {
+            "stopped": False,
+            "task": None,
+            "stop": None,
+            "control": result.control,
+            "response": result.response.model_dump(mode="json"),
+        }
     refresh_dialogue(request, result.task)
     payload = await build_task_payload(request, result.task)
     spoken = SpokenResponse.model_validate(payload["presentation"]["response"]["spoken"])

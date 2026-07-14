@@ -21,9 +21,12 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import hashlib
+import io
 import os
+import re
 import tempfile
 import time
+import wave
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -263,7 +266,7 @@ class WhisperCppSpeechRecognitionProvider:
             raise ValueError("audio is empty")
         if len(audio_bytes) > 50 * 1024 * 1024:
             raise ValueError("audio exceeds the bounded size limit")
-        suffix = _audio_suffix(mime)
+        audio_bytes, suffix = _prepare_whisper_audio(audio_bytes, mime)
         descriptor, raw_path = tempfile.mkstemp(prefix="thoth-voice-", suffix=suffix)
         audio_path = Path(raw_path)
         started = time.perf_counter()
@@ -352,6 +355,32 @@ def _audio_suffix(mime: str) -> str:
         "audio/webm": ".webm",
         "audio/mp4": ".m4a",
     }.get(normalized, ".audio")
+
+
+def _prepare_whisper_audio(audio: bytes, mime: str) -> tuple[bytes, str]:
+    parts = [part.strip().lower() for part in mime.split(";") if part.strip()]
+    if not parts or parts[0] != "audio/pcm":
+        return audio, _audio_suffix(mime)
+    parameters = dict(
+        part.split("=", 1) for part in parts[1:] if re.fullmatch(r"[a-z]+=[a-z0-9]+", part)
+    )
+    if parameters.get("format") != "s16le":
+        raise ValueError("PCM audio must use signed 16-bit little-endian samples")
+    sample_rate = int(parameters.get("rate", "0"))
+    channels = int(parameters.get("channels", "0"))
+    if not 8_000 <= sample_rate <= 192_000:
+        raise ValueError("PCM audio sample rate is outside the supported range")
+    if channels not in {1, 2}:
+        raise ValueError("PCM audio must contain one or two channels")
+    if len(audio) % (2 * channels):
+        raise ValueError("PCM audio contains an incomplete sample frame")
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as wav:
+        wav.setnchannels(channels)
+        wav.setsampwidth(2)
+        wav.setframerate(sample_rate)
+        wav.writeframes(audio)
+    return buffer.getvalue(), ".wav"
 
 
 def _bounded_error(stderr: str) -> str:

@@ -46,11 +46,10 @@ export class WsClient {
         }
       };
       ws.onclose = () => {
+        if (this.closedByUser) return;
         this.options.onStatus("disconnected");
-        if (!this.closedByUser) {
-          this.timer = setTimeout(() => this.open(), this.retryMs);
-          this.retryMs = Math.min(this.retryMs * 2, 8000);
-        }
+        this.timer = setTimeout(() => this.open(), this.retryMs);
+        this.retryMs = Math.min(this.retryMs * 2, 8000);
       };
       ws.onerror = () => {
         ws.close();

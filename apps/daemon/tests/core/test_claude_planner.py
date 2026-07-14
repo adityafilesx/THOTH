@@ -174,3 +174,4 @@ async def test_planner_that_raises_fails_task_cleanly(tmp_path: Path) -> None:
     orch = await _orch(tmp_path, ClaudePlanner(_registry(), client))
     task = await orch.submit("anything")  # planner raises -> FAILED, no runner
     assert task.state is TaskState.FAILED and "planning failed" in (task.error or "")
+    assert await orch.settle(task.id) is task

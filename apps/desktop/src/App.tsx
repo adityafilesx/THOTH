@@ -141,9 +141,13 @@ export default function App() {
   const [windowLabel, setWindowLabel] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!(window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__) {
+      setWindowLabel("browser");
+      return;
+    }
     void import("@tauri-apps/api/window")
       .then(({ getCurrentWindow }) => setWindowLabel(getCurrentWindow().label))
-      .catch(() => setWindowLabel("main"));
+      .catch(() => setWindowLabel("browser"));
   }, []);
 
   if (windowLabel === null) return null;
@@ -164,6 +168,11 @@ export default function App() {
       </Layout>
       <ApprovalDrawer />
       <ActiveExecutionHUD />
+      {windowLabel === "browser" && (
+        <div className="fixed bottom-4 right-4 z-50 w-[420px]">
+          <VoiceOverlay hideWhenIdle />
+        </div>
+      )}
     </QueryClientProvider>
   );
 }

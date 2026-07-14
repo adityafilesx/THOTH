@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
+import { LocalPcmRecorder } from "@/lib/pcmRecorder";
 
 export type VoiceOverlayState =
   | "idle"
@@ -20,6 +21,34 @@ const ROUTE_LABELS: Record<VoiceRoute, string> = {
   skill: "Skill",
   local_planner: "Local planner",
 };
+
+const MINIMUM_CAPTURE_MS = 500;
+const PARTIAL_TRANSCRIPTION_INTERVAL_MS = 750;
+
+interface RecorderStopTarget {
+  state: RecordingState;
+  requestData: () => void;
+  stop: () => void;
+}
+
+export function captureStopDelay(startedAt: number, now: number): number {
+  return Math.max(0, MINIMUM_CAPTURE_MS - (now - startedAt));
+}
+
+export function flushAndStopRecorder(recorder: RecorderStopTarget): boolean {
+  if (recorder.state !== "recording") return false;
+  recorder.requestData();
+  recorder.stop();
+  return true;
+}
+
+export function shouldRequestPartial(
+  lastRequestedAt: number | null,
+  now: number,
+  interval = PARTIAL_TRANSCRIPTION_INTERVAL_MS,
+): boolean {
+  return lastRequestedAt === null || now - lastRequestedAt >= interval;
+}
 
 function stateLabel(state: VoiceOverlayState): string {
   return state.replace(/^./, (first) => first.toUpperCase());
@@ -116,17 +145,30 @@ interface PTTEvent {
   state: "Pressed" | "Released";
 }
 
-export function VoiceOverlay({ listenForNativeEvents = true }: { listenForNativeEvents?: boolean }) {
+export function VoiceOverlay({
+  listenForNativeEvents = true,
+  hideWhenIdle = false,
+}: {
+  listenForNativeEvents?: boolean;
+  hideWhenIdle?: boolean;
+}) {
   const [state, setState] = useState<VoiceOverlayState>("idle");
   const [partial, setPartial] = useState("");
   const [finalText, setFinalText] = useState("");
   const [route, setRoute] = useState<VoiceRoute | null>(null);
   const [error, setError] = useState<string | null>(null);
   const sessionId = useRef<string | null>(null);
-  const recorder = useRef<MediaRecorder | null>(null);
+  const recorder = useRef<LocalPcmRecorder | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const uploads = useRef<Promise<unknown>>(Promise.resolve());
   const autoSubmit = useRef<number | null>(null);
+  const stopTimer = useRef<number | null>(null);
+  const recordingStartedAt = useRef<number | null>(null);
+  const releaseRequested = useRef(false);
+  const cancelRequested = useRef(false);
+  const startInFlight = useRef(false);
+  const capturedAudioBytes = useRef(0);
+  const lastPartialRequestedAt = useRef<number | null>(null);
   const lastEscape = useRef(0);
 
   const syncNativeState = useCallback((next: VoiceOverlayState) => {
@@ -153,10 +195,34 @@ export function VoiceOverlay({ listenForNativeEvents = true }: { listenForNative
     stream.current?.getTracks().forEach((track) => track.stop());
     stream.current = null;
     recorder.current = null;
+    recordingStartedAt.current = null;
+  }, []);
+
+  const clearStopTimer = useCallback(() => {
+    if (stopTimer.current !== null) window.clearTimeout(stopTimer.current);
+    stopTimer.current = null;
+  }, []);
+
+  const stopAfterMinimumCapture = useCallback(() => {
+    const activeRecorder = recorder.current;
+    const startedAt = recordingStartedAt.current;
+    if (!activeRecorder || startedAt === null || activeRecorder.state !== "recording") return;
+    if (stopTimer.current !== null) return;
+    const delay = captureStopDelay(startedAt, performance.now());
+    const stop = () => {
+      stopTimer.current = null;
+      const currentRecorder = recorder.current;
+      if (currentRecorder) flushAndStopRecorder(currentRecorder);
+    };
+    if (delay === 0) stop();
+    else stopTimer.current = window.setTimeout(stop, delay);
   }, []);
 
   const cancel = useCallback(async () => {
     if (autoSubmit.current !== null) window.clearTimeout(autoSubmit.current);
+    clearStopTimer();
+    cancelRequested.current = true;
+    releaseRequested.current = false;
     if (recorder.current?.state === "recording") recorder.current.stop();
     stopTracks();
     const id = sessionId.current;
@@ -169,7 +235,7 @@ export function VoiceOverlay({ listenForNativeEvents = true }: { listenForNative
     setError(null);
     changeState("idle");
     closeOverlay();
-  }, [changeState, closeOverlay, stopTracks]);
+  }, [changeState, clearStopTimer, closeOverlay, stopTracks]);
 
   const submit = useCallback(async (textOverride?: string) => {
     const id = sessionId.current;
@@ -203,6 +269,13 @@ export function VoiceOverlay({ listenForNativeEvents = true }: { listenForNative
     changeState("transcribing");
     try {
       await uploads.current;
+      if (capturedAudioBytes.current === 0) {
+        await api.cancelVoiceSession(id).catch(() => {});
+        sessionId.current = null;
+        setError("No audio was captured. Hold push-to-talk while speaking, then release.");
+        changeState("failed");
+        return;
+      }
       const snapshot = await api.finaliseVoiceSession(id);
       const text = snapshot.editable_text ?? snapshot.final?.text ?? "";
       setPartial("");
@@ -218,13 +291,19 @@ export function VoiceOverlay({ listenForNativeEvents = true }: { listenForNative
   }, [changeState, stopTracks, submit]);
 
   const release = useCallback(() => {
-    if (recorder.current?.state === "recording") {
-      recorder.current.stop();
-    }
-  }, []);
+    releaseRequested.current = true;
+    stopAfterMinimumCapture();
+  }, [stopAfterMinimumCapture]);
 
   const start = useCallback(async () => {
-    if (!["idle", "failed"].includes(state)) return;
+    if (startInFlight.current || !["idle", "failed"].includes(state)) return;
+    startInFlight.current = true;
+    clearStopTimer();
+    releaseRequested.current = false;
+    cancelRequested.current = false;
+    capturedAudioBytes.current = 0;
+    lastPartialRequestedAt.current = null;
+    uploads.current = Promise.resolve();
     setError(null);
     setPartial("");
     setFinalText("");
@@ -233,22 +312,37 @@ export function VoiceOverlay({ listenForNativeEvents = true }: { listenForNative
       const snapshot = await api.startVoiceSession("hold");
       sessionId.current = snapshot.session_id;
       stream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream.current);
-      recorder.current = mediaRecorder;
-      mediaRecorder.addEventListener("dataavailable", (event) => {
-        if (!event.data.size || !sessionId.current) return;
+      const pcmRecorder = new LocalPcmRecorder(stream.current);
+      recorder.current = pcmRecorder;
+      pcmRecorder.addEventListener("dataavailable", (event) => {
+        const data = (event as BlobEvent).data;
+        if (!data.size || !sessionId.current) return;
+        capturedAudioBytes.current += data.size;
         const id = sessionId.current;
-        uploads.current = uploads.current
-          .then(() => api.appendVoiceAudio(id, event.data))
-          .then(() => api.voicePartial(id))
-          .then((next) => setPartial(next.partial?.text ?? ""))
-          .catch((caught: unknown) => {
-            setError(caught instanceof Error ? caught.message : "Partial transcription failed.");
-          });
+        const now = performance.now();
+        const requestPartial = shouldRequestPartial(lastPartialRequestedAt.current, now);
+        if (requestPartial) lastPartialRequestedAt.current = now;
+        uploads.current = uploads.current.then(() => api.appendVoiceAudio(id, data));
+        if (requestPartial) {
+          uploads.current = uploads.current
+            .then(() => api.voicePartial(id))
+            .then((next) => setPartial(next.partial?.text ?? ""))
+            .catch((caught: unknown) => {
+              setError(caught instanceof Error ? caught.message : "Partial transcription failed.");
+            });
+        }
       });
-      mediaRecorder.addEventListener("stop", () => void finalise(), { once: true });
-      mediaRecorder.start(500);
+      pcmRecorder.addEventListener(
+        "stop",
+        () => {
+          if (!cancelRequested.current) void finalise();
+        },
+        { once: true },
+      );
+      pcmRecorder.start();
+      recordingStartedAt.current = performance.now();
       changeState("listening");
+      if (releaseRequested.current) stopAfterMinimumCapture();
     } catch (caught) {
       const id = sessionId.current;
       if (id) await api.cancelVoiceSession(id).catch(() => {});
@@ -256,8 +350,10 @@ export function VoiceOverlay({ listenForNativeEvents = true }: { listenForNative
       stopTracks();
       setError(caught instanceof Error ? caught.message : "Microphone is unavailable.");
       changeState("failed");
+    } finally {
+      startInFlight.current = false;
     }
-  }, [changeState, finalise, state, stopTracks]);
+  }, [changeState, clearStopTimer, finalise, state, stopAfterMinimumCapture, stopTracks]);
 
   useEffect(() => {
     if (!listenForNativeEvents) return;
@@ -282,9 +378,10 @@ export function VoiceOverlay({ listenForNativeEvents = true }: { listenForNative
       unlistenPTT?.();
       unlistenStop?.();
       window.removeEventListener("thoth:ptt", browserPTT);
+      clearStopTimer();
       stopTracks();
     };
-  }, [listenForNativeEvents, release, start, stopTracks]);
+  }, [clearStopTimer, listenForNativeEvents, release, start, stopTracks]);
 
   useEffect(() => {
     const escape = (event: KeyboardEvent) => {
@@ -303,7 +400,7 @@ export function VoiceOverlay({ listenForNativeEvents = true }: { listenForNative
     return () => window.removeEventListener("keydown", escape);
   }, [cancel, state]);
 
-  return (
+  return hideWhenIdle && state === "idle" ? null : (
     <VoiceOverlayView
       state={state}
       partial={partial}

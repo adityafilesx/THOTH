@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from fastapi import FastAPI
 from httpx import AsyncClient
 
+from thoth_daemon.core.command_dispatch import CommandDispatcher
 from thoth_daemon.voice.contracts import (
     FinalTranscript,
     SpeechPlaybackState,
@@ -89,10 +90,17 @@ def _prime(app: FastAPI, text: str, *, retain_transcripts: bool = False) -> None
     app.state.spoken_requests = speech_provider.requests
     app.state.voice_sessions = sessions
     app.state.global_stop = stop
+    app.state.command_dispatcher = CommandDispatcher(
+        orchestrator=app.state.orchestrator,
+        stop=stop,
+        speech=speech,
+        skills=app.state.skills,
+        workspace=app.state.default_workspace,
+        known_apps={profile.display_name for profile in app.state.application_profiles.all()},
+    )
     app.state.voice_commands = VoiceCommandService(
         sessions=sessions,
-        stop=stop,
-        orchestrator=app.state.orchestrator,
+        dispatcher=app.state.command_dispatcher,
         tts=speech,
     )
 
@@ -234,6 +242,35 @@ class TestVoiceStopBypass:
         response = await client.post("/api/stop", json={"reason": "global_button"})
         assert response.status_code == 200
         assert response.json()["reason"] == "global_button"
+
+    async def test_stop_speaking_returns_control_without_starting_new_speech(
+        self,
+        client: AsyncClient,
+        app: FastAPI,
+    ) -> None:
+        _prime(app, "stop speaking")
+        session_id = await _start(client)
+        await client.put(
+            f"/api/voice/sessions/{session_id}/audio",
+            content=b"spoken control",
+            headers={"Content-Type": "audio/wav"},
+        )
+        await client.post(f"/api/voice/sessions/{session_id}/finalise")
+
+        response = await client.post(f"/api/voice/sessions/{session_id}/submit")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["stopped"] is False
+        assert body["task"] is None
+        assert body["control"] == "speech_interrupted"
+        assert body["response"]["display"]["text"] == "Speech stopped."
+        assert app.state.spoken_requests == []
+
+    async def test_global_stop_accepts_typed_reflex_reason(self, client: AsyncClient) -> None:
+        response = await client.post("/api/stop", json={"reason": "typed_command"})
+        assert response.status_code == 200
+        assert response.json()["reason"] == "typed_command"
 
 
 class TestVoiceDialogueContinuity:

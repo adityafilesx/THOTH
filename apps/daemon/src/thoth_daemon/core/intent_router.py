@@ -72,16 +72,21 @@ _BARE = [
         ReflexKind.STATUS,
         re.compile(r"^(what('| i)?s )?(the )?(current )?(task )?status[?.! ]*$"),
     ),
+    (
+        ReflexKind.STATUS,
+        re.compile(r"^read (the )?(current )?(task )?status[?.! ]*$"),
+    ),
     (ReflexKind.MUTE, re.compile(r"^(thoth[ ,]*)?mute( thoth| yourself)?[.! ]*$")),
     (
         ReflexKind.INTERRUPT,
-        re.compile(r"^(thoth[ ,]*)?(interrupt|be quiet|quiet|hush)( thoth)?[.! ]*$"),
+        re.compile(r"^(thoth[ ,]*)?(interrupt|be quiet|quiet|hush|stop speaking)( thoth)?[.! ]*$"),
     ),
 ]
 
 # Verb + argument commands. The argument must resolve against a known set.
 _OPEN = re.compile(rf"^(open|launch)\s+(?P<arg>{_WORD}+?)[.! ]*$")
 _FOCUS = re.compile(rf"^(focus|switch to|bring up|go to)\s+(?P<arg>{_WORD}+?)[.! ]*$")
+_BRING_FORWARD = re.compile(rf"^bring\s+(?P<arg>{_WORD}+?)\s+forward[.! ]*$")
 _RUN = re.compile(rf"^(run|start|execute)\s+(the\s+)?(?P<arg>{_WORD}+?)( skill)?[.! ]*$")
 _CONTINUE = re.compile(rf"^continue\s+(the\s+)?(?P<arg>{_WORD}+?)( workspace| project)?[.! ]*$")
 
@@ -102,30 +107,31 @@ class IntentRouter:
     def route(self, text: str) -> RoutedIntent:
         norm = " ".join(text.strip().split())
         low = norm.lower()
+        command = re.sub(r"^thoth(?:[ ,]+)", "", low)
 
         for kind, rx in _BARE:
-            if rx.match(low):
+            if rx.match(low) or rx.match(command):
                 return RoutedIntent(tier=RouteTier.REFLEX, reflex_kind=kind, raw=text)
 
-        m = _OPEN.match(low)
+        m = _OPEN.match(command)
         if m and (app := self._apps.get(m.group("arg").strip())):
             return RoutedIntent(
                 tier=RouteTier.REFLEX, reflex_kind=ReflexKind.OPEN_APP, target=app, raw=text
             )
 
-        m = _FOCUS.match(low)
+        m = _FOCUS.match(command) or _BRING_FORWARD.match(command)
         if m and (app := self._apps.get(m.group("arg").strip())):
             return RoutedIntent(
                 tier=RouteTier.REFLEX, reflex_kind=ReflexKind.FOCUS_APP, target=app, raw=text
             )
 
-        m = _RUN.match(low)
+        m = _RUN.match(command)
         if m and (skill := self._resolve_skill(m.group("arg").strip())):
             return RoutedIntent(
                 tier=RouteTier.REFLEX, reflex_kind=ReflexKind.RUN_SKILL, target=skill, raw=text
             )
 
-        m = _CONTINUE.match(low)
+        m = _CONTINUE.match(command)
         if m and (ws := self._workspaces.get(m.group("arg").strip())):
             return RoutedIntent(
                 tier=RouteTier.REFLEX,
