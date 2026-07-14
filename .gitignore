@@ -39,6 +39,7 @@ id_ed25519*
 # macOS
 .DS_Store
 apps/ax-test-app/.build/
+apps/ax-helper/.build/
 
 # Editors
 .idea/

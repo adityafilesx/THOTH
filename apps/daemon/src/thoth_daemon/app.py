@@ -60,8 +60,8 @@ from thoth_daemon.inference import (
 )
 from thoth_daemon.logging_setup import configure_logging, get_logger
 from thoth_daemon.macos.app_control import default_app_control
-from thoth_daemon.macos.ax_permission import default_ax_permission_service
-from thoth_daemon.macos.semantic_ax import RealSemanticAXAdapter
+from thoth_daemon.macos.ax_helper import AXHelperClient, AXHelperSemanticAXAdapter
+from thoth_daemon.macos.ax_permission import AXPermissionService
 from thoth_daemon.schemas import ResourceScope, WorkspaceProfile
 from thoth_daemon.security.auth import mint_token, write_token_file
 from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
@@ -222,12 +222,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         app_control = default_app_control()
         focus_manager = FocusManager(app_control)
-        ax_permissions = default_ax_permission_service()
+        # AX calls execute in the stable, signed helper bundle. Absence of the
+        # local mode-0600 socket is typed unavailable; the daemon never falls
+        # back to its unstable Python host identity.
+        ax_helper = AXHelperClient()
+        ax_permissions = AXPermissionService(trust_probe=ax_helper.is_trusted)
         ax_diagnostics = AXDiagnosticsStore()
+        app.state.ax_helper = ax_helper
         app.state.ax_permissions = ax_permissions
         app.state.ax_diagnostics = ax_diagnostics
         ax_controller = AXController(
-            RealSemanticAXAdapter(ax_permissions),
+            AXHelperSemanticAXAdapter(ax_helper),
             ax_permissions,
             app.state.application_profiles,
             app_control=app_control,
