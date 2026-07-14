@@ -12,14 +12,21 @@ Audio bytes are never logged or retained. whisper.cpp is the local default;
 missing runtime/model state returns 503 and never falls back to cloud speech.
 """
 
+import logging
 from typing import Any, Literal, cast
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict
 
+from thoth_daemon.api.operational import build_task_payload, refresh_dialogue
 from thoth_daemon.core.local_runtime import RuntimeUnavailable
 from thoth_daemon.core.orchestrator import Orchestrator
-from thoth_daemon.core.persona import SpokenResponse
+from thoth_daemon.core.persona import (
+    PersonaResponseComposer,
+    ResponseFact,
+    ResponseIntent,
+    SpokenResponse,
+)
 from thoth_daemon.schemas import TaskSource
 from thoth_daemon.voice.contracts import AudioCaptureMode
 from thoth_daemon.voice.service import VoiceCommandService, VoiceSessionRegistry
@@ -29,6 +36,7 @@ from thoth_daemon.voice.stt import STTAdapter, STTUnavailableError
 from thoth_daemon.voice.tts import SpeechSynthesisService
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class SayBody(BaseModel):
@@ -96,6 +104,16 @@ async def _transcribe(request: Request) -> Any:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+async def _speak_safely(request: Request, response: SpokenResponse) -> None:
+    """Keep optional local playback outside task truth and execution state."""
+    try:
+        await _tts(request).speak(response)
+    except Exception:
+        # A missing or failed local voice must not rewrite an authoritative
+        # task result. Runtime health remains available through /api/runtime.
+        logger.warning("voice_response_playback_failed", exc_info=True)
+
+
 @router.post("/api/voice/transcribe")
 async def transcribe(request: Request) -> dict[str, Any]:
     transcript = await _transcribe(request)
@@ -108,7 +126,11 @@ async def voice_task(request: Request) -> dict[str, Any]:
     orch = cast(Orchestrator, request.app.state.orchestrator)
     task = await orch.submit(transcript.text, TaskSource.VOICE)
     settled = await orch.settle(task.id)
-    return settled.model_dump(mode="json")
+    refresh_dialogue(request, settled)
+    payload = await build_task_payload(request, settled)
+    spoken = SpokenResponse.model_validate(payload["presentation"]["response"]["spoken"])
+    await _speak_safely(request, spoken)
+    return payload
 
 
 @router.post("/api/voice/say")
@@ -187,7 +209,23 @@ async def submit_voice_session(session_id: str, request: Request) -> dict[str, A
         result = await _commands(request).submit(session_id)
     except Exception as exc:
         raise _voice_error(exc) from exc
-    return result.model_dump(mode="json")
+    if result.stopped:
+        response = PersonaResponseComposer().compose(
+            ResponseFact(intent=ResponseIntent.INTERRUPTED)
+        )
+        await _speak_safely(request, response.spoken)
+        return {
+            "stopped": True,
+            "task": None,
+            "stop": result.stop.model_dump(mode="json") if result.stop else None,
+        }
+    if result.task is None:
+        raise HTTPException(status_code=409, detail="voice submission produced no task")
+    refresh_dialogue(request, result.task)
+    payload = await build_task_payload(request, result.task)
+    spoken = SpokenResponse.model_validate(payload["presentation"]["response"]["spoken"])
+    await _speak_safely(request, spoken)
+    return {"stopped": False, "task": payload, "stop": None}
 
 
 @router.delete("/api/voice/sessions/{session_id}")

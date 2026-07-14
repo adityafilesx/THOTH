@@ -5,12 +5,51 @@ from datetime import UTC, datetime
 from fastapi import FastAPI
 from httpx import AsyncClient
 
-from thoth_daemon.voice.contracts import FinalTranscript, TranscriptSegment
+from thoth_daemon.voice.contracts import (
+    FinalTranscript,
+    SpeechPlaybackState,
+    SpeechRequest,
+    SpeechSynthesisHealth,
+    TranscriptSegment,
+)
 from thoth_daemon.voice.service import VoiceCommandService, VoiceSessionRegistry
 from thoth_daemon.voice.stop import GlobalStopAuthority
 from thoth_daemon.voice.stt import MockSpeechRecognitionProvider
+from thoth_daemon.voice.tts import SpeechSynthesisService
 
 NOW = datetime(2026, 7, 14, 9, 0, tzinfo=UTC)
+
+
+class _CompletedPlayback:
+    @property
+    def running(self) -> bool:
+        return False
+
+    async def wait(self) -> int:
+        return 0
+
+
+class _RecordingSpeechProvider:
+    def __init__(self) -> None:
+        self.requests: list[SpeechRequest] = []
+
+    @property
+    def state(self) -> SpeechPlaybackState:
+        return SpeechPlaybackState.IDLE
+
+    async def health(self) -> SpeechSynthesisHealth:
+        return SpeechSynthesisHealth(
+            available=True,
+            provider="recording-local",
+            detail="test provider",
+        )
+
+    async def speak(self, request: SpeechRequest) -> _CompletedPlayback:
+        self.requests.append(request)
+        return _CompletedPlayback()
+
+    async def interrupt(self) -> bool:
+        return False
 
 
 def _final(text: str) -> FinalTranscript:
@@ -34,6 +73,8 @@ def _final(text: str) -> FinalTranscript:
 
 def _prime(app: FastAPI, text: str, *, retain_transcripts: bool = False) -> None:
     provider = MockSpeechRecognitionProvider(_final(text))
+    speech_provider = _RecordingSpeechProvider()
+    speech = SpeechSynthesisService(speech_provider)
     sessions = VoiceSessionRegistry(
         provider,
         retain_transcripts=retain_transcripts,
@@ -41,16 +82,18 @@ def _prime(app: FastAPI, text: str, *, retain_transcripts: bool = False) -> None
     )
     stop = GlobalStopAuthority(
         sessions=sessions,
-        tts=app.state.speech_synthesis,
+        tts=speech,
         orchestrator=app.state.orchestrator,
     )
+    app.state.speech_synthesis = speech
+    app.state.spoken_requests = speech_provider.requests
     app.state.voice_sessions = sessions
     app.state.global_stop = stop
     app.state.voice_commands = VoiceCommandService(
         sessions=sessions,
         stop=stop,
         orchestrator=app.state.orchestrator,
-        tts=app.state.speech_synthesis,
+        tts=speech,
     )
 
 
@@ -101,6 +144,13 @@ class TestVoiceSessionLifecycle:
         assert body["stopped"] is False
         assert body["task"]["source"] == "voice"
         assert body["task"]["goal"] == "run all tests"
+        assert body["task"]["presentation"]["authoritative"] is True
+        spoken = body["task"]["presentation"]["response"]["spoken"]["text"]
+        assert app.state.spoken_requests[0].segments[0].text == spoken
+
+        dialogue = await client.get(f"/api/dialogue/{body['task']['id']}")
+        assert dialogue.status_code == 200
+        assert dialogue.json()["active_task_id"] == body["task"]["id"]
 
         # Default privacy policy removes the transcript session after submit.
         missing = await client.get(f"/api/voice/sessions/{session_id}")
@@ -171,6 +221,9 @@ class TestVoiceStopBypass:
         assert body["task"] is None
         assert body["stop"]["approvals_invalidated"] == 1
         assert (await client.get("/api/approvals/pending")).json() == []
+        assert app.state.spoken_requests[0].segments[0].text == (
+            "Stopped. No external action was taken."
+        )
 
     async def test_visible_global_stop_endpoint_is_model_free(
         self,
