@@ -33,6 +33,7 @@ logs/
 !.env.example
 *.pem
 *.key
+*.token
 id_rsa*
 id_ed25519*
 
