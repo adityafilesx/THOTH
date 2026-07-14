@@ -5,9 +5,26 @@ import {
   captureStopDelay,
   flushAndStopRecorder,
   shouldRequestPartial,
+  voiceRouteForIntent,
   VoiceOverlay,
   VoiceOverlayView,
 } from "./VoiceOverlay";
+
+describe("voice routing labels", () => {
+  it("labels deterministic skill commands as Skill", () => {
+    expect(
+      voiceRouteForIntent({
+        tier: "reflex",
+        reflex_kind: "run_skill",
+        target: "run-project-tests",
+      }),
+    ).toBe("skill");
+  });
+
+  it("does not mislabel a safety clarification as Reflex", () => {
+    expect(voiceRouteForIntent({ tier: "clarify" })).toBe("clarify");
+  });
+});
 
 describe("push-to-talk recorder release", () => {
   it("delays an early release until the minimum capture window", () => {

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { api } from "@/lib/api";
+import { api, type RoutedIntentResponse } from "@/lib/api";
 import { LocalPcmRecorder } from "@/lib/pcmRecorder";
 
 export type VoiceOverlayState =
@@ -14,13 +14,21 @@ export type VoiceOverlayState =
   | "submitting"
   | "failed";
 
-export type VoiceRoute = "reflex" | "skill" | "local_planner";
+export type VoiceRoute = "reflex" | "skill" | "local_planner" | "clarify";
 
 const ROUTE_LABELS: Record<VoiceRoute, string> = {
   reflex: "Reflex",
   skill: "Skill",
   local_planner: "Local planner",
+  clarify: "Clarification",
 };
+
+export function voiceRouteForIntent(routed: RoutedIntentResponse): VoiceRoute {
+  if (routed.tier === "planner") return "local_planner";
+  if (routed.tier === "skill" || routed.reflex_kind === "run_skill") return "skill";
+  if (routed.tier === "clarify") return "clarify";
+  return "reflex";
+}
 
 const MINIMUM_CAPTURE_MS = 500;
 const MAXIMUM_CAPTURE_MS = 30_000;
@@ -255,13 +263,7 @@ export function VoiceOverlay({
     try {
       await api.editVoiceTranscript(id, text);
       const routed = await api.routeIntent(text);
-      setRoute(
-        routed.tier === "planner"
-          ? "local_planner"
-          : routed.tier === "skill"
-            ? "skill"
-            : "reflex",
-      );
+      setRoute(voiceRouteForIntent(routed));
       await api.submitVoiceSession(id);
       sessionId.current = null;
       changeState("idle");

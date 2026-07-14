@@ -207,6 +207,8 @@ export interface RoutedIntentResponse {
     | "stop"
     | "cancel"
     | "status"
+    | "daemon_status"
+    | "start_backend"
     | "open_app"
     | "focus_app"
     | "run_skill"
