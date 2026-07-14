@@ -5,15 +5,22 @@ import { useTasksStore } from "@/stores/tasks";
 
 import { CommandCenter } from "./CommandCenter";
 
-const { createTask, dispatchCommand, globalStop, routeIntent } = vi.hoisted(() => ({
-  createTask: vi.fn(),
-  dispatchCommand: vi.fn(),
-  globalStop: vi.fn(),
-  routeIntent: vi.fn(),
-}));
+const { beginPushToTalk, createTask, dispatchCommand, endPushToTalk, globalStop, routeIntent } =
+  vi.hoisted(() => ({
+    beginPushToTalk: vi.fn(),
+    createTask: vi.fn(),
+    dispatchCommand: vi.fn(),
+    endPushToTalk: vi.fn(),
+    globalStop: vi.fn(),
+    routeIntent: vi.fn(),
+  }));
 
 vi.mock("@/lib/api", () => ({
   api: { createTask, dispatchCommand, globalStop, routeIntent },
+}));
+
+vi.mock("@/lib/native", () => ({
+  native: { beginPushToTalk, endPushToTalk },
 }));
 
 describe("CommandCenter", () => {
@@ -54,5 +61,16 @@ describe("CommandCenter", () => {
     expect(screen.getByLabelText("THOTH control response")).toHaveTextContent(
       "Stopped. No external action was taken.",
     );
+  });
+
+  it("ends push-to-talk when the pointer is released outside the button", () => {
+    render(<CommandCenter />);
+    const microphone = screen.getByRole("button", { name: "Push to talk" });
+
+    fireEvent.pointerDown(microphone, { pointerId: 7 });
+    fireEvent.pointerUp(window, { pointerId: 7 });
+
+    expect(beginPushToTalk).toHaveBeenCalledOnce();
+    expect(endPushToTalk).toHaveBeenCalledOnce();
   });
 });

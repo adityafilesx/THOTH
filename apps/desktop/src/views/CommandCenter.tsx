@@ -1,5 +1,5 @@
 import { Mic, SendHorizontal } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { StateLadder } from "@/components/StateLadder";
 import { OperationalSummary } from "@/components/OperationalSummary";
@@ -15,12 +15,35 @@ export function CommandCenter() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [controlResponse, setControlResponse] = useState<string | null>(null);
+  const pushToTalkActive = useRef(false);
   const tasks = useTasksStore((s) => s.tasks);
   const activeTaskId = useTasksStore((s) => s.activeTaskId);
   const setActiveTask = useTasksStore((s) => s.setActiveTask);
   const upsertTask = useTasksStore((s) => s.upsertTask);
 
   const active = activeTaskId ? tasks[activeTaskId] : null;
+
+  const beginPushToTalk = useCallback(() => {
+    if (pushToTalkActive.current) return;
+    pushToTalkActive.current = true;
+    void native.beginPushToTalk();
+  }, []);
+
+  const endPushToTalk = useCallback(() => {
+    if (!pushToTalkActive.current) return;
+    pushToTalkActive.current = false;
+    void native.endPushToTalk();
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("pointerup", endPushToTalk);
+    window.addEventListener("pointercancel", endPushToTalk);
+    return () => {
+      window.removeEventListener("pointerup", endPushToTalk);
+      window.removeEventListener("pointercancel", endPushToTalk);
+      endPushToTalk();
+    };
+  }, [endPushToTalk]);
 
   const submit = async () => {
     const trimmed = goal.trim();
@@ -122,17 +145,20 @@ export function CommandCenter() {
           size="icon"
           aria-label="Push to talk"
           title="Hold to talk · Option+Space globally"
-          onPointerDown={() => void native.beginPushToTalk()}
-          onPointerUp={() => void native.endPushToTalk()}
-          onPointerCancel={() => void native.endPushToTalk()}
+          onPointerDown={(event) => {
+            event.currentTarget.setPointerCapture?.(event.pointerId);
+            beginPushToTalk();
+          }}
+          onPointerUp={endPushToTalk}
+          onPointerCancel={endPushToTalk}
           onKeyDown={(event) => {
             if (!event.repeat && (event.key === " " || event.key === "Enter")) {
-              void native.beginPushToTalk();
+              beginPushToTalk();
             }
           }}
           onKeyUp={(event) => {
             if (event.key === " " || event.key === "Enter") {
-              void native.endPushToTalk();
+              endPushToTalk();
             }
           }}
         >

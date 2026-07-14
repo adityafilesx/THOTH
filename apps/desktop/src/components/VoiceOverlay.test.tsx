@@ -41,10 +41,11 @@ describe("push-to-talk recorder release", () => {
 });
 
 describe("partial transcription cadence", () => {
-  it("requests an initial partial and then throttles local whisper work", () => {
-    expect(shouldRequestPartial(null, 100)).toBe(true);
-    expect(shouldRequestPartial(100, 849)).toBe(false);
-    expect(shouldRequestPartial(100, 850)).toBe(true);
+  it("waits before the initial partial and then throttles local whisper work", () => {
+    expect(shouldRequestPartial(null, 749, 0)).toBe(false);
+    expect(shouldRequestPartial(null, 750, 0)).toBe(true);
+    expect(shouldRequestPartial(750, 1_499, 0)).toBe(false);
+    expect(shouldRequestPartial(750, 1_500, 0)).toBe(true);
   });
 });
 

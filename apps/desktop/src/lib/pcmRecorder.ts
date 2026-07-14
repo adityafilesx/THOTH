@@ -13,6 +13,33 @@ export function pcmMimeType(sampleRate: number): string {
   return `audio/pcm;format=s16le;rate=${sampleRate};channels=1`;
 }
 
+export class PcmChunkBuffer {
+  private chunks: Uint8Array[] = [];
+  private byteLength = 0;
+
+  constructor(private readonly targetBytes: number) {}
+
+  push(chunk: Uint8Array): Uint8Array | null {
+    if (chunk.byteLength === 0) return null;
+    this.chunks.push(chunk);
+    this.byteLength += chunk.byteLength;
+    return this.byteLength >= this.targetBytes ? this.flush() : null;
+  }
+
+  flush(): Uint8Array | null {
+    if (this.byteLength === 0) return null;
+    const combined = new Uint8Array(this.byteLength);
+    let offset = 0;
+    for (const chunk of this.chunks) {
+      combined.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    this.chunks = [];
+    this.byteLength = 0;
+    return combined;
+  }
+}
+
 /**
  * Local mono PCM capture for the bundled whisper.cpp runtime.
  *
@@ -27,6 +54,7 @@ export class LocalPcmRecorder extends EventTarget {
   private readonly source: MediaStreamAudioSourceNode;
   private readonly processor: ScriptProcessorNode;
   private readonly silentOutput: GainNode;
+  private readonly chunks: PcmChunkBuffer;
 
   constructor(stream: MediaStream) {
     super();
@@ -34,14 +62,14 @@ export class LocalPcmRecorder extends EventTarget {
     this.source = this.context.createMediaStreamSource(stream);
     this.processor = this.context.createScriptProcessor(4096, 1, 1);
     this.silentOutput = this.context.createGain();
+    // About 500 ms of mono s16le PCM per upload.
+    this.chunks = new PcmChunkBuffer(this.context.sampleRate);
     this.silentOutput.gain.value = 0;
     this.processor.onaudioprocess = (event) => {
       if (this.state !== "recording") return;
       const pcm = encodePcm16(event.inputBuffer.getChannelData(0));
-      const buffer = new ArrayBuffer(pcm.byteLength);
-      new Uint8Array(buffer).set(pcm);
-      const data = new Blob([buffer], { type: pcmMimeType(this.context.sampleRate) });
-      this.dispatchEvent(new BlobEvent("dataavailable", { data }));
+      const batch = this.chunks.push(pcm);
+      if (batch) this.emit(batch);
     };
   }
 
@@ -55,7 +83,8 @@ export class LocalPcmRecorder extends EventTarget {
   }
 
   requestData(): void {
-    // PCM chunks are emitted continuously from the audio processing callback.
+    const pending = this.chunks.flush();
+    if (pending) this.emit(pending);
   }
 
   stop(): void {
@@ -67,5 +96,12 @@ export class LocalPcmRecorder extends EventTarget {
     this.silentOutput.disconnect();
     void this.context.close();
     this.dispatchEvent(new Event("stop"));
+  }
+
+  private emit(pcm: Uint8Array): void {
+    const buffer = new ArrayBuffer(pcm.byteLength);
+    new Uint8Array(buffer).set(pcm);
+    const data = new Blob([buffer], { type: pcmMimeType(this.context.sampleRate) });
+    this.dispatchEvent(new BlobEvent("dataavailable", { data }));
   }
 }

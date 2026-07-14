@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { encodePcm16, pcmMimeType } from "./pcmRecorder";
+import { encodePcm16, PcmChunkBuffer, pcmMimeType } from "./pcmRecorder";
 
 describe("local PCM recorder", () => {
   it("encodes clamped mono samples as signed 16-bit little-endian PCM", () => {
@@ -21,5 +21,16 @@ describe("local PCM recorder", () => {
     expect(pcmMimeType(48_000)).toBe(
       "audio/pcm;format=s16le;rate=48000;channels=1",
     );
+  });
+
+  it("batches callbacks and flushes pending PCM exactly once", () => {
+    const chunks = new PcmChunkBuffer(4);
+    expect(chunks.push(new Uint8Array([1, 2]))).toBeNull();
+    expect(chunks.push(new Uint8Array([3, 4]))).toEqual(
+      new Uint8Array([1, 2, 3, 4]),
+    );
+    expect(chunks.flush()).toBeNull();
+    expect(chunks.push(new Uint8Array([5]))).toBeNull();
+    expect(chunks.flush()).toEqual(new Uint8Array([5]));
   });
 });

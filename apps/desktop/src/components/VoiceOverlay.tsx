@@ -23,6 +23,7 @@ const ROUTE_LABELS: Record<VoiceRoute, string> = {
 };
 
 const MINIMUM_CAPTURE_MS = 500;
+const MAXIMUM_CAPTURE_MS = 30_000;
 const PARTIAL_TRANSCRIPTION_INTERVAL_MS = 750;
 
 interface RecorderStopTarget {
@@ -45,9 +46,10 @@ export function flushAndStopRecorder(recorder: RecorderStopTarget): boolean {
 export function shouldRequestPartial(
   lastRequestedAt: number | null,
   now: number,
+  recordingStartedAt: number,
   interval = PARTIAL_TRANSCRIPTION_INTERVAL_MS,
 ): boolean {
-  return lastRequestedAt === null || now - lastRequestedAt >= interval;
+  return now - (lastRequestedAt ?? recordingStartedAt) >= interval;
 }
 
 function stateLabel(state: VoiceOverlayState): string {
@@ -163,6 +165,7 @@ export function VoiceOverlay({
   const uploads = useRef<Promise<unknown>>(Promise.resolve());
   const autoSubmit = useRef<number | null>(null);
   const stopTimer = useRef<number | null>(null);
+  const captureLimitTimer = useRef<number | null>(null);
   const recordingStartedAt = useRef<number | null>(null);
   const releaseRequested = useRef(false);
   const cancelRequested = useRef(false);
@@ -200,7 +203,9 @@ export function VoiceOverlay({
 
   const clearStopTimer = useCallback(() => {
     if (stopTimer.current !== null) window.clearTimeout(stopTimer.current);
+    if (captureLimitTimer.current !== null) window.clearTimeout(captureLimitTimer.current);
     stopTimer.current = null;
+    captureLimitTimer.current = null;
   }, []);
 
   const stopAfterMinimumCapture = useCallback(() => {
@@ -211,6 +216,10 @@ export function VoiceOverlay({
     const delay = captureStopDelay(startedAt, performance.now());
     const stop = () => {
       stopTimer.current = null;
+      if (captureLimitTimer.current !== null) {
+        window.clearTimeout(captureLimitTimer.current);
+        captureLimitTimer.current = null;
+      }
       const currentRecorder = recorder.current;
       if (currentRecorder) flushAndStopRecorder(currentRecorder);
     };
@@ -320,13 +329,26 @@ export function VoiceOverlay({
         capturedAudioBytes.current += data.size;
         const id = sessionId.current;
         const now = performance.now();
-        const requestPartial = shouldRequestPartial(lastPartialRequestedAt.current, now);
+        const startedAt = recordingStartedAt.current ?? now;
+        const requestPartial = shouldRequestPartial(
+          lastPartialRequestedAt.current,
+          now,
+          startedAt,
+        );
         if (requestPartial) lastPartialRequestedAt.current = now;
-        uploads.current = uploads.current.then(() => api.appendVoiceAudio(id, data));
+        uploads.current = uploads.current.then(() => {
+          if (sessionId.current !== id) return undefined;
+          return api.appendVoiceAudio(id, data);
+        });
         if (requestPartial) {
           uploads.current = uploads.current
-            .then(() => api.voicePartial(id))
-            .then((next) => setPartial(next.partial?.text ?? ""))
+            .then(() => {
+              if (sessionId.current !== id) return undefined;
+              return api.voicePartial(id);
+            })
+            .then((next) => {
+              if (next && sessionId.current === id) setPartial(next.partial?.text ?? "");
+            })
             .catch((caught: unknown) => {
               setError(caught instanceof Error ? caught.message : "Partial transcription failed.");
             });
@@ -341,6 +363,10 @@ export function VoiceOverlay({
       );
       pcmRecorder.start();
       recordingStartedAt.current = performance.now();
+      captureLimitTimer.current = window.setTimeout(() => {
+        releaseRequested.current = true;
+        stopAfterMinimumCapture();
+      }, MAXIMUM_CAPTURE_MS);
       changeState("listening");
       if (releaseRequested.current) stopAfterMinimumCapture();
     } catch (caught) {
