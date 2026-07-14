@@ -13,6 +13,7 @@ Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation 
 - Six versioned application profiles exist. Unknown/forbidden/undeclared capabilities fail closed. VS Code workspace association is verified through the real running bundle plus authoritative THOTH path evidence; editor read/edit remain experimental.
 - Operational dialogue is in-memory, task-isolated, and expiring. It resolves only authoritative recent objects, cannot approve or expand scope, and enforces `no_push` before approval or execution.
 - Push-to-talk uses visible hold/toggle capture, local whisper.cpp contracts, partial/final/editable transcripts, default audio/transcript deletion, and the same orchestrator as text. v1.8.6 and tiny.en/base.en/small.en are locally SHA-256 pinned; mismatches fail closed. There is no cloud/mock fallback.
+- Cancelled sessions are discarded after the single cancellation response. Abandoned unsubmitted sessions expire after a bounded two-minute local TTL, zero active audio, and are removed; daemon shutdown clears active capture state.
 - One deterministic Stop authority covers capture, TTS, all nonterminal tasks, and unconsumed approvals. Voice cannot approve R2/R3.
 - Typed, legacy voice, and session voice commands share one deterministic dispatcher. Exact approval language returns clarification before planning. Authoritative reflex/skill plans cannot be replaced by model recovery.
 - App launch/focus now require the native foreground postcondition and independent re-probe before completion; failure is task failure, not a display-only warning. Bounded API settlement returns active task state rather than HTTP 500.
@@ -25,15 +26,15 @@ Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation 
 
 | Gate | Result |
 |---|---|
-| `uv run --project apps/daemon pytest` | **995 passed** through `make test` in 36.25 seconds |
-| Unlocked focus rerun | 6 foreground/focus live tests passed; no skip |
+| `uv run --project apps/daemon pytest` | **996 passed, 1 skipped** (locked-screen focus restoration) |
+| Strict daemon teardown gate | **996 passed, 1 skipped** with worker-thread warnings promoted to errors |
 | Ruff check / format | clean / 223 files formatted |
 | `mypy apps/daemon/src` (strict) | clean, 120 source files |
-| `pnpm -C apps/desktop test` | **91 passed** across 14 files |
+| `pnpm -C apps/desktop test` | **95 passed** across 14 files |
 | Desktop ESLint / TypeScript / Vite | clean / clean / built |
 | Cargo check / Rust tests | passed / 1 passed |
 | `alembic upgrade head` | passed through `0004_hash_chain` |
-| `make test` | passed: **1,086 tests** (995 daemon + 91 desktop) |
+| Combined automated count | **1,091 passed** (996 daemon + 95 desktop) |
 | Phase 5.4 helper/AX targeted matrix | **110 passed** |
 | Swift AX helper release build/package/signature | passed |
 
@@ -64,6 +65,8 @@ See `docs/PHASE_5_2_5_3_CAPSTONE.md` for the complete matrix.
 Phase 5.4 real evidence is in `docs/PHASE_5_4_CAPSTONE.md`. The fixture packaged, signed, launched, and reported its unique bundle identifier. The explicit Settings visit left exact-helper TCC status `denied`; AX-dependent capstones therefore failed closed and no profile capability was promoted.
 
 The 2026-07-14 recovery rerun found the packaged helper alive with its mode-0600 socket, but the fresh daemon probe still reports `not_determined`. This is not treated as permission evidence; the helper identity must appear as trusted before AX capstones can run.
+
+The latest repaired-build live probe also verified loopback health, offline runtime status, the pinned Whisper model, deterministic route classification, model-free typed Stop, and immediate removal of cancelled voice sessions. The host then locked; foreground reported `com.apple.loginwindow`, the focus-live test skipped, and the current desktop visual pass was not claimed.
 
 ## Residual limits
 

@@ -1,7 +1,7 @@
 # THOTH real voice test report
 
 **Date:** 2026-07-14
-**Status:** automated pipeline pass; real microphone release gate pending
+**Status:** PARTIALLY WORKING — automated and live API pipeline pass; real microphone release gate pending
 
 ## Result
 
@@ -17,8 +17,9 @@ THOTH's local voice implementation, deterministic command routing, safety bounda
 - Exact voice/text approval language cannot approve or enter the planner.
 - `run the tests` resolves to the installed authoritative skill and stops at exact R2 approval.
 - Failed app focus cannot be reported as completed.
-- Temporary transcript sessions are single-use and removed on success or exception.
-- 995 daemon tests and 91 desktop tests pass. Python lint/format/typecheck, ESLint, TypeScript, Vite production build, Rust check, and Alembic migration pass.
+- Temporary transcript sessions are single-use and removed on success, exception, explicit cancel, or bounded abandonment expiry. Active capture is cleared on daemon shutdown.
+- 996 daemon tests and 95 desktop tests pass (1,091 total), with one locked-screen focus test skipped. Python lint/format/typecheck, ESLint, TypeScript, Vite production build, Rust check/test, and Alembic migration pass. The daemon suite also passes with worker-thread warnings treated as errors.
+- The repaired daemon is currently running on loopback. Live typed Stop is model-free, live route classification distinguishes skill/clarification/reflex/planner, and cancelled voice sessions become inaccessible immediately.
 
 ## Not yet verified
 
@@ -28,6 +29,23 @@ THOTH's local voice implementation, deterministic command routing, safety bounda
 - The 30-command real microphone matrix.
 - Five acoustic Stop repetitions and three barge-in repetitions.
 - Distribution signing, notarization, and clean-install TCC behavior.
+- A current post-restart desktop visual pass; the Mac locked before Computer Use could inspect it.
+
+## Readiness snapshot
+
+These percentages are engineering completion estimates, not measured accuracy scores:
+
+| Area | Status | Estimate | Evidence ceiling |
+|---|---|---:|---|
+| Deterministic safety/execution core | WORKING | 96% | Full automated gate, live command/Stop, approval and verification controls |
+| Desktop command experience | WORKING | 88% | 95 tests and prior unlocked live UI; current post-restart check blocked by lock |
+| Local voice implementation | PARTIALLY WORKING | 72% | Local PCM/STT/TTS/session pipeline is green; no clean post-fix user-spoken pass |
+| Real microphone readiness | IMPLEMENTED BUT UNVERIFIED | 35% | Zero completed post-fix human microphone commands |
+| Semantic Accessibility control | IMPLEMENTED BUT UNVERIFIED | 55% | Helper/profile/tool automation is green; exact helper TCC is `not_determined` |
+| Distribution packaging | BLOCKED | 25% | No Developer ID/notarization/clean-install evidence |
+| Validated v1 product | PARTIALLY WORKING | 60% | Strong local core, but human voice, TCC, and distribution gates remain open |
+
+Wake word, proactive behavior, universal application control, and long-term personal memory are NOT IMPLEMENTED and are not part of the current release claim.
 
 ## Required next evidence
 
