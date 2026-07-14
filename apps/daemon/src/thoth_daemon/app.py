@@ -262,9 +262,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         register_shell_tool(registry)  # restricted shell (slice 4)
         register_git_tools(registry)  # git workflow tools (slice 5)
         register_app_tools(registry, app_control)  # macOS app launch/focus/list (slice 6)
-        register_browser_tools(registry)  # scoped browser read (slice 7)
+        register_browser_tools(
+            registry,
+            network_isolation=cfg.network_isolation,
+        )  # scoped browser read (slice 7)
         register_semantic_ax_tools(registry, ax_controller)  # bounded semantic AX tools (5.4)
-        register_browser_interaction_tools(registry)  # interactive session (Phase 4 slice 4)
+        register_browser_interaction_tools(
+            registry,
+            network_isolation=cfg.network_isolation,
+        )  # interactive session (Phase 4 slice 4)
 
         # Planner selection (slice 8). Default "mock"; "claude" uses a
         # planning-only Anthropic call (needs ANTHROPIC_API_KEY). Plan output is

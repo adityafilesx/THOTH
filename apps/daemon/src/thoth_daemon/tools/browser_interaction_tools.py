@@ -24,6 +24,7 @@ from thoth_daemon.browser.session import (
     default_browser_session,
 )
 from thoth_daemon.core.focus import FocusPolicy
+from thoth_daemon.inference.isolation import NetworkIsolationGuard
 from thoth_daemon.schemas import ResourceScope, RiskLevel, VerificationStrategy
 from thoth_daemon.tools.base import ToolDefinition
 from thoth_daemon.tools.registry import ToolRegistry
@@ -72,9 +73,18 @@ def _require_http(url: str) -> None:
 
 
 class _SessionTool:
-    def __init__(self, session: BrowserSession | None = None) -> None:
+    def __init__(
+        self,
+        session: BrowserSession | None = None,
+        *,
+        network_isolation: bool = False,
+    ) -> None:
         super().__init__()
         self._session = session or default_browser_session()
+        self._network = NetworkIsolationGuard(isolation=network_isolation)
+
+    def _require_network(self, url: str) -> None:
+        self._network.check(url)
 
 
 # -- browser_open (R1) --------------------------------------------------------
@@ -99,6 +109,7 @@ class BrowserOpen(_SessionTool, ToolDefinition[OpenIn, PageView]):
 
     async def run(self, args: OpenIn, dry_run: bool) -> PageView:
         _require_http(args.url)
+        self._require_network(args.url)
         if dry_run:
             return PageView(url=args.url, title="", text="[dry-run]", selectors=[])
         return _view(await self._session.open(args.url, self.timeout_s))
@@ -362,18 +373,21 @@ class BrowserSubmit(_SessionTool, ToolDefinition[SubmitIn, PageView]):
 
 
 def register_browser_interaction_tools(
-    registry: ToolRegistry, session: BrowserSession | None = None
+    registry: ToolRegistry,
+    session: BrowserSession | None = None,
+    *,
+    network_isolation: bool = False,
 ) -> None:
     s = session or default_browser_session()
     for tool in (
-        BrowserOpen(s),
-        BrowserFind(s),
-        BrowserClick(s),
-        BrowserFill(s),
-        BrowserSelect(s),
-        BrowserDownload(s),
-        BrowserScreenshot(s),
-        BrowserPrepareSubmission(s),
-        BrowserSubmit(s),
+        BrowserOpen(s, network_isolation=network_isolation),
+        BrowserFind(s, network_isolation=network_isolation),
+        BrowserClick(s, network_isolation=network_isolation),
+        BrowserFill(s, network_isolation=network_isolation),
+        BrowserSelect(s, network_isolation=network_isolation),
+        BrowserDownload(s, network_isolation=network_isolation),
+        BrowserScreenshot(s, network_isolation=network_isolation),
+        BrowserPrepareSubmission(s, network_isolation=network_isolation),
+        BrowserSubmit(s, network_isolation=network_isolation),
     ):
         registry.register(tool)

@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict
 
 from thoth_daemon.browser.browser_adapter import BrowserAdapter, default_browser
 from thoth_daemon.core.focus import FocusPolicy
+from thoth_daemon.inference.isolation import NetworkIsolationGuard
 from thoth_daemon.schemas import ResourceScope, RiskLevel, VerificationStrategy
 from thoth_daemon.tools.base import ToolDefinition
 from thoth_daemon.tools.registry import ToolRegistry
@@ -41,9 +42,15 @@ class BrowserRead(ToolDefinition[BrowserReadIn, BrowserReadOut]):
     verification = VerificationStrategy.OUTPUT_ASSERTION
     redaction_fields: ClassVar[list[str]] = ["text"]
 
-    def __init__(self, adapter: BrowserAdapter | None = None) -> None:
+    def __init__(
+        self,
+        adapter: BrowserAdapter | None = None,
+        *,
+        network_isolation: bool = False,
+    ) -> None:
         super().__init__()
         self._browser = adapter or default_browser()
+        self._network = NetworkIsolationGuard(isolation=network_isolation)
 
     def requested_scope(self, args: BrowserReadIn) -> ResourceScope:
         host = urlparse(args.url).hostname or ""
@@ -53,11 +60,19 @@ class BrowserRead(ToolDefinition[BrowserReadIn, BrowserReadOut]):
         scheme = urlparse(args.url).scheme
         if scheme not in ("http", "https"):
             raise ValueError(f"unsupported url scheme: {scheme!r}")
+        self._network.check(args.url)
         if dry_run:
             return BrowserReadOut(url=args.url, title="", text="[dry-run]", truncated=False)
         pc = await self._browser.fetch(args.url, self.timeout_s)
         return BrowserReadOut(url=pc.url, title=pc.title, text=pc.text, truncated=pc.truncated)
 
 
-def register_browser_tools(registry: ToolRegistry, adapter: BrowserAdapter | None = None) -> None:
-    registry.register(BrowserRead(adapter or default_browser()))
+def register_browser_tools(
+    registry: ToolRegistry,
+    adapter: BrowserAdapter | None = None,
+    *,
+    network_isolation: bool = False,
+) -> None:
+    registry.register(
+        BrowserRead(adapter or default_browser(), network_isolation=network_isolation)
+    )
