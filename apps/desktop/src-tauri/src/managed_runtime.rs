@@ -598,4 +598,13 @@ mod tests {
 
         assert!(error.contains("local daemon address"));
     }
+
+    #[test]
+    fn packaged_app_declares_bounded_microphone_use() {
+        let info_plist = include_str!("../Info.plist");
+
+        assert!(info_plist.contains("NSMicrophoneUsageDescription"));
+        assert!(info_plist.contains("push-to-talk"));
+        assert!(info_plist.contains("locally"));
+    }
 }
