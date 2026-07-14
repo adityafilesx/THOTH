@@ -141,3 +141,37 @@ class ApprovalEngine:
         for req in self._requests.values():
             if req.status is ApprovalStatus.PENDING and now > req.expires_at:
                 req.status = ApprovalStatus.EXPIRED
+
+    def invalidate_for_task(self, task_id: str) -> set[str]:
+        """Revoke every unused approval associated with one task.
+
+        Pending requests and approved-but-not-consumed grants are invalidated.
+        Already consumed grants describe an effect that may have begun and are
+        left as approved audit history; cancellation still reaches the runner.
+        """
+        invalidated: set[str] = set()
+        for request in self._requests.values():
+            if request.task_id != task_id:
+                continue
+            if request.status is ApprovalStatus.PENDING:
+                request.status = ApprovalStatus.INVALIDATED
+                invalidated.add(request.id)
+                continue
+            grant = self._grants.get(request.invocation_id)
+            if (
+                request.status is ApprovalStatus.APPROVED
+                and grant is not None
+                and not grant.consumed
+            ):
+                request.status = ApprovalStatus.INVALIDATED
+                invalidated.add(request.id)
+                self._grants.pop(request.invocation_id, None)
+        return invalidated
+
+    def invalidate_all(self) -> set[str]:
+        """Revoke all pending and granted-but-unused approval authority."""
+        invalidated: set[str] = set()
+        task_ids = {request.task_id for request in self._requests.values()}
+        for task_id in task_ids:
+            invalidated.update(self.invalidate_for_task(task_id))
+        return invalidated

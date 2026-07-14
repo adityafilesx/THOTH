@@ -5,7 +5,8 @@
         "pending",
         "approved",
         "denied",
-        "expired"
+        "expired",
+        "invalidated"
       ],
       "title": "ApprovalStatus",
       "type": "string"

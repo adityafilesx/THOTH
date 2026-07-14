@@ -87,6 +87,7 @@ class ApprovalStatus(StrEnum):
     APPROVED = "approved"
     DENIED = "denied"
     EXPIRED = "expired"
+    INVALIDATED = "invalidated"
 
 
 class Provenance(StrEnum):

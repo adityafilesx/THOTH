@@ -988,8 +988,24 @@ class Orchestrator:
         runner = self._runners.get(task_id)
         if runner is None:
             raise KeyError(task_id)
+        self._approvals.invalidate_for_task(task_id)
         runner.cancel()
         return await self.settle(task_id)
+
+    async def cancel_all(self) -> tuple[list[Task], set[str]]:
+        """Cancel every active runner and revoke all unused approvals first."""
+        invalidated = self._approvals.invalidate_all()
+        active = [
+            runner
+            for runner in self._runners.values()
+            if runner.machine.state not in TERMINAL_STATES
+        ]
+        for runner in active:
+            runner.cancel()
+        # Do not make emergency-stop acknowledgement wait for a tool timeout.
+        # Runners observe their cancellation event at their next bounded check.
+        await asyncio.sleep(0)
+        return [runner.task for runner in active], invalidated
 
     def get_task(self, task_id: str) -> Task | None:
         runner = self._runners.get(task_id)

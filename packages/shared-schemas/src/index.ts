@@ -111,7 +111,12 @@ export interface Task {
   updated_at: string;
 }
 
-export type ApprovalStatus = "pending" | "approved" | "denied" | "expired";
+export type ApprovalStatus =
+  | "pending"
+  | "approved"
+  | "denied"
+  | "expired"
+  | "invalidated";
 
 export interface ApprovalRequest {
   id: string;

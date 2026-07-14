@@ -111,3 +111,29 @@ class TestDecisions:
         engine.decide(rid, approved=False)
         assert engine.pending() == []
         assert engine.get(rid).status is ApprovalStatus.DENIED
+
+    def test_invalidate_for_task_revokes_pending_and_granted_approval(self) -> None:
+        engine = make_engine()
+        pending_id = request(engine, invocation_id="pending-inv")
+        granted_id = request(engine, invocation_id="granted-inv")
+        engine.decide(granted_id, approved=True)
+
+        invalidated = engine.invalidate_for_task("t1")
+
+        assert invalidated == {pending_id, granted_id}
+        assert engine.get(pending_id).status is ApprovalStatus.INVALIDATED
+        assert engine.get(granted_id).status is ApprovalStatus.INVALIDATED
+        with pytest.raises(ApprovalRequiredError):
+            engine.authorize_execution("granted-inv")
+
+    def test_invalidate_all_does_not_change_consumed_or_denied_requests(self) -> None:
+        engine = make_engine()
+        consumed_id = request(engine, invocation_id="consumed")
+        engine.decide(consumed_id, approved=True)
+        engine.authorize_execution("consumed")
+        denied_id = request(engine, invocation_id="denied")
+        engine.decide(denied_id, approved=False)
+
+        assert engine.invalidate_all() == set()
+        assert engine.get(consumed_id).status is ApprovalStatus.APPROVED
+        assert engine.get(denied_id).status is ApprovalStatus.DENIED
