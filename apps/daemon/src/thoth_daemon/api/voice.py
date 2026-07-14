@@ -135,11 +135,7 @@ def _dialogue_goal(
     if resolution.intent is DialogueIntent.RUN_TESTS:
         return "Run the tests in the current approved workspace."
     if resolution.intent is DialogueIntent.COMMIT_CHANGES:
-        suffix = (
-            " Do not push."
-            if DialogueConstraint.NO_PUSH in resolution.constraints
-            else ""
-        )
+        suffix = " Do not push." if DialogueConstraint.NO_PUSH in resolution.constraints else ""
         return f"Commit the verified changes in the current approved workspace.{suffix}"
     if resolution.intent is DialogueIntent.RETRY_VERIFIED_RESULT:
         return "Retry the recent verified operation through the normal safety pipeline."
@@ -186,13 +182,13 @@ async def _submit_recent_follow_up(
             raise HTTPException(status_code=409, detail="recent dialogue task no longer exists")
         payload = await build_task_payload(request, task)
         if resolution.intent is DialogueIntent.READ_BACK:
-            spoken = SpokenResponse.model_validate(
-                payload["presentation"]["response"]["spoken"]
-            )
+            spoken = SpokenResponse.model_validate(payload["presentation"]["response"]["spoken"])
         else:
-            spoken = PersonaResponseComposer().compose(
-                ResponseFact(intent=ResponseIntent.ACKNOWLEDGEMENT)
-            ).spoken
+            spoken = (
+                PersonaResponseComposer()
+                .compose(ResponseFact(intent=ResponseIntent.ACKNOWLEDGEMENT))
+                .spoken
+            )
         await _speak_safely(request, spoken)
         return {
             "stopped": False,

@@ -23,17 +23,24 @@ Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation 
 
 | Gate | Result |
 |---|---|
-| `uv run --project apps/daemon pytest apps/daemon/tests` | **887 passed, 1 skipped** |
+| `uv run --project apps/daemon pytest` | **956 passed** in 24.45 seconds |
 | Unlocked focus rerun | 6 foreground/focus live tests passed; no skip |
-| Ruff check / format | clean / 199 files formatted |
-| `mypy apps/daemon/src` (strict) | clean, 108 source files |
-| `pnpm -C apps/desktop test` | **68 passed** |
+| Ruff check / format | clean / 219 files formatted |
+| `mypy apps/daemon/src` (strict) | clean, 118 source files |
+| `pnpm -C apps/desktop test` | **75 passed** across 12 files |
 | Desktop ESLint / TypeScript / Vite | clean / clean / built |
-| `cargo check` | passed |
+| Cargo check / Rust tests | passed / 1 passed |
 | `alembic upgrade head` | passed through `0004_hash_chain` |
-| `make test` | passed: **955 tests** (887 daemon + 68 desktop), plus 1 environment skip |
+| `make test` | passed: **1,030 tests** (955 daemon + 75 desktop), plus 1 transient locked-desktop focus skip |
+| Phase 5.4 helper/AX targeted matrix | **110 passed** |
+| Swift AX helper release build/package/signature | passed |
 
 Host context is required for Chromium Mach ports, loopback sockets, hardware `sysctl`, NSWorkspace, and local Ollama. Sandbox-denied results are not counted as product evidence.
+
+The standalone daemon gate and a subsequent focused rerun passed both live
+focus tests. During `make test`, the same focus-restoration test briefly saw
+`com.apple.loginwindow` and skipped; the background no-focus-theft case passed.
+This is recorded as environmental volatility, not a product pass or failure.
 
 ## Real macOS evidence
 

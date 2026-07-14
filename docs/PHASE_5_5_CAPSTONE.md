@@ -1,7 +1,7 @@
 # Phase 5.5 capstone evidence
 
 **Date:** 2026-07-14
-**Status:** automated implementation green pending final gates; real voice evidence blocked
+**Status:** automated gates green; real voice evidence blocked
 
 ## Automated evidence
 
@@ -40,3 +40,18 @@ The 30-command real spoken matrix, Whisper WER/model comparison, end-to-end
 latency, and memory utilisation are not available. Phase 5.5 must not be called
 complete or daily-driver ready until those gates run on an unlocked desktop
 with a verified local Whisper model and microphone permission.
+
+## Final automated gates
+
+| Gate | Result |
+|---|---|
+| Daemon | 956 passed; latest aggregate run 955 passed + one transient locked-desktop focus skip |
+| Desktop | 75 passed across 12 files |
+| Ruff / format | clean / 219 files |
+| Strict mypy | clean / 118 source files |
+| ESLint / TypeScript / Vite | clean / clean / built |
+| Cargo check / Rust tests | passed / 1 passed |
+| Swift helper release/package/signature | passed |
+| Alembic fresh database | upgraded through `0004_hash_chain` |
+| Phase 5.4 helper/AX targeted matrix | 110 passed |
+| `make test` | 1,030 passed + one environment skip |

@@ -100,12 +100,8 @@ async def _main() -> None:
 
     result = {
         "recording_start": _summary(_measure_sync(recording_start, 1_000)),
-        "reflex_route": _summary(
-            _measure_sync(lambda: router.route("Thoth, stop."), 10_000)
-        ),
-        "skill_route": _summary(
-            _measure_sync(lambda: router.route("run project-health"), 10_000)
-        ),
+        "reflex_route": _summary(_measure_sync(lambda: router.route("Thoth, stop."), 10_000)),
+        "skill_route": _summary(_measure_sync(lambda: router.route("run project-health"), 10_000)),
         "tts_interruption": _summary(interrupt_samples),
         "stop_acknowledgement": _summary(stop_samples),
         "first_partial": {"available": False, "reason": "whisper.cpp model unavailable"},

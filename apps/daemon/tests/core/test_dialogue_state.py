@@ -188,18 +188,14 @@ def test_recent_voice_follow_up_requires_exactly_one_active_task() -> None:
 
     store.put(_state(active_task_id="t2", workspace_id="w1"))
     with pytest.raises(DialogueAmbiguous, match="multiple active"):
-        store.resolve_recent_follow_up(
-            "Run the tests.", NOW, authorized_workspace_ids={"w1"}
-        )
+        store.resolve_recent_follow_up("Run the tests.", NOW, authorized_workspace_ids={"w1"})
 
 
 def test_non_follow_up_is_not_bound_to_recent_dialogue() -> None:
     store = OperationalDialogueStore()
     store.put(_state())
     assert (
-        store.resolve_recent_follow_up(
-            "Write a new report.", NOW, authorized_workspace_ids={"w1"}
-        )
+        store.resolve_recent_follow_up("Write a new report.", NOW, authorized_workspace_ids={"w1"})
         is None
     )
 

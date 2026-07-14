@@ -225,9 +225,7 @@ class OperationalDialogueStore:
     ) -> DialogueResolution | None:
         """Resolve voice follow-ups only when recent task context is unique."""
         normalized = _normalize(text).rstrip(".! ")
-        if normalized not in _OPERATIONAL_FOLLOW_UPS and not _VAGUE_APPROVAL.fullmatch(
-            normalized
-        ):
+        if normalized not in _OPERATIONAL_FOLLOW_UPS and not _VAGUE_APPROVAL.fullmatch(normalized):
             return None
         active: list[DialogueState] = []
         for task_id in tuple(self._states):
@@ -246,9 +244,7 @@ class OperationalDialogueStore:
             authorized_workspace_ids=authorized_workspace_ids,
         )
 
-    def authoritative_artifact_path(
-        self, resolution: DialogueResolution, now: datetime
-    ) -> str:
+    def authoritative_artifact_path(self, resolution: DialogueResolution, now: datetime) -> str:
         if resolution.intent is not DialogueIntent.OPEN_ARTIFACT or not resolution.artifact_id:
             raise DialogueExpired("dialogue resolution does not identify an artifact")
         state = self.get(resolution.active_task_id, now)
