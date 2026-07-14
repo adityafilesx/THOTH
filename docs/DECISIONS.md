@@ -209,3 +209,19 @@ The configured whisper.cpp executable and GGML model may each carry an expected 
 ## ADR-052: v1 validation fails closed on distribution evidence
 **Date:** 2026-07-14 · **Status:** Accepted
 An ad-hoc development bundle, developer checkout, bundled-sample audio, automated AX fixture, or prior unit result cannot substitute for Developer ID/notarization, clean installation, real microphone commands, or fresh TCC-backed independent read-back. The v1 decision remains `RELEASE CANDIDATE` until every mandatory environmental/distribution gate has direct evidence. Rejected: release readiness inferred from implementation completeness.
+
+## ADR-053: All command surfaces share one deterministic dispatcher
+**Date:** 2026-07-14 · **Status:** Accepted
+Typed commands, legacy voice submission, and session-based push-to-talk now enter the same `CommandDispatcher`. Exact Stop, status, speech-control, app, workspace, and installed-skill requests are classified before any planner construction or model call. Approval language is a deterministic clarification that can never consume an approval. Rejected: endpoint-specific routing and treating a transcript as an approval channel.
+
+## ADR-054: Authoritative plans cannot be replaced by model recovery
+**Date:** 2026-07-14 · **Status:** Accepted
+Plans produced by deterministic reflexes or installed skills may use bounded same-step retry, but recovery cannot ask the local model to replace them. This prevents a valid authoritative invocation from being mutated into a different tool, target, argument schema, risk, or scope. Novel planner-originated tasks retain bounded replan through the full validation pipeline. Rejected: model repair of registered deterministic commands.
+
+## ADR-055: Focus postconditions gate execution truth
+**Date:** 2026-07-14 · **Status:** Accepted
+An app launch or focus return value is not success. The native adapter waits for the app to become frontmost, the tool independently re-probes OS state, and the orchestrator converts an unverified focus outcome into failure before task completion. Retry comparisons retain the original foreground baseline, so a stolen focus cannot become a false success baseline. Rejected: display-only focus warnings and tool-return self-certification.
+
+## ADR-056: HTTP settlement timeout is not task failure
+**Date:** 2026-07-14 · **Status:** Accepted
+The command API waits only a bounded interval for convenience. If a valid task remains active after that window, it returns the current authoritative snapshot and continues reporting progress through task refresh and WebSocket events. The timeout neither cancels the task nor produces HTTP 500. Rejected: conflating request latency with execution failure.

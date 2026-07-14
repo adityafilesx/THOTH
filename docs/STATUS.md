@@ -2,7 +2,7 @@
 
 **As of:** 2026-07-14
 
-Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation is present. THOTH is a **v1.0 release candidate**, not a validated release. Phase 5.4 remains pending TCC-backed UI capstones. A pinned local Whisper runtime and three candidates now exist, but Phase 5.5 still lacks real microphone/global-shortcut exercise, the 30-command matrix, acoustic Stop/barge-in, and offline voice-to-action evidence. Signing/notarization and clean installation are also blocked.
+Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation is present. THOTH is a **v1.0 release candidate**, not a validated release. Phase 5.4 remains pending TCC-backed UI capstones: the current exact-helper live probe still reports `not_determined`, despite broader permissions being enabled. A pinned local Whisper runtime and three candidates now exist, but Phase 5.5 still lacks a successful post-fix real microphone command, the 30-command matrix, acoustic Stop/barge-in, and offline voice-to-action evidence. Signing/notarization and clean installation are also blocked.
 
 ## Current verified capability
 
@@ -14,6 +14,8 @@ Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation 
 - Operational dialogue is in-memory, task-isolated, and expiring. It resolves only authoritative recent objects, cannot approve or expand scope, and enforces `no_push` before approval or execution.
 - Push-to-talk uses visible hold/toggle capture, local whisper.cpp contracts, partial/final/editable transcripts, default audio/transcript deletion, and the same orchestrator as text. v1.8.6 and tiny.en/base.en/small.en are locally SHA-256 pinned; mismatches fail closed. There is no cloud/mock fallback.
 - One deterministic Stop authority covers capture, TTS, all nonterminal tasks, and unconsumed approvals. Voice cannot approve R2/R3.
+- Typed, legacy voice, and session voice commands share one deterministic dispatcher. Exact approval language returns clarification before planning. Authoritative reflex/skill plans cannot be replaced by model recovery.
+- App launch/focus now require the native foreground postcondition and independent re-probe before completion; failure is task failure, not a display-only warning. Bounded API settlement returns active task state rather than HTTP 500.
 - Native Tauri presence includes Option+Space press/release, a content-free menu state, non-focus-stealing voice overlay, and authoritative execution HUD. Local macOS TTS speaks only bounded `SpokenResponse`.
 - A single local runtime manager serializes heavy Qwen/Whisper use on 16 GB, exposes health/eviction/offline state, and retains numeric-only bounded voice latency samples.
 - The desktop renders authoritative persona, foreground, workspace, focus, runtime, dialogue-expiry, and proposed/approved/executed/verified status without hidden reasoning.
@@ -23,15 +25,15 @@ Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation 
 
 | Gate | Result |
 |---|---|
-| `uv run --project apps/daemon pytest` | **958 passed** in 33.63 seconds |
+| `uv run --project apps/daemon pytest` | **993 passed** in 44.52 seconds; repeated through `make test` in 37.84 seconds |
 | Unlocked focus rerun | 6 foreground/focus live tests passed; no skip |
-| Ruff check / format | clean / 219 files formatted |
-| `mypy apps/daemon/src` (strict) | clean, 118 source files |
-| `pnpm -C apps/desktop test` | **75 passed** across 12 files |
+| Ruff check / format | clean / 223 files formatted |
+| `mypy apps/daemon/src` (strict) | clean, 120 source files |
+| `pnpm -C apps/desktop test` | **91 passed** across 14 files |
 | Desktop ESLint / TypeScript / Vite | clean / clean / built |
 | Cargo check / Rust tests | passed / 1 passed |
 | `alembic upgrade head` | passed through `0004_hash_chain` |
-| `make test` | passed: **1,033 tests** (958 daemon + 75 desktop), no skip |
+| `make test` | passed: **1,084 tests** (993 daemon + 91 desktop) |
 | Phase 5.4 helper/AX targeted matrix | **110 passed** |
 | Swift AX helper release build/package/signature | passed |
 
@@ -61,6 +63,8 @@ See `docs/PHASE_5_2_5_3_CAPSTONE.md` for the complete matrix.
 
 Phase 5.4 real evidence is in `docs/PHASE_5_4_CAPSTONE.md`. The fixture packaged, signed, launched, and reported its unique bundle identifier. The explicit Settings visit left exact-helper TCC status `denied`; AX-dependent capstones therefore failed closed and no profile capability was promoted.
 
+The 2026-07-14 recovery rerun found the packaged helper alive with its mode-0600 socket, but the fresh daemon probe still reports `not_determined`. This is not treated as permission evidence; the helper identity must appear as trusted before AX capstones can run.
+
 ## Residual limits
 
 - No verified real microphone speech accuracy, acoustic Stop/barge-in, wake word, proactivity, Gmail/Calendar control, universal app control, continuous visual awareness, or long-term memory claim.
@@ -72,7 +76,7 @@ Phase 5.4 real evidence is in `docs/PHASE_5_4_CAPSTONE.md`. The fixture packaged
 
 ## Honest capability statement
 
-**THOTH provides a consistent local persona, understands short-lived operational context, detects the active macOS workspace, manages supported application focus, and has a fully local voice/presence implementation pending real speech-model evaluation.**
+**THOTH provides a consistent local persona, understands short-lived operational context, detects the active macOS workspace, and has a local safety-gated focus and voice implementation. Real microphone reliability and exact-helper Accessibility control remain unverified release gates.**
 
 ## Recommended next phase
 

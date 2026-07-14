@@ -71,6 +71,12 @@ The initial loopback CORS blocker is resolved. During recovery, the following ad
 10. A typed `run the tests` preflight exposed a hollow-success route: the local planner listed applications and the task was marked complete without running tests. Natural project operations now resolve to authoritative installed skills; `run the tests` produces an exact `shell_run make test` step with R2 approval and exit-code verification.
 11. A stale untrusted database workspace could override an explicitly configured trusted workspace. Startup now reconciles exact normalized paths from trusted launch configuration, preserves unrelated records, and selects the configured profile as the default.
 12. Reconnecting desktop clients could miss task events and falsely show `No task running`. WebSocket connection is now considered established only after the authenticated server acknowledgement, and every authenticated reconnect refreshes tasks and pending approvals before presenting state.
+13. The legacy `/api/voice/task` endpoint bypassed the deterministic command dispatcher. It now uses the same dispatcher as typed commands and push-to-talk sessions, so Stop, app, skill, and safety reflexes cannot fall through to the planner.
+14. Exact approval language could still reach the planner as a new voice or text task. It now returns a deterministic clarification directing the user to the visible invocation-bound approval control; it never consumes a pending approval and makes zero model calls.
+15. A failed authoritative app-focus plan could enter model-generated recovery. The model then changed the valid `app` argument into invalid `app_name`, reproducing the raw Pydantic failure shown in the desktop. Pre-built reflex and skill plans now permit bounded same-step retries but never model replacement.
+16. The command endpoint treated its three-second settlement window as an exception and returned HTTP 500 while a legitimate task continued. Settlement now returns the current authoritative task snapshot at the timeout; WebSocket/task refresh carries later progress.
+17. App launch/focus success was accepted before the required final focus was independently observed. App tools now wait for the native foreground postcondition and re-probe it independently; the orchestrator converts a failed focus postcondition into tool failure and preserves the original focus baseline across retries.
+18. Voice transcript sessions could remain in memory if dispatch raised. Final submission now removes the single-use session in a `finally` path on every outcome.
 
 Live recovery evidence on 2026-07-14:
 
@@ -80,7 +86,11 @@ Live recovery evidence on 2026-07-14:
 - A typed `thoth stop` traversed `/api/commands`, returned HTTP 200, created no task, and visibly displayed `Stopped. No external action was taken.` without model use.
 - The first real microphone attempt delivered PCM to the daemon and local Whisper returned partial recognition. Because the release/cancellation defect interrupted finalisation, it is recorded as an unsuccessful diagnostic attempt, not a passed command.
 - A live typed `Thoth, run the tests.` command now stops at `WAITING_FOR_APPROVAL` with an exact R2 `shell_run make test` invocation and an exit-code verifier. No approval was bypassed.
-- The final combined automated gate passed: 981 daemon tests and 91 desktop tests. Ruff, Ruff formatting, strict mypy, ESLint, TypeScript, Vite build, Rust check/test, and Alembic upgrade also passed.
+- Live `thoth stop`, `check the daemon`, and `start the backend` commands all returned deterministic no-task controls. Live `approve it` returned clarification and created no task.
+- Finder, TextEdit, and Visual Studio Code application grants were created through the authenticated permissions API from the user's explicit authorization. They are persistent, scoped records; no profile expanded itself from model output.
+- A real TextEdit launch attempt demonstrated that this Codex-hosted test process can delay macOS foreground transitions while terminal automation is active. THOTH therefore ended `FAILED_REQUIRES_USER`; it did not claim completion. A separate native AppKit probe could focus TextEdit once the controlling call yielded. This is recorded as an environment-limited focus capstone, not a pass.
+- The final combined automated gate passed: 993 daemon tests and 91 desktop tests. Ruff, Ruff formatting, strict mypy, ESLint, TypeScript, Vite build, Rust check, and Alembic upgrade also passed.
+- Local macOS TTS playback and interruption were exercised successfully through authenticated voice endpoints. The runtime remained local-only.
 - A clean post-fix real microphone command remains pending. It will not be inferred from automated PCM tests, partial recognition, or typed commands.
 
 ## Exact continuation plan
@@ -107,3 +117,7 @@ Generated audio, prerecorded synthetic audio, bundled samples, and typed transcr
 ## Starting claim ceiling
 
 At the current checkpoint, local voice transport into Whisper, authoritative routing, reconnect reconciliation, and all automated gates are verified. Real microphone-to-action readiness remains unverified until the user personally completes a post-fix spoken command. No real voice pass is claimed yet.
+
+## Current manual retry
+
+With the daemon and desktop running, hold the microphone button for two to three seconds, say `Thoth, stop.`, release, and wait up to five seconds. The pass requires a visible final transcript, a `reflex / stop` route, `Stopped. No external action was taken.`, no task creation, and no retained temporary audio. A partial transcript alone is not a pass.
