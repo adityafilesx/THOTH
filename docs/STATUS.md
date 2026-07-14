@@ -33,7 +33,7 @@ Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation 
 | `mypy apps/daemon/src` (strict) | clean, 120 source files |
 | `pnpm -C apps/desktop test` | **95 passed** across 14 files |
 | Desktop ESLint / TypeScript / Vite | clean / clean / built |
-| Cargo check / Rust tests | passed / 7 passed |
+| Cargo check / Rust tests | passed / 8 passed |
 | `alembic upgrade head` | passed through `0004_hash_chain` |
 | Combined daemon + desktop count | **1,094 passed** (999 daemon + 95 desktop) |
 | Phase 5.4 helper/AX targeted matrix | **110 passed** |
@@ -70,6 +70,13 @@ The 2026-07-14 recovery rerun found the packaged helper alive with its mode-0600
 The latest repaired-build live probe also verified loopback health, offline runtime status, the pinned Whisper model, deterministic route classification, model-free typed Stop, and immediate removal of cancelled voice sessions. The host then locked; foreground reported `com.apple.loginwindow`, the focus-live test skipped, and the current desktop visual pass was not claimed.
 
 The packaged-app continuation independently verified a 217 MB `.app` and 196 MB DMG. The app launched its own frozen daemon and helper with no checkout daemon running, required the private token, reported the bundled base.en pin as verified, executed model-free Stop, and removed a cancelled voice session. Normal Quit and forced desktop termination both released the daemon/helper after parent-loss monitoring was added. The mounted DMG contained every manifest asset and `codesign --verify --deep --strict` passed. `spctl` still rejects the ad-hoc app because no Developer ID/notarization evidence exists.
+
+The final native microphone audit found and repaired a packaging defect: the
+Chrome-hosted dev UI had permission, but `THOTH.app` lacked its own microphone
+usage declaration. The signed app and DMG now contain a bounded
+`NSMicrophoneUsageDescription` stating push-to-talk and local transcription.
+The next real capture will still require the user to accept macOS's THOTH-specific
+microphone prompt; no human speech result is inferred from the declaration.
 
 ## Residual limits
 

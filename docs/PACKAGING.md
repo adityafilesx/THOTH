@@ -22,6 +22,11 @@ also monitor the desktop PID and exit if the parent is forcibly terminated.
 An occupied daemon port is rejected before either child starts, so a second app
 instance cannot replace the first instance's helper socket.
 
+The merged app `Info.plist` declares microphone use narrowly: recording occurs
+only during push-to-talk and transcription is local. macOS grants microphone
+access per app identity, so Chrome's development permission does not grant it
+to `THOTH.app`; the user must accept the native app's first-use prompt.
+
 ## Build
 
 The builder must have the repository dependencies plus these integrity-pinned

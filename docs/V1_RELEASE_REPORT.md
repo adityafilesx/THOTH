@@ -96,10 +96,16 @@ remain manual blockers.
 | Ruff / format | clean / 225 files |
 | Strict mypy | clean, 120 source files |
 | ESLint / TypeScript / Vite | clean / clean / built |
-| Cargo / Rust | check passed / 7 tests passed |
+| Cargo / Rust | check passed / 8 tests passed |
 | Swift helper | release build/package passed |
 | Alembic | fresh DB upgraded through `0004_hash_chain` |
 | App / DMG | built, manifest matched, strict ad-hoc signature passed |
+
+The native app and mounted DMG now include
+`NSMicrophoneUsageDescription`: THOTH records only while push-to-talk is active
+and transcribes locally. This repairs the packaging reason Chrome could receive
+audio while the native bundle could not request its own permission. It is not a
+substitute for the remaining real 30-command microphone evidence.
 
 ## Mandatory blockers
 
