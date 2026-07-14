@@ -165,3 +165,39 @@ Chromium's profile orders `browser_dom` before Accessibility. Playwright owns pa
 ## ADR-041: Restricted subprocess remains primary over Terminal AX
 **Date:** 2026-07-14 · **Status:** Accepted
 Terminal's profile contains only bounded AX snapshot rules. Commands execute through the restricted argv-only subprocess tool with scope, risk, timeout, cancellation, redaction, and independent verification; THOTH never opens or foregrounds Terminal merely to run a background command. Rejected: typing commands into Terminal through AX, reading terminal history, and treating visible terminal output as shell execution authority.
+
+## ADR-042: whisper.cpp is the primary local STT boundary
+**Date:** 2026-07-14 · **Status:** Accepted, live model evidence pending
+Speech recognition is provider-neutral; whisper.cpp is the production default and missing binary/model state is typed unavailable. Audio uses private mode-0600 temporary files deleted in `finally`, including cancellation. There is no cloud or automatic mock fallback. Rejected: cloud STT, faster-whisper as an unmeasured default, and retaining audio for convenience.
+
+## ADR-043: SpokenResponse is the only TTS input
+**Date:** 2026-07-14 · **Status:** Accepted
+TTS is provider-neutral with macOS `say` as the local default and Piper optional. Only bounded persona `SpokenResponse` text is spoken; secure paths/secrets collapse to a deterministic display-only notice. Playback is interruptible and non-verbal local cues are supported. Rejected: cloud TTS, speaking full display/audit output, and treating playback failure as task failure.
+
+## ADR-044: Push-to-talk owns the complete microphone lifecycle
+**Date:** 2026-07-14 · **Status:** Accepted
+Option+Space hold (with toggle mode available) opens a visible local capture session, streams bounded chunks, finalises on release, permits a three-second edit window, and submits exactly once. Tracks/audio are released on finalise, cancel, error, and overlay close. There is no wake word or hidden capture. Rejected: always-on listening and a second voice execution pipeline.
+
+## ADR-045: Voice can deny or cancel but never approve
+**Date:** 2026-07-14 · **Status:** Accepted
+A transcript is input to a new task, never an invocation-bound approval. R2/R3 and external effects remain visible desktop approvals; vague or explicit spoken approval text cannot consume a pending approval. Rejected: speaker identification as approval and replayable voice authorization.
+
+## ADR-046: One deterministic Stop authority spans all stages
+**Date:** 2026-07-14 · **Status:** Accepted
+The visible Stop controls and exact push-to-talk phrase use one model-free authority that cancels voice sessions and all nonterminal orchestrator runners, interrupts TTS, and invalidates unconsumed approvals. Whole-utterance matching and TTS exclusion prevent webpage/acoustic embedding. Rejected: planner-mediated cancellation and stage-specific stop buttons.
+
+## ADR-047: Local AI resources use one bounded runtime manager
+**Date:** 2026-07-14 · **Status:** Accepted
+Qwen, Whisper, and TTS expose closed load/ready/busy/cache/evict/degraded/failed states, health/integrity, idle eviction, battery/memory policy, crash recovery, and cancellation. Qwen/Whisper are heavy and serialize on the 16 GB host; reflex remains available unloaded. Rejected: independent unbounded model loaders and cloud recovery.
+
+## ADR-048: Voice retention is volatile and opt-in
+**Date:** 2026-07-14 · **Status:** Accepted
+Audio is zeroised after finalise/cancel/failure. Transcript sessions are removed after submission by default; optional retention is in-memory and restart-volatile. Rolling latency metrics contain numeric timings only. Rejected: persistent raw audio, default transcript history, and transcript-bearing telemetry.
+
+## ADR-049: Native presence carries closed state, not content
+**Date:** 2026-07-14 · **Status:** Accepted
+Tauri owns the global shortcut, menu-bar item, and non-focus-stealing overlay. Native presence accepts a closed status enum and allowlisted bounded labels; raw transcripts, model tokens, secrets, and reasoning never enter the tray. The HUD consumes authoritative daemon presentation. Rejected: a transcript-bearing menu and fixture state presented as live.
+
+## ADR-050: Accessibility runs in a stable local helper identity
+**Date:** 2026-07-14 · **Status:** Accepted, Developer ID release signing pending
+The daemon uses `me.adityalabs.thoth.axhelper` over a current-user mode-0600 Unix socket authenticated by peer UID. The versioned protocol has only bounded semantic AX operations and no network listener, coordinates, shell, plan, approval, or profile mutation. Helper absence/trust failure is typed unavailable with no Python fallback. Rejected: granting TCC to uv Python/Terminal and exposing AX over HTTP.

@@ -23,7 +23,7 @@ Every provider implements: `generate`, `generate_stream` (chunk iterator), `warm
 
 ## Network isolation mode
 
-`THOTH_NETWORK_ISOLATION=1` (or Settings flag): `NetworkIsolationGuard.check(endpoint)` refuses any endpoint that is not loopback (`127.0.0.1`, `::1`, `localhost`) or in-process. The Anthropic provider is refused outright in isolation mode regardless of flags. Guard is enforced at provider construction AND per-request.
+`THOTH_NETWORK_ISOLATION=1` (or Settings flag): `NetworkIsolationGuard.check(endpoint)` refuses any endpoint that is not loopback (`127.0.0.1`, `::1`, `localhost`) or in-process. The Anthropic provider is refused outright in isolation mode regardless of flags. Guard is enforced at provider construction and per request, and external browser reads/navigation are now rejected before adapter invocation. Local files, subprocess tools, app control, reflex/skills, and loopback services remain available.
 
 ## Model registry
 

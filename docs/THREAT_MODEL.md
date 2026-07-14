@@ -72,10 +72,10 @@ New attack surfaces and their mitigations; the §4 invariants all still hold and
 | Surface | Threats | Mitigations |
 |---|---|---|
 | Scoped filesystem / restricted shell / git tools | path escape, sensitive-file reads, argv injection | symlink-safe resolution + denylist; ScopeEnforcer gate + registry backstop; allowlisted bare-name argv, `shell=False`, metacharacters rejected; R2 per-command approval |
-| Accessibility (AX) tools | driving un-approved apps; hostile AX values steering the agent | `requested_scope(apps=[app])` enforced; role+label addressing (no coordinates); AX values are untrusted inert data; every real call gated on `AXIsProcessTrusted` — no TCC ⇒ typed `AXPermissionError`, never a fake success |
+| Accessibility (AX) tools | driving un-approved apps; hostile AX values steering the agent; unstable TCC identity | `requested_scope(apps=[app])` enforced; role+label addressing (no coordinates); AX values are untrusted inert data; exact helper `me.adityalabs.thoth.axhelper` over mode-0600 peer-UID-authenticated Unix socket; no Python fallback; every real call freshly TCC-gated |
 | Interactive browser session | hostile page content (prompt injection), off-allowlist navigation, deceptive form submission | page text always `WEB_UNTRUSTED` + injection-guard scanned (containment tested); per-navigation domain scope; **two-phase submission**: prepare captures the exact payload, submit is R2 + single-use, refuses stale forms AND action hosts differing from the approved `action_url`; `current_url` scope anchors must match the session's actual page |
 | Skill engine | a skill smuggling lowered risks / extra tools / removed verification | planning-only expansion; declared risk copied verbatim (effective = max(default, declared) — downgrade attempt still halts for approval, tested); expanded plans re-enter full validation + policy review; typed input validation |
-| Voice | a transcript approving actions or expanding scope; audio retention | transcripts only ever become new task goals (`source=voice`) — isolation tested against a pending R2 approval; audio bytes never logged/persisted; STT unavailable ⇒ typed 503, never silent |
+| Voice | transcript/replay approval, embedded Stop, TTS feedback, hidden recording, duplicate tasks, audio/secret retention | visible push-to-talk only; voice never consumes approval; whole-utterance model-free Stop excludes TTS; edit/final submit-once; tracks/audio zeroised; local STT typed unavailable; bounded `SpokenResponse` suppresses secrets; no cloud fallback |
 | Audit tampering (around the store) | direct SQLite edits rewriting history | per-task hash chain over prev-hash+task+correlation+seq+type+payload+timestamp; `verify_chain` detects mutation, deletion (seq gap), reorder; store still has no update/delete surface |
 | Recovery loops | runaway retry/replan cycles | ≤2 retries/step, ≤2 replans, depth ≤3 episodes, ≤25 executions/task; exhaustion ⇒ terminal `FAILED_REQUIRES_USER` |
 
@@ -106,3 +106,17 @@ New attack surfaces and their mitigations; the §4 invariants all still hold and
 - AX editor/document manipulation remains experimental until explicit Accessibility permission and a real verification pass.
 - Dialogue is deliberately volatile; restart loses short follow-up context rather than persisting sensitive operational memory.
 - Local-model availability depends on the loopback runtime. Model-dependent requests degrade deterministically; no cloud fallback is attempted.
+
+### Residual risks after Phase 5.5 implementation
+
+- Real Whisper accuracy, microphone/global-shortcut behaviour, acoustic
+  echo/barge-in, end-to-end latency, and memory pressure with Qwen loaded are
+  unverified because no local Whisper runtime/model is installed and the
+  desktop is locked.
+- The AX helper development artifact is ad-hoc signed. Release packaging needs
+  a stable Developer ID signature before manual TCC approval is production
+  evidence.
+- Unix socket peer-UID authentication prevents other users but not a malicious
+  same-user process. The helper's deliberately tiny protocol and upstream
+  profile/policy gates reduce impact; code-signature-bound XPC remains a future
+  hardening option.

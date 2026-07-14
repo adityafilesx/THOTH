@@ -21,6 +21,8 @@ Statuses:
 
 The native SwiftUI AX fixture is packaged and ad-hoc signed with the unique bundle identifier `me.adityalabs.thoth.axtest`. Its stable semantic identifiers are profile allowlisted. Its AX capabilities remain experimental because the daemon's real 2026-07-14 trust probe returned `not_determined`; unit evidence does not promote a capability to real-verified status.
 
+Semantic AX execution is now hosted by the separate background bundle `me.adityalabs.thoth.axhelper`, not uv Python. The helper cannot add or promote application profiles; it accepts only the already-authorized semantic operation over authenticated local IPC and returns untrusted bounded observations. Its current live trust probe is false, so this host change promotes no application capability.
+
 VS Code workspace matching was exercised on 2026-07-13 against the real running `com.microsoft.VSCode` process and the approved THOTH repository path. Authoritative sources were the approved path and active task workspace; the bundle id was a hint. Chromium form interaction and submission remain experimental despite unit/fixture coverage and are not described as generally verified web control.
 
 The profile registry preserves private authoritative copies and returns deep copies at API/read boundaries. Model output and webpage/window content therefore cannot mutate the registry, self-add a capability, promote experimental status, or downgrade a forbidden operation.

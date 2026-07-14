@@ -89,9 +89,16 @@ contains no capstone-generated screenshot or AX tree artifact.
 
 ## Remaining real gate
 
+The unstable Python host described in the original run has now been replaced
+by the background helper `me.adityalabs.thoth.axhelper`. Its release build,
+bundle identifier, ad-hoc development signature, mode-0600 Unix socket, peer
+UID authentication, launch, and live `trusted=false` response were verified.
+The daemon has no Python fallback. See `TCC_HOST_IDENTITY.md` and
+`PHASE_5_4_TCC_CLOSURE.md`.
+
 To close Phase 5.4, the user must first unlock the interactive desktop and
-explicitly grant Accessibility trust to the actual daemon/terminal host
-process in System Settings. Then rerun B–H against the packaged fixture,
+explicitly grant Accessibility trust to that exact packaged helper in System
+Settings. Then rerun B–H against the packaged fixture,
 TextEdit, and VS Code, record independent UI and final-focus evidence, and
 promote only the exact capabilities that pass. Until then the honest claim
 remains the Phase 5.3 claim; universal computer control and semantic real-AX

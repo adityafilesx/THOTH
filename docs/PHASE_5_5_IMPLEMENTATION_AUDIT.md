@@ -149,3 +149,18 @@ Automated contracts are not evidence that global push-to-talk, real local STT,
 or broad spoken-command accuracy works on this host. Until the real microphone,
 Whisper model, global-shortcut, offline, and 30-command gates pass, Phase 5.5 is
 implementation-in-progress and no new voice capability claim is made.
+
+## Implemented continuation outcome
+
+The audit findings were preserved. Subsequent local commits added the
+whisper.cpp provider/contracts, in-memory partial/final/edit lifecycle,
+deterministic global Stop and approval invalidation, local macOS/Piper TTS,
+bounded runtime manager, native shortcut/menu/overlay/HUD, authoritative
+persona playback, safe recent dialogue resolution, numeric latency metrics,
+and tool-level offline browser refusal. The unstable Python AX host was
+replaced by `me.adityalabs.thoth.axhelper`; a live mode-0600 socket/trust probe
+passed structurally and returned false as expected.
+
+Real Whisper, microphone, 30-command, offline voice-to-action, unlocked global
+shortcut, and TCC-backed AX workflows remain unavailable. The original claim
+ceiling therefore remains in force until those external evidence gates pass.

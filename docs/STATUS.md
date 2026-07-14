@@ -2,7 +2,7 @@
 
 **As of:** 2026-07-14
 
-Phases 0–4, 5.0, 5.1, 5.2, and 5.3 are implemented. Phase 5.4's packaged native fixture, typed permission boundary, bounded semantic AX contracts/resolver/tools, independent verifiers, application-profile enforcement, focus/cancellation integration, desktop diagnostics, deterministic persona outcomes, and adversarial hardening are implemented. Phase 5.4 remains pending real TCC-backed UI capstones.
+Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation is present. Phase 5.4 remains pending real TCC-backed UI capstones; Phase 5.5 remains pending a real local Whisper model, microphone/global-shortcut exercise, 30-command matrix, and offline voice-to-action capstone.
 
 ## Current verified capability
 
@@ -12,8 +12,12 @@ Phases 0–4, 5.0, 5.1, 5.2, and 5.3 are implemented. Phase 5.4's packaged nativ
 - Foreground context is captured only on demand. It contains no screenshot, image, or Accessibility-tree field; titles and sensitive paths are redacted before bounded in-memory retention.
 - Six versioned application profiles exist. Unknown/forbidden/undeclared capabilities fail closed. VS Code workspace association is verified through the real running bundle plus authoritative THOTH path evidence; editor read/edit remain experimental.
 - Operational dialogue is in-memory, task-isolated, and expiring. It resolves only authoritative recent objects, cannot approve or expand scope, and enforces `no_push` before approval or execution.
+- Push-to-talk uses visible hold/toggle capture, local whisper.cpp contracts, partial/final/editable transcripts, default audio/transcript deletion, and the same orchestrator as text. Missing Whisper is typed unavailable; there is no cloud/mock fallback.
+- One deterministic Stop authority covers capture, TTS, all nonterminal tasks, and unconsumed approvals. Voice cannot approve R2/R3.
+- Native Tauri presence includes Option+Space press/release, a content-free menu state, non-focus-stealing voice overlay, and authoritative execution HUD. Local macOS TTS speaks only bounded `SpokenResponse`.
+- A single local runtime manager serializes heavy Qwen/Whisper use on 16 GB, exposes health/eviction/offline state, and retains numeric-only bounded voice latency samples.
 - The desktop renders authoritative persona, foreground, workspace, focus, runtime, dialogue-expiry, and proposed/approved/executed/verified status without hidden reasoning.
-- Production exposes ten dotted semantic AX tools with exact bundle/capability/target/action/verifier authority, bounded untrusted snapshots, no coordinates, fresh TCC checks, independent UI verification, modal-aware resolution, and one non-persistent diagnostic summary. All real AX capabilities remain experimental because current trust is `not_determined`.
+- Production exposes ten dotted semantic AX tools through the stable local helper `me.adityalabs.thoth.axhelper`. The helper has no Python fallback, network listener, coordinate, shell, planning, approval, or profile surface. All real AX capabilities remain experimental because helper trust is false.
 
 ## Verification
 
@@ -52,7 +56,7 @@ Phase 5.4 real evidence is in `docs/PHASE_5_4_CAPSTONE.md`. The fixture packaged
 
 ## Residual limits
 
-- No voice interaction, wake word, proactivity, Gmail/Calendar control, universal app control, continuous visual awareness, or long-term memory claim.
+- No verified real speech accuracy, wake word, proactivity, Gmail/Calendar control, universal app control, continuous visual awareness, or long-term memory claim.
 - AX editor/document manipulation remains experimental until Accessibility permission and real evidence exist.
 - Chromium foreground presentation and form operations remain experimental; only separately verified read-only/background capabilities are marked verified.
 - Dialogue is process-local and intentionally disappears on restart.
@@ -60,8 +64,8 @@ Phase 5.4 real evidence is in `docs/PHASE_5_4_CAPSTONE.md`. The fixture packaged
 
 ## Honest capability statement
 
-**THOTH provides a consistent local persona, understands short-lived operational context, detects the active macOS workspace, and manages supported application focus without unnecessary disruption.**
+**THOTH provides a consistent local persona, understands short-lived operational context, detects the active macOS workspace, manages supported application focus, and has a fully local voice/presence implementation pending real speech-model evaluation.**
 
 ## Recommended next phase
 
-Complete the Phase 5.4 real-evidence gate on an unlocked desktop after the user explicitly grants Accessibility trust: run the packaged-app form/delayed/ambiguity/moving workflows, exact TextEdit read-back, VS Code final-focus check, and real permission-revocation case. Promote only capabilities with independent evidence. Do not start voice, proactivity, or long-term memory first.
+Install and integrity-pin local whisper.cpp tiny/base/small candidates; unlock the desktop; run the 30-command voice/latency/resource/offline matrix; select the measured model. Separately grant TCC manually to the exact packaged AX helper and close Phase 5.4 UI evidence. Do not begin wake-word, proactivity, or long-term memory work first.

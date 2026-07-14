@@ -8,11 +8,11 @@ THOTH is not a chatbot, a note-taking app, a generic second brain, or a voice-co
 
 ## Status
 
-**Phases 0–4 and 5.0–5.3 are built. Phase 5.4 is implemented but pending real Accessibility capstones.** The deterministic safety core is enforced end to end: no tool execution outside `EXECUTING`, no risk downgrade, invocation-bound single-use approvals, scoped tools, independent verification, bounded recovery, and tamper-evident audit. Phase 5.4 adds a packaged native fixture, fresh permission boundary, bounded semantic AX tools, application-specific authority, independent UI verifiers, focus/cancellation ordering, live diagnostics, and deterministic persona outcomes. The current host has no Accessibility trust, so real UI capabilities remain experimental and are not claimed.
+**Phases 0–4 and 5.0–5.3 are built. Phase 5.4 and 5.5 implementation is present, with real Accessibility and voice evidence still open.** The deterministic safety core is enforced end to end: no tool execution outside `EXECUTING`, no risk downgrade, invocation-bound single-use approvals, scoped tools, independent verification, bounded recovery, and tamper-evident audit. Phase 5.5 adds a local whisper.cpp boundary, visible push-to-talk lifecycle, local speech synthesis, deterministic Stop, native menu/overlay/HUD, safe dialogue follow-ups, and bounded runtime/latency state. No local Whisper runtime/model is installed on this host, so real spoken-command accuracy and end-to-end voice workflows are not claimed.
 
 Five capstone workflows ran against the real OS and were **independently verified** — real file and git state, a real `https://example.com` fetch, a real single-use approval, a real TextEdit launch ([docs/CAPSTONE_REPORT.md](docs/CAPSTONE_REPORT.md)). Those runs used scripted reference plans; the same goals through the **live Claude planner are pending live verification** (requires `ANTHROPIC_API_KEY`).
 
-Current bounded claim: **THOTH provides a consistent local persona, understands short-lived operational context, detects the active macOS workspace, and manages supported application focus without unnecessary disruption.** It does not claim voice interaction, proactivity, universal app control, continuous visual awareness, or long-term memory. See [docs/STATUS.md](docs/STATUS.md) and [Phase 5.2–5.3 capstones](docs/PHASE_5_2_5_3_CAPSTONE.md).
+Current bounded claim: **THOTH provides a consistent local persona, understands short-lived operational context, detects the active macOS workspace, manages supported application focus, and has a fully local voice/presence implementation pending real speech-model evaluation.** It does not claim verified broad speech accuracy, proactivity, universal app control, continuous visual awareness, or long-term memory. See [docs/STATUS.md](docs/STATUS.md) and [Phase 5.5 capstones](docs/PHASE_5_5_CAPSTONE.md).
 
 ## Principles (priority order)
 
@@ -32,6 +32,7 @@ Current bounded claim: **THOTH provides a consistent local persona, understands 
 ```
 apps/desktop        Tauri 2 + React + TypeScript desktop client
 apps/daemon         Python 3.12 FastAPI daemon (agent core, safety engine)
+apps/ax-helper      Stable signed macOS Accessibility host (local Unix socket)
 packages/shared-schemas   JSON Schemas + TS types generated from Pydantic contracts
 packages/design-tokens    Design tokens for the desktop UI
 docs                PRD, architecture, threat model, test plan, decisions, status
@@ -44,6 +45,7 @@ docs                PRD, architecture, threat model, test plan, decisions, statu
 - [uv](https://docs.astral.sh/uv/) (manages Python 3.12 automatically)
 - Node.js ≥ 20 with corepack (`corepack enable pnpm`)
 - Rust toolchain (for the Tauri shell)
+- Optional for real voice: local `whisper-cli` plus a verified ggml Whisper model
 
 ## Quick start
 
@@ -93,6 +95,8 @@ No planner or tool may downgrade its own risk level. See [docs/THREAT_MODEL.md](
 - [docs/APPLICATION_PROFILES.md](docs/APPLICATION_PROFILES.md) — supported app capability authority
 - [docs/ACCESSIBILITY_ARCHITECTURE.md](docs/ACCESSIBILITY_ARCHITECTURE.md) — semantic AX authority, bounds, and responsibilities
 - [docs/PHASE_5_4_CAPSTONE.md](docs/PHASE_5_4_CAPSTONE.md) — real permission/fixture evidence and blocked capstones
+- [docs/VOICE_ARCHITECTURE.md](docs/VOICE_ARCHITECTURE.md) — local voice, Stop, presence, and retention boundaries
+- [docs/PHASE_5_5_CAPSTONE.md](docs/PHASE_5_5_CAPSTONE.md) — automated evidence and remaining real voice gates
 
 ## Security
 
