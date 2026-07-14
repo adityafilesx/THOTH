@@ -20,6 +20,7 @@ htmlcov/
 apps/desktop/src-tauri/target/
 
 # Databases & logs (runtime artifacts, never committed)
+data/
 *.db
 *.db-journal
 *.sqlite3

@@ -189,6 +189,47 @@ class TestWhisperCppProvider:
         with pytest.raises(SpeechRecognitionUnavailable, match="executable"):
             await provider.transcribe(b"audio", "audio/wav")
 
+    async def test_integrity_mismatch_is_typed_unavailable(self, tmp_path: Path) -> None:
+        executable = tmp_path / "whisper-cli"
+        executable.write_bytes(b"runtime")
+        executable.chmod(0o700)
+        model = tmp_path / "ggml-base.en.bin"
+        model.write_bytes(b"model")
+        provider = WhisperCppSpeechRecognitionProvider(
+            executable=executable,
+            model_path=model,
+            expected_executable_sha256="0" * 64,
+            expected_model_sha256="1" * 64,
+        )
+
+        health = await provider.health()
+
+        assert health.available is False
+        assert "integrity" in health.detail
+        with pytest.raises(SpeechRecognitionUnavailable, match="integrity"):
+            await provider.transcribe(b"audio", "audio/wav")
+
+    async def test_matching_integrity_pins_are_reported_ready(self, tmp_path: Path) -> None:
+        import hashlib
+
+        executable = tmp_path / "whisper-cli"
+        executable.write_bytes(b"runtime")
+        executable.chmod(0o700)
+        model = tmp_path / "ggml-base.en.bin"
+        model.write_bytes(b"model")
+        provider = WhisperCppSpeechRecognitionProvider(
+            executable=executable,
+            model_path=model,
+            expected_executable_sha256=hashlib.sha256(b"runtime").hexdigest(),
+            expected_model_sha256=hashlib.sha256(b"model").hexdigest(),
+        )
+
+        health = await provider.health()
+
+        assert provider.integrity_pinned is True
+        assert health.available is True
+        assert "integrity verified" in health.detail
+
     async def test_private_audio_file_is_deleted_and_argv_is_bounded(self, tmp_path: Path) -> None:
         executable = tmp_path / "whisper-cli"
         executable.write_text("binary placeholder")

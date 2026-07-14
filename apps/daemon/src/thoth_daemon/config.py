@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     # speech service is ever selected as fallback.
     whisper_executable: Path = Path("/opt/homebrew/bin/whisper-cli")
     whisper_model_path: Path = Path("./data/models/whisper/ggml-base.en.bin")
+    whisper_executable_sha256: str | None = None
+    whisper_model_sha256: str | None = None
     whisper_language: str = "en"
     voice_retain_transcripts: bool = False
     voice_correction_window_seconds: float = 3.0

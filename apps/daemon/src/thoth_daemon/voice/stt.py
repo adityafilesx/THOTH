@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
 import os
 import tempfile
 import time
@@ -148,6 +149,14 @@ class FasterWhisperSTTAdapter:
 WhisperRunner = Callable[[list[str], Path], Awaitable[tuple[int, str, str]]]
 
 
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 async def _run_whisper(argv: list[str], audio_path: Path) -> tuple[int, str, str]:
     del audio_path
     process = await asyncio.create_subprocess_exec(
@@ -179,15 +188,23 @@ class WhisperCppSpeechRecognitionProvider:
         executable: Path = Path("/opt/homebrew/bin/whisper-cli"),
         model_path: Path = Path("data/models/whisper/ggml-base.en.bin"),
         language: str = "en",
+        expected_executable_sha256: str | None = None,
+        expected_model_sha256: str | None = None,
         runner: WhisperRunner = _run_whisper,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
         self._executable = executable
         self._model_path = model_path
         self._language = language
+        self._expected_executable_sha256 = expected_executable_sha256
+        self._expected_model_sha256 = expected_model_sha256
         self._runner = runner
         self._clock = clock
         self._loaded = False
+
+    @property
+    def integrity_pinned(self) -> bool:
+        return bool(self._expected_executable_sha256 and self._expected_model_sha256)
 
     async def health(self) -> SpeechRecognitionHealth:
         if not self._executable.is_file() or not os.access(self._executable, os.X_OK):
@@ -206,12 +223,36 @@ class WhisperCppSpeechRecognitionProvider:
                 loaded=False,
                 detail="local Whisper model is unavailable",
             )
+        if self._expected_executable_sha256:
+            executable_hash = await asyncio.to_thread(_sha256_file, self._executable)
+            if executable_hash != self._expected_executable_sha256:
+                return SpeechRecognitionHealth(
+                    available=False,
+                    provider="whisper.cpp",
+                    model=str(self._model_path),
+                    loaded=False,
+                    detail="whisper.cpp executable integrity verification failed",
+                )
+        if self._expected_model_sha256:
+            model_hash = await asyncio.to_thread(_sha256_file, self._model_path)
+            if model_hash != self._expected_model_sha256:
+                return SpeechRecognitionHealth(
+                    available=False,
+                    provider="whisper.cpp",
+                    model=str(self._model_path),
+                    loaded=False,
+                    detail="local Whisper model integrity verification failed",
+                )
         return SpeechRecognitionHealth(
             available=True,
             provider="whisper.cpp",
             model=str(self._model_path),
             loaded=self._loaded,
-            detail="local whisper.cpp runtime is ready",
+            detail=(
+                "local whisper.cpp runtime is ready; integrity verified"
+                if self.integrity_pinned
+                else "local whisper.cpp runtime is ready"
+            ),
         )
 
     async def transcribe(self, audio_bytes: bytes, mime: str) -> SpeechRecognitionResult:
@@ -336,5 +377,7 @@ def default_stt_adapter() -> STTAdapter:
             )
         ),
         language=os.environ.get("THOTH_WHISPER_LANGUAGE", "en"),
+        expected_executable_sha256=os.environ.get("THOTH_WHISPER_EXECUTABLE_SHA256"),
+        expected_model_sha256=os.environ.get("THOTH_WHISPER_MODEL_SHA256"),
     )
     return SpeechRecognitionSTTAdapter(provider)

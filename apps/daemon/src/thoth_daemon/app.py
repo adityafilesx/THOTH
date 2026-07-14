@@ -135,6 +135,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             executable=cfg.whisper_executable,
             model_path=cfg.whisper_model_path,
             language=cfg.whisper_language,
+            expected_executable_sha256=cfg.whisper_executable_sha256,
+            expected_model_sha256=cfg.whisper_model_sha256,
         )
         app.state.stt = SpeechRecognitionSTTAdapter(app.state.speech_recognition)
         audit_store = AuditStore(session_factory)
@@ -160,6 +162,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             max_heavy_concurrency=1,
             offline=cfg.network_isolation,
         )
+        speech_health = await app.state.speech_recognition.health()
         app.state.local_runtime.register(
             RuntimeRegistration(
                 component=RuntimeComponent.PLANNER,
@@ -176,7 +179,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 display_name=cfg.whisper_model_path.name,
                 driver=SpeechRecognitionRuntimeDriver(app.state.speech_recognition),
                 memory_estimate_bytes=500 * 1024 * 1024,
-                integrity_verified=None,
+                integrity_verified=(
+                    speech_health.available
+                    if app.state.speech_recognition.integrity_pinned
+                    else None
+                ),
                 heavy=True,
             )
         )
