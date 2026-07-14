@@ -8,12 +8,10 @@
 
 The semantic AX implementation, application fixture, safety boundaries, and
 desktop diagnostics are built and automated tests pass. Phase 5.4 is **not
-claimed complete** because the current daemon process does not have macOS
-Accessibility trust. The real probe returned `ax_trusted=false` /
-`not_determined`; no System Settings window was opened and no TCC control was
-automated. The current interactive desktop also returned
-`com.apple.loginwindow`, so the current focus rerun skipped precisely as a
-locked-desktop check.
+claimed complete** because the exact helper does not have macOS Accessibility
+trust. During v1 validation THOTH opened System Settings only through the
+explicit requested endpoint; the fresh state became `denied`. No TCC control
+was automated and no real AX mutation ran.
 
 No AX capability was promoted from experimental to verified on the strength of
 unit or mock evidence.
@@ -24,7 +22,7 @@ unit or mock evidence.
 |---|---|---|
 | Package native fixture | Pass | Release Swift build completed; ad-hoc signature passed `codesign --verify --deep --strict`. |
 | Unique fixture identity | Pass | Packaged plist and real running application both reported `me.adityalabs.thoth.axtest`; PID 57350 during the run. |
-| Current AX permission | Fail closed | `AXIsProcessTrusted()` returned false. Typed status remains `not_determined`; no permission prompt/settings side effect was initiated. |
+| Current AX permission | Fail closed | `AXIsProcessTrusted()` returned false. After an explicit Settings visit, typed status is `denied`; no permission control was automated. |
 | Real foreground capture | Pass, locked state | NSWorkspace returned `loginwindow` / `com.apple.loginwindow`, and the foreground broker reported that real state. |
 | Supported app inventory | Pass | Finder, TextEdit, and Code were observed as real running applications. |
 | VS Code workspace association | Pass | Running `com.microsoft.VSCode` plus the authoritative approved THOTH path/task workspace matched; title evidence remained a hint. |

@@ -8,11 +8,14 @@ THOTH is not a chatbot, a note-taking app, a generic second brain, or a voice-co
 
 ## Status
 
-**Phases 0–4 and 5.0–5.3 are built. Phase 5.4 and 5.5 implementation is present, with real Accessibility and voice evidence still open.** The deterministic safety core is enforced end to end: no tool execution outside `EXECUTING`, no risk downgrade, invocation-bound single-use approvals, scoped tools, independent verification, bounded recovery, and tamper-evident audit. Phase 5.5 adds a local whisper.cpp boundary, visible push-to-talk lifecycle, local speech synthesis, deterministic Stop, native menu/overlay/HUD, safe dialogue follow-ups, and bounded runtime/latency state. No local Whisper runtime/model is installed on this host, so real spoken-command accuracy and end-to-end voice workflows are not claimed.
+**THOTH is a v1.0 release candidate, not a validated release.** The deterministic safety core is enforced end to end: no tool execution outside `EXECUTING`, no risk downgrade, invocation-bound single-use approvals, scoped tools, independent verification, bounded recovery, and tamper-evident audit. A local SHA-256-pinned whisper.cpp v1.8.6 runtime plus tiny.en/base.en/small.en candidates are installed on the validation host, and bundled-sample transcription works. Real microphone accuracy, acoustic Stop/barge-in, TCC-backed AX mutations, notarized packaging, and clean installation remain unvalidated.
 
 Five capstone workflows ran against the real OS and were **independently verified** — real file and git state, a real `https://example.com` fetch, a real single-use approval, a real TextEdit launch ([docs/CAPSTONE_REPORT.md](docs/CAPSTONE_REPORT.md)). Those runs used scripted reference plans; the same goals through the **live Claude planner are pending live verification** (requires `ANTHROPIC_API_KEY`).
 
 Current bounded claim: **THOTH provides a consistent local persona, understands short-lived operational context, detects the active macOS workspace, manages supported application focus, and has a fully local voice/presence implementation pending real speech-model evaluation.** It does not claim verified broad speech accuracy, proactivity, universal app control, continuous visual awareness, or long-term memory. See [docs/STATUS.md](docs/STATUS.md) and [Phase 5.5 capstones](docs/PHASE_5_5_CAPSTONE.md).
+
+See [the v1 release report](docs/V1_RELEASE_REPORT.md) for exact runtime hashes,
+test results, packaging evidence, and mandatory release blockers.
 
 ## Principles (priority order)
 
@@ -45,7 +48,7 @@ docs                PRD, architecture, threat model, test plan, decisions, statu
 - [uv](https://docs.astral.sh/uv/) (manages Python 3.12 automatically)
 - Node.js ≥ 20 with corepack (`corepack enable pnpm`)
 - Rust toolchain (for the Tauri shell)
-- Optional for real voice: local `whisper-cli` plus a verified ggml Whisper model
+- Optional for real voice: local `whisper-cli` plus a SHA-256-pinned GGML Whisper model
 
 ## Quick start
 

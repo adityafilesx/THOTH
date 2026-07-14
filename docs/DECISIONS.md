@@ -201,3 +201,11 @@ Tauri owns the global shortcut, menu-bar item, and non-focus-stealing overlay. N
 ## ADR-050: Accessibility runs in a stable local helper identity
 **Date:** 2026-07-14 · **Status:** Accepted, Developer ID release signing pending
 The daemon uses `me.adityalabs.thoth.axhelper` over a current-user mode-0600 Unix socket authenticated by peer UID. The versioned protocol has only bounded semantic AX operations and no network listener, coordinates, shell, plan, approval, or profile mutation. Helper absence/trust failure is typed unavailable with no Python fallback. Rejected: granting TCC to uv Python/Terminal and exposing AX over HTTP.
+
+## ADR-051: Local speech artifacts require SHA-256 pins
+**Date:** 2026-07-14 · **Status:** Accepted
+The configured whisper.cpp executable and GGML model may each carry an expected SHA-256. Health recomputes configured pins before transcription; mismatch is typed unavailable, and the runtime manager exposes verified/failed integrity state. The local registry records the v1.8.6 binary and tiny.en/base.en/small.en metadata as inert data. Rejected: existence-only health, trusting filenames, and silently falling back to another model/provider.
+
+## ADR-052: v1 validation fails closed on distribution evidence
+**Date:** 2026-07-14 · **Status:** Accepted
+An ad-hoc development bundle, developer checkout, bundled-sample audio, automated AX fixture, or prior unit result cannot substitute for Developer ID/notarization, clean installation, real microphone commands, or fresh TCC-backed independent read-back. The v1 decision remains `RELEASE CANDIDATE` until every mandatory environmental/distribution gate has direct evidence. Rejected: release readiness inferred from implementation completeness.

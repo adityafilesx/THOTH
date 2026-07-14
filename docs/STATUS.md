@@ -2,7 +2,7 @@
 
 **As of:** 2026-07-14
 
-Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation is present. Phase 5.4 remains pending real TCC-backed UI capstones; Phase 5.5 remains pending a real local Whisper model, microphone/global-shortcut exercise, 30-command matrix, and offline voice-to-action capstone.
+Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation is present. THOTH is a **v1.0 release candidate**, not a validated release. Phase 5.4 remains pending TCC-backed UI capstones. A pinned local Whisper runtime and three candidates now exist, but Phase 5.5 still lacks real microphone/global-shortcut exercise, the 30-command matrix, acoustic Stop/barge-in, and offline voice-to-action evidence. Signing/notarization and clean installation are also blocked.
 
 ## Current verified capability
 
@@ -12,7 +12,7 @@ Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation 
 - Foreground context is captured only on demand. It contains no screenshot, image, or Accessibility-tree field; titles and sensitive paths are redacted before bounded in-memory retention.
 - Six versioned application profiles exist. Unknown/forbidden/undeclared capabilities fail closed. VS Code workspace association is verified through the real running bundle plus authoritative THOTH path evidence; editor read/edit remain experimental.
 - Operational dialogue is in-memory, task-isolated, and expiring. It resolves only authoritative recent objects, cannot approve or expand scope, and enforces `no_push` before approval or execution.
-- Push-to-talk uses visible hold/toggle capture, local whisper.cpp contracts, partial/final/editable transcripts, default audio/transcript deletion, and the same orchestrator as text. Missing Whisper is typed unavailable; there is no cloud/mock fallback.
+- Push-to-talk uses visible hold/toggle capture, local whisper.cpp contracts, partial/final/editable transcripts, default audio/transcript deletion, and the same orchestrator as text. v1.8.6 and tiny.en/base.en/small.en are locally SHA-256 pinned; mismatches fail closed. There is no cloud/mock fallback.
 - One deterministic Stop authority covers capture, TTS, all nonterminal tasks, and unconsumed approvals. Voice cannot approve R2/R3.
 - Native Tauri presence includes Option+Space press/release, a content-free menu state, non-focus-stealing voice overlay, and authoritative execution HUD. Local macOS TTS speaks only bounded `SpokenResponse`.
 - A single local runtime manager serializes heavy Qwen/Whisper use on 16 GB, exposes health/eviction/offline state, and retains numeric-only bounded voice latency samples.
@@ -23,7 +23,7 @@ Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation 
 
 | Gate | Result |
 |---|---|
-| `uv run --project apps/daemon pytest` | **956 passed** in 24.45 seconds |
+| `uv run --project apps/daemon pytest` | **958 passed** in 33.63 seconds |
 | Unlocked focus rerun | 6 foreground/focus live tests passed; no skip |
 | Ruff check / format | clean / 219 files formatted |
 | `mypy apps/daemon/src` (strict) | clean, 118 source files |
@@ -31,7 +31,7 @@ Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation 
 | Desktop ESLint / TypeScript / Vite | clean / clean / built |
 | Cargo check / Rust tests | passed / 1 passed |
 | `alembic upgrade head` | passed through `0004_hash_chain` |
-| `make test` | passed: **1,030 tests** (955 daemon + 75 desktop), plus 1 transient locked-desktop focus skip |
+| `make test` | passed: **1,033 tests** (958 daemon + 75 desktop), no skip |
 | Phase 5.4 helper/AX targeted matrix | **110 passed** |
 | Swift AX helper release build/package/signature | passed |
 
@@ -59,11 +59,12 @@ This is recorded as environmental volatility, not a product pass or failure.
 
 See `docs/PHASE_5_2_5_3_CAPSTONE.md` for the complete matrix.
 
-Phase 5.4 real evidence is in `docs/PHASE_5_4_CAPSTONE.md`. The fixture packaged, signed, launched, and reported its unique bundle identifier. The current real TCC probe returned false / `not_determined`, and the current desktop was locked (`loginwindow`); AX-dependent capstones therefore failed closed and no profile capability was promoted.
+Phase 5.4 real evidence is in `docs/PHASE_5_4_CAPSTONE.md`. The fixture packaged, signed, launched, and reported its unique bundle identifier. The explicit Settings visit left exact-helper TCC status `denied`; AX-dependent capstones therefore failed closed and no profile capability was promoted.
 
 ## Residual limits
 
-- No verified real speech accuracy, wake word, proactivity, Gmail/Calendar control, universal app control, continuous visual awareness, or long-term memory claim.
+- No verified real microphone speech accuracy, acoustic Stop/barge-in, wake word, proactivity, Gmail/Calendar control, universal app control, continuous visual awareness, or long-term memory claim.
+- No Developer ID identity, notarization, Gatekeeper-accepted package, or clean-install evidence. The current 0.1.0 DMG contains only the desktop shell.
 - AX editor/document manipulation remains experimental until Accessibility permission and real evidence exist.
 - Chromium foreground presentation and form operations remain experimental; only separately verified read-only/background capabilities are marked verified.
 - Dialogue is process-local and intentionally disappears on restart.
@@ -75,4 +76,4 @@ Phase 5.4 real evidence is in `docs/PHASE_5_4_CAPSTONE.md`. The fixture packaged
 
 ## Recommended next phase
 
-Install and integrity-pin local whisper.cpp tiny/base/small candidates; unlock the desktop; run the 30-command voice/latency/resource/offline matrix; select the measured model. Separately grant TCC manually to the exact packaged AX helper and close Phase 5.4 UI evidence. Do not begin wake-word, proactivity, or long-term memory work first.
+Capture the 30-command real microphone corpus and select the measured model; run acoustic Stop/barge-in and offline voice-to-action. Manually grant TCC to the exact helper and close the real AX matrix. Then build a complete Developer-ID-signed/notarized package and validate it in a clean macOS account. Do not begin new product capabilities first.

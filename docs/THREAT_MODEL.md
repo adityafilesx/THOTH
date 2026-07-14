@@ -76,6 +76,7 @@ New attack surfaces and their mitigations; the §4 invariants all still hold and
 | Interactive browser session | hostile page content (prompt injection), off-allowlist navigation, deceptive form submission | page text always `WEB_UNTRUSTED` + injection-guard scanned (containment tested); per-navigation domain scope; **two-phase submission**: prepare captures the exact payload, submit is R2 + single-use, refuses stale forms AND action hosts differing from the approved `action_url`; `current_url` scope anchors must match the session's actual page |
 | Skill engine | a skill smuggling lowered risks / extra tools / removed verification | planning-only expansion; declared risk copied verbatim (effective = max(default, declared) — downgrade attempt still halts for approval, tested); expanded plans re-enter full validation + policy review; typed input validation |
 | Voice | transcript/replay approval, embedded Stop, TTS feedback, hidden recording, duplicate tasks, audio/secret retention | visible push-to-talk only; voice never consumes approval; whole-utterance model-free Stop excludes TTS; edit/final submit-once; tracks/audio zeroised; local STT typed unavailable; bounded `SpokenResponse` suppresses secrets; no cloud fallback |
+| Local speech supply chain | replaced runtime/model weights, filename spoof, silent provider substitution | optional expected SHA-256 for executable and model is recomputed before transcription; mismatch fails typed unavailable; registry is inert data; no cloud/mock fallback |
 | Audit tampering (around the store) | direct SQLite edits rewriting history | per-task hash chain over prev-hash+task+correlation+seq+type+payload+timestamp; `verify_chain` detects mutation, deletion (seq gap), reorder; store still has no update/delete surface |
 | Recovery loops | runaway retry/replan cycles | ≤2 retries/step, ≤2 replans, depth ≤3 episodes, ≤25 executions/task; exhaustion ⇒ terminal `FAILED_REQUIRES_USER` |
 
@@ -116,6 +117,8 @@ New attack surfaces and their mitigations; the §4 invariants all still hold and
 - The AX helper development artifact is ad-hoc signed. Release packaging needs
   a stable Developer ID signature before manual TCC approval is production
   evidence.
+- The current desktop DMG is ad-hoc, fails strict verification/Gatekeeper, and
+  omits the daemon/helper/models. It is not installable release evidence.
 - Unix socket peer-UID authentication prevents other users but not a malicious
   same-user process. The helper's deliberately tiny protocol and upstream
   profile/policy gates reduce impact; code-signature-bound XPC remains a future

@@ -1,13 +1,13 @@
 # Phase 5.5 capstone evidence
 
 **Date:** 2026-07-14
-**Status:** automated gates green; real voice evidence blocked
+**Status:** pinned local runtime green; real microphone evidence blocked
 
 ## Automated evidence
 
 - Voice/text share the orchestrator and authoritative task presentation.
-- whisper.cpp is the primary local provider; missing runtime/model fails typed
-  unavailable with private temporary-file cleanup and no cloud fallback.
+- whisper.cpp v1.8.6 and tiny.en/base.en/small.en are locally installed and
+  SHA-256 pinned. Binary/model mismatch fails typed unavailable before use.
 - Partial/final/edit/correction/submit-once/cancel/audio-zeroisation contracts
   pass with the explicit mock provider.
 - Exact whole-utterance Stop bypasses intent/planner, cancels sessions/tasks/TTS,
@@ -25,27 +25,30 @@
 
 | Capstone | Result | Reason/evidence ceiling |
 |---|---|---|
-| Open TextEdit by spoken command | Not verified | no whisper.cpp model/microphone session |
+| Open TextEdit by spoken command | Not verified | runtime exists; no real microphone session |
 | Continue THOTH | Not verified end-to-end | local components exist; no real spoken input |
 | What am I working on | Not verified end-to-end | foreground/dialogue independently tested |
 | Run tests without focus theft | Not verified by voice | background/focus contracts tested |
-| Say “Thoth, stop” during task | Automated only | real speech unavailable |
+| Say “Thoth, stop” during task | Automated only | no real acoustic trial |
 | R2 by voice cannot approve | Pass automated | pending approval remains; no external effect |
-| Offline voice-to-action | Not verified | external browser denial passes; Whisper absent |
+| Offline voice-to-action | Not verified | external browser denial passes; no real microphone workflow |
 | Ambiguous “Open it” | Pass automated | 409 clarification, zero new task |
 | Barge in while speaking | Automated component pass | real mic/TTS acoustic loop unavailable |
 | Planner disabled reflex/skill | Pass automated | model-free routing/runtime floor |
 
-The 30-command real spoken matrix, Whisper WER/model comparison, end-to-end
-latency, and memory utilisation are not available. Phase 5.5 must not be called
-complete or daily-driver ready until those gates run on an unlocked desktop
+All candidates passed a bundled-WAV health probe; base.en produced one managed
+partial/final/edit/cancel run with no residual temp file. This does not select
+a production model. The 30-command real spoken matrix, real WER/intent/model
+comparison, acoustic Stop/barge-in, and installed-build latency are not
+available. Phase 5.5 must not be called complete or daily-driver ready until
+those gates run on an unlocked desktop
 with a verified local Whisper model and microphone permission.
 
 ## Final automated gates
 
 | Gate | Result |
 |---|---|
-| Daemon | 956 passed; latest aggregate run 955 passed + one transient locked-desktop focus skip |
+| Daemon | 958 passed, no skip |
 | Desktop | 75 passed across 12 files |
 | Ruff / format | clean / 219 files |
 | Strict mypy | clean / 118 source files |
@@ -54,4 +57,4 @@ with a verified local Whisper model and microphone permission.
 | Swift helper release/package/signature | passed |
 | Alembic fresh database | upgraded through `0004_hash_chain` |
 | Phase 5.4 helper/AX targeted matrix | 110 passed |
-| `make test` | 1,030 passed + one environment skip |
+| `make test` | 1,033 passed, no skip |
