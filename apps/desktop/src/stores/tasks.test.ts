@@ -59,6 +59,23 @@ const APPROVAL: ApprovalRequest = {
 beforeEach(reset);
 
 describe("applyEvent", () => {
+  it("snapshot selects the newest task when the previous active task is absent", () => {
+    useTasksStore.getState().setTasks([
+      task({ id: "older", created_at: "2026-07-11T08:00:00Z" }),
+      task({ id: "newer", created_at: "2026-07-11T09:00:00Z" }),
+    ]);
+    expect(useTasksStore.getState().activeTaskId).toBe("newer");
+  });
+
+  it("snapshot preserves an active task that still exists", () => {
+    useTasksStore.setState({ activeTaskId: "older" });
+    useTasksStore.getState().setTasks([
+      task({ id: "older" }),
+      task({ id: "newer" }),
+    ]);
+    expect(useTasksStore.getState().activeTaskId).toBe("older");
+  });
+
   it("connection.established is a no-op", () => {
     useTasksStore.getState().applyEvent(envelope("connection.established", {}));
     expect(useTasksStore.getState().tasks).toEqual({});

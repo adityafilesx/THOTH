@@ -38,12 +38,17 @@ function DaemonBridge() {
   }, [health.data?.version, setDaemonVersion]);
 
   useEffect(() => {
-    const ws = new WsClient({ onEvent: applyEvent, onStatus: setStatus });
+    const refreshSnapshot = () => {
+      void api.listTasks().then(setTasks).catch(() => {});
+      void api.pendingApprovals().then(setPendingApprovals).catch(() => {});
+    };
+    const ws = new WsClient({
+      onEvent: applyEvent,
+      onStatus: setStatus,
+      onConnected: refreshSnapshot,
+    });
     ws.connect();
     wsRef.current = ws;
-    // Initial state snapshot; WS keeps it current afterwards.
-    api.listTasks().then(setTasks).catch(() => {});
-    api.pendingApprovals().then(setPendingApprovals).catch(() => {});
     return () => ws.close();
   }, [applyEvent, setStatus, setTasks, setPendingApprovals]);
 

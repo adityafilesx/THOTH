@@ -33,7 +33,16 @@ export const useTasksStore = create<TasksState>((set) => ({
   auditByTask: {},
 
   setTasks: (tasks) =>
-    set({ tasks: Object.fromEntries(tasks.map((t) => [t.id, t])) }),
+    set((state) => {
+      const byId = Object.fromEntries(tasks.map((task) => [task.id, task]));
+      const activeTaskId =
+        state.activeTaskId && byId[state.activeTaskId]
+          ? state.activeTaskId
+          : [...tasks]
+              .sort((left, right) => left.created_at.localeCompare(right.created_at))
+              .at(-1)?.id ?? null;
+      return { tasks: byId, activeTaskId };
+    }),
   upsertTask: (task) =>
     set((s) => ({ tasks: { ...s.tasks, [task.id]: task } })),
   setActiveTask: (activeTaskId) => set({ activeTaskId }),

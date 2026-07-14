@@ -29,10 +29,16 @@ afterEach(() => {
 });
 
 describe("WsClient auth", () => {
-  it("sends the auth frame on open", async () => {
+  it("sends auth on open and connects only after server acknowledgement", async () => {
     vi.stubEnv("VITE_THOTH_TOKEN", "dev-token");
     vi.stubGlobal("WebSocket", FakeWebSocket as unknown as typeof WebSocket);
-    const client = new WsClient({ onEvent: () => {}, onStatus: () => {} });
+    const statuses: string[] = [];
+    const connected = vi.fn();
+    const client = new WsClient({
+      onEvent: () => {},
+      onStatus: (status) => statuses.push(status),
+      onConnected: connected,
+    });
     client.connect();
     await vi.waitFor(() => expect(FakeWebSocket.instances.length).toBe(1));
     const ws = FakeWebSocket.instances[0];
@@ -41,6 +47,12 @@ describe("WsClient auth", () => {
       type: "auth",
       token: "dev-token",
     });
+    expect(statuses).toEqual(["connecting"]);
+    ws.onmessage?.({
+      data: JSON.stringify({ type: "connection.established", payload: {} }),
+    });
+    expect(statuses).toEqual(["connecting", "connected"]);
+    expect(connected).toHaveBeenCalledOnce();
   });
 
   it("does not publish a false disconnection when intentionally disposed", async () => {
@@ -54,6 +66,9 @@ describe("WsClient auth", () => {
     client.connect();
     await vi.waitFor(() => expect(FakeWebSocket.instances.length).toBe(1));
     FakeWebSocket.instances[0].onopen?.();
+    FakeWebSocket.instances[0].onmessage?.({
+      data: JSON.stringify({ type: "connection.established", payload: {} }),
+    });
 
     client.close();
 
