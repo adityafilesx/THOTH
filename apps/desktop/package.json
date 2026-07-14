@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "prepare:release": "python3 scripts/prepare_release.py",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

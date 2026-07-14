@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:5173",
-    "beforeBuildCommand": "pnpm build",
+    "beforeBuildCommand": "pnpm build && pnpm prepare:release",
     "frontendDist": "../dist"
   },
   "app": {
@@ -40,8 +40,18 @@
     }
   },
   "bundle": {
-    "active": false,
-    "targets": [],
-    "icon": ["icons/icon.png"]
+    "active": true,
+    "targets": ["app", "dmg"],
+    "icon": ["icons/icon.png"],
+    "resources": {
+      "resources/THOTH Accessibility Helper.app": "THOTH Accessibility Helper.app",
+      "resources/runtime": "runtime",
+      "resources/models": "models",
+      "resources/runtime-manifest.json": "runtime-manifest.json"
+    },
+    "macOS": {
+      "minimumSystemVersion": "13.0",
+      "signingIdentity": "-"
+    }
   }
 }

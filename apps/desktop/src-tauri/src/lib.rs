@@ -2,6 +2,7 @@
 // a non-focus-stealing voice overlay, and global push-to-talk. Computer
 // interaction remains exclusively behind the daemon safety state machine.
 
+mod managed_runtime;
 mod presence;
 
 use std::sync::Mutex;
@@ -15,6 +16,7 @@ use tauri::{
 };
 
 struct PresenceStore(Mutex<PresencePayload>);
+struct RuntimeAuth(Mutex<Option<String>>);
 
 struct TrayItems {
     status: MenuItem<Wry>,
@@ -67,7 +69,11 @@ struct PushToTalkEvent {
 }
 
 #[tauri::command]
-fn session_token() -> Option<String> {
+fn session_token(auth: State<'_, RuntimeAuth>) -> Option<String> {
+    auth.0.lock().ok().and_then(|value| value.clone())
+}
+
+fn configured_session_token() -> Option<String> {
     if let Ok(token) = std::env::var("THOTH_SESSION_TOKEN") {
         if !token.is_empty() {
             return Some(token);
@@ -93,7 +99,9 @@ fn update_presence(
 
 #[tauri::command]
 fn update_voice_state(state: String, items: State<'_, TrayItems>) -> Result<(), String> {
-    items.update_voice(&state).map_err(|error| error.to_string())
+    items
+        .update_voice(&state)
+        .map_err(|error| error.to_string())
 }
 
 fn emit_push_to_talk(app: &tauri::AppHandle, state: &'static str) -> tauri::Result<()> {
@@ -135,8 +143,7 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
     let task = MenuItem::with_id(app, "task", labels.task, false, None::<&str>)?;
     let approval = MenuItem::with_id(app, "approval", labels.approval, false, None::<&str>)?;
     let stop = MenuItem::with_id(app, "stop", "Stop", true, None::<&str>)?;
-    let microphone =
-        MenuItem::with_id(app, "microphone", labels.microphone, false, None::<&str>)?;
+    let microphone = MenuItem::with_id(app, "microphone", labels.microphone, false, None::<&str>)?;
     let planner = MenuItem::with_id(app, "planner", labels.planner, false, None::<&str>)?;
     let stt = MenuItem::with_id(app, "stt", labels.stt, false, None::<&str>)?;
     let tts = MenuItem::with_id(app, "tts", labels.tts, false, None::<&str>)?;
@@ -231,12 +238,27 @@ pub fn run() {
         })
         .build();
 
-    let builder = tauri::Builder::default();
+    let builder =
+        tauri::Builder::default().manage(RuntimeAuth(Mutex::new(configured_session_token())));
     #[cfg(desktop)]
     let builder = builder.plugin(shortcut_plugin);
 
-    builder
+    let app = builder
         .setup(|app| {
+            let manage_runtime = !cfg!(debug_assertions)
+                || std::env::var("THOTH_MANAGED_RUNTIME").as_deref() == Ok("1");
+            if manage_runtime {
+                let executable = std::env::current_exe()?;
+                let data_dir = app.path().app_data_dir()?;
+                let runtime = managed_runtime::ManagedRuntime::start(&executable, data_dir)
+                    .map_err(std::io::Error::other)?;
+                *app.state::<RuntimeAuth>()
+                    .0
+                    .lock()
+                    .map_err(|_| std::io::Error::other("runtime auth lock poisoned"))? =
+                    Some(runtime.token().to_string());
+                app.manage(runtime);
+            }
             setup_tray(app)?;
             #[cfg(desktop)]
             {
@@ -254,6 +276,16 @@ pub fn run() {
             end_push_to_talk,
             set_voice_overlay_visible
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running THOTH desktop");
+        .build(tauri::generate_context!())
+        .expect("error while building THOTH desktop");
+    app.run(|handle, event| {
+        if matches!(
+            event,
+            tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
+        ) {
+            if let Some(runtime) = handle.try_state::<managed_runtime::ManagedRuntime>() {
+                runtime.shutdown();
+            }
+        }
+    });
 }

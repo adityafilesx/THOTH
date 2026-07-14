@@ -1,4 +1,4 @@
-.PHONY: setup daemon desktop dev test test-daemon test-desktop lint typecheck build migrate schemas clean
+.PHONY: setup daemon desktop dev test test-daemon test-desktop lint typecheck build bundle migrate schemas clean
 
 DAEMON := apps/daemon
 DESKTOP := apps/desktop
@@ -42,6 +42,9 @@ typecheck: ## Type-check daemon and desktop
 
 build: ## Production build of the frontend
 	pnpm -C $(DESKTOP) build
+
+bundle: ## Build the packaged local core app + DMG (current config is ad-hoc signed)
+	pnpm -C $(DESKTOP) tauri build
 
 schemas: ## Regenerate packages/shared-schemas from Pydantic contracts
 	uv run --project $(DAEMON) python -m thoth_daemon.schemas.export packages/shared-schemas/schemas
