@@ -10,11 +10,13 @@ from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict
 
+from thoth_daemon.core.local_runtime import LocalAIRuntimeManager, RuntimeComponent
 from thoth_daemon.schemas import Task, TaskSource
 from thoth_daemon.voice.contracts import (
     AudioCaptureMode,
     PartialTranscript,
     SpeechRecognitionProvider,
+    SpeechRecognitionResult,
     VoiceActivityState,
     VoiceSessionSnapshot,
 )
@@ -61,11 +63,13 @@ class VoiceSessionRegistry:
         retain_transcripts: bool = False,
         correction_window: timedelta = timedelta(seconds=3),
         clock: Callable[[], datetime] = _now,
+        runtime: LocalAIRuntimeManager | None = None,
     ) -> None:
         self._provider = provider
         self._retain_transcripts = retain_transcripts
         self._correction_window = correction_window
         self._clock = clock
+        self._runtime = runtime
         self._sessions: dict[str, _ManagedSession] = {}
 
     def start(self, mode: AudioCaptureMode) -> VoiceSessionSnapshot:
@@ -90,7 +94,7 @@ class VoiceSessionRegistry:
         audio = managed.capture.audio_bytes()
         if not audio:
             raise ValueError("voice session has no audio")
-        result = await self._provider.transcribe(audio, managed.mime)
+        result = await self._transcribe(audio, managed.mime)
         previous = managed.capture.partials[-1].text if managed.capture.partials else ""
         partial = PartialTranscript(
             text=result.transcript.text,
@@ -110,7 +114,7 @@ class VoiceSessionRegistry:
             raise ValueError("voice session has no audio")
         managed.capture.set_activity(VoiceActivityState.FINALISING)
         try:
-            result = await self._provider.transcribe(audio, managed.mime)
+            result = await self._transcribe(audio, managed.mime)
             managed.capture.finalise(result.transcript)
         except BaseException:
             managed.capture.fail()
@@ -167,6 +171,12 @@ class VoiceSessionRegistry:
             return self._sessions[session_id]
         except KeyError as exc:
             raise KeyError(f"voice session {session_id!r} was not found") from exc
+
+    async def _transcribe(self, audio: bytes, mime: str) -> SpeechRecognitionResult:
+        if self._runtime is None:
+            return await self._provider.transcribe(audio, mime)
+        async with self._runtime.use(RuntimeComponent.SPEECH_RECOGNITION):
+            return await self._provider.transcribe(audio, mime)
 
 
 class VoiceCommandService:

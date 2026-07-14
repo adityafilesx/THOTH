@@ -4,6 +4,7 @@ from fastapi import APIRouter, Request
 
 import thoth_daemon
 from thoth_daemon.config import Settings
+from thoth_daemon.core.local_runtime import LocalAIRuntimeManager
 
 router = APIRouter()
 
@@ -11,6 +12,7 @@ router = APIRouter()
 @router.get("/api/settings")
 async def get_settings(request: Request) -> dict[str, Any]:
     cfg = cast(Settings, request.app.state.settings)
+    runtime = cast(LocalAIRuntimeManager, request.app.state.local_runtime)
     return {
         "version": thoth_daemon.__version__,
         "planner": cfg.planner,
@@ -21,4 +23,5 @@ async def get_settings(request: Request) -> dict[str, Any]:
         "inference_provider": cfg.inference_provider,
         "inference_model": cfg.inference_model,
         "network_isolation": cfg.network_isolation,
+        "local_runtime": runtime.snapshot().model_dump(mode="json"),
     }

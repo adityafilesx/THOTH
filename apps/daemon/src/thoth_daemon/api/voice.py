@@ -17,6 +17,7 @@ from typing import Any, Literal, cast
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict
 
+from thoth_daemon.core.local_runtime import RuntimeUnavailable
 from thoth_daemon.core.orchestrator import Orchestrator
 from thoth_daemon.core.persona import SpokenResponse
 from thoth_daemon.schemas import TaskSource
@@ -77,7 +78,7 @@ def _stop(request: Request) -> GlobalStopAuthority:
 def _voice_error(exc: Exception) -> HTTPException:
     if isinstance(exc, KeyError):
         return HTTPException(status_code=404, detail=str(exc))
-    if isinstance(exc, STTUnavailableError):
+    if isinstance(exc, (STTUnavailableError, RuntimeUnavailable)):
         return HTTPException(status_code=503, detail=str(exc))
     if isinstance(exc, (RuntimeError, TranscriptCorrectionExpired)):
         return HTTPException(status_code=409, detail=str(exc))

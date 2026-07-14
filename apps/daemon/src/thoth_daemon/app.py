@@ -5,7 +5,17 @@ from typing import Any
 
 from fastapi import FastAPI
 
-from thoth_daemon.api import health, intent, operational, permissions, skills, tasks, voice, ws
+from thoth_daemon.api import (
+    health,
+    intent,
+    operational,
+    permissions,
+    runtime,
+    skills,
+    tasks,
+    voice,
+    ws,
+)
 from thoth_daemon.api import settings as settings_api
 from thoth_daemon.api.middleware import BearerAuthMiddleware
 from thoth_daemon.audit.store import AuditStore
@@ -20,6 +30,14 @@ from thoth_daemon.core.focus import FocusManager
 from thoth_daemon.core.foreground import ForegroundContext, ForegroundContextBroker
 from thoth_daemon.core.local_plan_client import OllamaPlanClient
 from thoth_daemon.core.local_planner import LocalPlanner
+from thoth_daemon.core.local_runtime import (
+    InferenceRuntimeDriver,
+    LocalAIRuntimeManager,
+    RuntimeComponent,
+    RuntimeRegistration,
+    SpeechRecognitionRuntimeDriver,
+    SpeechSynthesisRuntimeDriver,
+)
 from thoth_daemon.core.orchestrator import Orchestrator
 from thoth_daemon.core.planner import DeterministicMockPlanner, PlannerAdapter
 from thoth_daemon.core.policy import PolicyEngine
@@ -132,6 +150,42 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             inference_provider = DeterministicInferenceProvider()
         app.state.inference_provider = inference_provider
         app.state.runtime_monitor = LocalRuntimeMonitor(inference_provider)
+        app.state.local_runtime = LocalAIRuntimeManager(
+            memory_limit_bytes=12 * 1024 * 1024 * 1024,
+            max_heavy_concurrency=1,
+            offline=cfg.network_isolation,
+        )
+        app.state.local_runtime.register(
+            RuntimeRegistration(
+                component=RuntimeComponent.PLANNER,
+                display_name=cfg.inference_model,
+                driver=InferenceRuntimeDriver(inference_provider),
+                memory_estimate_bytes=4 * 1024 * 1024 * 1024,
+                integrity_verified=True if cfg.inference_provider == "deterministic" else None,
+                heavy=True,
+            )
+        )
+        app.state.local_runtime.register(
+            RuntimeRegistration(
+                component=RuntimeComponent.SPEECH_RECOGNITION,
+                display_name=cfg.whisper_model_path.name,
+                driver=SpeechRecognitionRuntimeDriver(app.state.speech_recognition),
+                memory_estimate_bytes=500 * 1024 * 1024,
+                integrity_verified=None,
+                heavy=True,
+            )
+        )
+        app.state.local_runtime.register(
+            RuntimeRegistration(
+                component=RuntimeComponent.TEXT_TO_SPEECH,
+                display_name="macOS local speech",
+                driver=SpeechSynthesisRuntimeDriver(app.state.speech_synthesis_provider),
+                memory_estimate_bytes=64 * 1024 * 1024,
+                integrity_verified=True,
+                heavy=False,
+            )
+        )
+        app.state.speech_synthesis.bind_runtime(app.state.local_runtime)
         app.state.dialogue = OperationalDialogueStore()
         app.state.application_profiles = build_default_application_profiles()
         app.state.default_workspace = default_ws
@@ -250,6 +304,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             app.state.speech_recognition,
             retain_transcripts=cfg.voice_retain_transcripts,
             correction_window=timedelta(seconds=cfg.voice_correction_window_seconds),
+            runtime=app.state.local_runtime,
         )
         app.state.global_stop = GlobalStopAuthority(
             sessions=app.state.voice_sessions,
@@ -278,4 +333,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(voice.router)
     app.include_router(intent.router)
     app.include_router(operational.router)
+    app.include_router(runtime.router)
     return app

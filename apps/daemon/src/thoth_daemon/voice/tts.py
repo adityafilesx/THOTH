@@ -17,7 +17,7 @@ import re
 import tempfile
 from collections.abc import Callable
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from thoth_daemon.core.persona import SpokenResponse
 from thoth_daemon.voice.contracts import (
@@ -28,6 +28,9 @@ from thoth_daemon.voice.contracts import (
     SpeechSynthesisHealth,
     SpeechSynthesisProvider,
 )
+
+if TYPE_CHECKING:
+    from thoth_daemon.core.local_runtime import LocalAIRuntimeManager
 
 logger = logging.getLogger(__name__)
 
@@ -337,9 +340,15 @@ class SpeechSynthesisService:
         provider: SpeechSynthesisProvider,
         *,
         rate_wpm: int = 185,
+        runtime: LocalAIRuntimeManager | None = None,
     ) -> None:
         self._provider = provider
         self._rate_wpm = rate_wpm
+        self._runtime = runtime
+        self._managed_task: asyncio.Task[int] | None = None
+
+    def bind_runtime(self, runtime: LocalAIRuntimeManager) -> None:
+        self._runtime = runtime
 
     async def speak(self, response: SpokenResponse) -> SpeechPlayback | None:
         text = response.text.strip()
@@ -349,19 +358,40 @@ class SpeechSynthesisService:
             text = text[: response.max_chars - 1].rstrip() + "…"
         if _SENSITIVE_SPEECH.search(text):
             text = "Sensitive details are available in the display."
-        return await self._provider.speak(
-            SpeechRequest(
-                segments=(SpeechSegment(text=text),),
-                rate_wpm=self._rate_wpm,
-            )
+        request = SpeechRequest(
+            segments=(SpeechSegment(text=text),),
+            rate_wpm=self._rate_wpm,
         )
+        return await self._speak(request)
 
     async def cue(
         self,
         cue: Literal["confirmation", "attention", "failure"] = "confirmation",
     ) -> SpeechPlayback:
         segment = SpeechSegment(cue=cue)
-        return await self._provider.speak(SpeechRequest(segments=(segment,)))
+        return await self._speak(SpeechRequest(segments=(segment,)))
 
     async def interrupt(self) -> bool:
-        return await self._provider.interrupt()
+        interrupted = await self._provider.interrupt()
+        task = self._managed_task
+        if task is not None and not task.done():
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+            interrupted = True
+        return interrupted
+
+    async def _speak(self, request: SpeechRequest) -> SpeechPlayback:
+        if self._runtime is None:
+            return await self._provider.speak(request)
+        self._managed_task = asyncio.create_task(self._managed_playback(request))
+        return _TaskSpeechHandle(self._managed_task)
+
+    async def _managed_playback(self, request: SpeechRequest) -> int:
+        from thoth_daemon.core.local_runtime import RuntimeComponent
+
+        if self._runtime is None:  # guarded by _speak; keeps narrowing explicit
+            raise RuntimeError("local runtime manager is not bound")
+        async with self._runtime.use(RuntimeComponent.TEXT_TO_SPEECH):
+            handle = await self._provider.speak(request)
+            return await handle.wait()

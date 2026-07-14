@@ -15,6 +15,11 @@ async def test_settings_shape(client: AsyncClient) -> None:
     ):
         assert key in body
     assert "session_token" not in body and "token" not in body
+    assert set(body["local_runtime"]["components"]) == {
+        "planner",
+        "speech_recognition",
+        "text_to_speech",
+    }
 
 
 async def test_settings_requires_auth(client: AsyncClient) -> None:
