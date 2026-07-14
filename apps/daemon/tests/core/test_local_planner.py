@@ -76,6 +76,16 @@ class TestPlanValidator:
             VALIDATOR.validate(raw, task_id="t1")
         assert exc.value.kind is PlanRejection.BAD_ARGUMENTS
 
+    def test_rejection_string_is_safe_at_serialization_boundaries(self) -> None:
+        raw = _plan({"tool_name": "fs_read_file", "arguments": {}, "declared_risk": "R0"})
+
+        with pytest.raises(PlanRejected) as exc:
+            VALIDATOR.validate(raw, task_id="t1")
+
+        assert str(exc.value) == "bad_arguments"
+        assert "validation error" in exc.value.detail
+        assert "pydantic.dev" in exc.value.detail
+
     def test_risk_downgrade_rejected(self) -> None:
         # fs_write_file default is R1; a plan declaring R0 is a downgrade.
         raw = _plan(

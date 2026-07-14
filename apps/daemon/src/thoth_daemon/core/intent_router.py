@@ -190,7 +190,9 @@ _NATURAL_SKILL_ALIASES: dict[str, str] = {
     "run tests": "run-project-tests",
     "prepare a commit": "prepare-git-commit",
     "show the modified files": "project-health-check",
+    "show me the modified files": "project-health-check",
     "show modified files": "project-health-check",
+    "show me modified files": "project-health-check",
     "summarize the workspace": "organize-workspace",
     "summarise the workspace": "organize-workspace",
 }

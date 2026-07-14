@@ -52,7 +52,11 @@ class PlanRejection(StrEnum):
 
 class PlanRejected(Exception):
     def __init__(self, kind: PlanRejection, detail: str) -> None:
-        super().__init__(f"{kind.value}: {detail}")
+        # Exception text crosses task, audit, WebSocket, and desktop
+        # boundaries. Keep it stable and user-safe; detailed validator output
+        # remains typed on the in-process exception for diagnostics/tests and
+        # must never be serialized implicitly through ``str(exc)``.
+        super().__init__(kind.value)
         self.kind = kind
         self.detail = detail
 

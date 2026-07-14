@@ -1,8 +1,9 @@
 """Reflex / skill / local-reasoning intent router (Phase 5 slice 3).
 
-Three tiers: REFLEX (deterministic commands — NEVER an LLM), SKILL
-(installed workflows, deterministic after inputs resolve), PLANNER (novel/
-ambiguous — the only tier that may touch an inference provider). The
+Four tiers: REFLEX (deterministic commands — NEVER an LLM), SKILL
+(installed workflows, deterministic after inputs resolve), CLARIFY (requires
+authoritative user context), and PLANNER (novel/ambiguous — the only tier that
+may touch an inference provider). The
 central guarantee: a reflex or skill input never constructs or calls a
 provider.
 """
@@ -13,6 +14,7 @@ from thoth_daemon.core.intent_router import (
     IntentRouter,
     ReflexKind,
     RouteTier,
+    build_skill_aliases,
     dispatch_intent,
 )
 
@@ -173,6 +175,22 @@ class TestNoLlmOnReflexOrSkill:
 
         assert spy.calls == []
         assert result.tier is RouteTier.CLARIFY
+
+    async def test_natural_modified_files_phrase_uses_skill_without_planner(self) -> None:
+        spy = _SpyPlanner()
+        router = IntentRouter(
+            known_apps=set(),
+            known_skills={"project-health-check"},
+            known_workspaces=set(),
+            skill_aliases=build_skill_aliases({"project-health-check"}),
+        )
+
+        result = await dispatch_intent(router, "Show me the modified files.", planner=spy)
+
+        assert spy.calls == []
+        assert result.tier is RouteTier.REFLEX
+        assert result.reflex_kind is ReflexKind.RUN_SKILL
+        assert result.target == "project-health-check"
 
     async def test_planner_tier_invokes_the_planner_once(self) -> None:
         spy = _SpyPlanner()
