@@ -170,7 +170,7 @@ class TestSeeds:
         await init_schema(db)
         store = SkillStore(make_session_factory(db))
         created = await seed_builtin_skills(store)
-        assert len(created) == 5
+        assert len(created) == 6
         again = await seed_builtin_skills(store)
         assert again == []  # idempotent
         names = {s.name for s in await store.list_skills()}
@@ -180,6 +180,7 @@ class TestSeeds:
             "research-and-save",
             "prepare-git-commit",
             "organize-workspace",
+            "run-project-tests",
         }
 
     async def test_seeded_skills_expand_cleanly(self, tmp_path: Path) -> None:
@@ -193,6 +194,7 @@ class TestSeeds:
             "research-and-save": {"url": "https://example.com", "dest_path": "/p/out.md"},
             "prepare-git-commit": {"repo_path": "/p"},
             "organize-workspace": {"workspace_path": "/p"},
+            "run-project-tests": {"project_path": "/p"},
         }
         for skill in await store.list_skills():
             plan = engine.expand(skill, inputs[skill.name], task_id="t")

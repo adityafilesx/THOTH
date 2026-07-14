@@ -76,6 +76,10 @@ _BARE = [
         ReflexKind.STATUS,
         re.compile(r"^read (the )?(current )?(task )?status[?.! ]*$"),
     ),
+    (
+        ReflexKind.STATUS,
+        re.compile(r"^what am i working on[?.! ]*$"),
+    ),
     (ReflexKind.MUTE, re.compile(r"^(thoth[ ,]*)?mute( thoth| yourself)?[.! ]*$")),
     (
         ReflexKind.INTERRUPT,
@@ -113,6 +117,14 @@ class IntentRouter:
             if rx.match(low) or rx.match(command):
                 return RoutedIntent(tier=RouteTier.REFLEX, reflex_kind=kind, raw=text)
 
+        if skill := self._resolve_skill(command.rstrip(".!? ")):
+            return RoutedIntent(
+                tier=RouteTier.REFLEX,
+                reflex_kind=ReflexKind.RUN_SKILL,
+                target=skill,
+                raw=text,
+            )
+
         m = _OPEN.match(command)
         if m and (app := self._apps.get(m.group("arg").strip())):
             return RoutedIntent(
@@ -147,6 +159,29 @@ class IntentRouter:
         if arg in self._skills:
             return self._skills[arg]
         return self._skill_aliases.get(arg)
+
+
+_NATURAL_SKILL_ALIASES: dict[str, str] = {
+    "run the tests": "run-project-tests",
+    "run tests": "run-project-tests",
+    "prepare a commit": "prepare-git-commit",
+    "show the modified files": "project-health-check",
+    "show modified files": "project-health-check",
+    "summarize the workspace": "organize-workspace",
+    "summarise the workspace": "organize-workspace",
+}
+
+
+def build_skill_aliases(skill_names: set[str]) -> dict[str, str]:
+    aliases = {name.replace("-", " "): name for name in skill_names}
+    aliases.update(
+        {
+            phrase: target
+            for phrase, target in _NATURAL_SKILL_ALIASES.items()
+            if target in skill_names
+        }
+    )
+    return aliases
 
 
 class IntentPlanner(Protocol):

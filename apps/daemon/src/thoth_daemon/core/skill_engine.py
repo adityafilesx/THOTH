@@ -227,6 +227,30 @@ def _builtin_skills() -> list[SkillDefinition]:
                 ),
             ],
         ),
+        SkillDefinition(
+            name="run-project-tests",
+            description="Run the project's complete local test gate with visible approval.",
+            inputs=["project_path"],
+            workflow=[
+                "Request approval for the bounded local test command",
+                "Run the complete project test gate",
+                "Verify that the command exited successfully",
+            ],
+            steps=[
+                SkillStep(
+                    title="Run tests in {project_path}",
+                    tool_name="shell_run",
+                    arguments={"command": "make test", "cwd": "{project_path}"},
+                    declared_risk=RiskLevel.R2,
+                    verification_checks=[
+                        VerificationCheck(
+                            kind=VerifierKind.EXIT_CODE,
+                            params={"expected": 0},
+                        )
+                    ],
+                )
+            ],
+        ),
     ]
 
 

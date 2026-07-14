@@ -15,7 +15,12 @@ from typing import Any, cast
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, ConfigDict
 
-from thoth_daemon.core.intent_router import IntentRouter, ReflexKind, RouteTier
+from thoth_daemon.core.intent_router import (
+    IntentRouter,
+    ReflexKind,
+    RouteTier,
+    build_skill_aliases,
+)
 from thoth_daemon.storage.skills import SkillStore
 from thoth_daemon.voice.metrics import VoiceLatencyMetrics, VoiceLatencyStage
 
@@ -35,14 +40,11 @@ class RouteBody(BaseModel):
 async def _build_router(request: Request) -> IntentRouter:
     skills = cast(SkillStore, request.app.state.skills)
     names = {s.name for s in await skills.list_skills()}
-    aliases: dict[str, str] = {}
-    for name in names:
-        aliases[name.replace("-", " ")] = name  # "project health check" -> slug
     return IntentRouter(
         known_apps=_BASE_APPS,
         known_skills=names,
         known_workspaces={"THOTH"},
-        skill_aliases=aliases,
+        skill_aliases=build_skill_aliases(names),
     )
 
 

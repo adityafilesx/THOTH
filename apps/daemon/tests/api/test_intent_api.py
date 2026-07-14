@@ -16,12 +16,19 @@ class TestIntentRoute:
         assert body["reflex_kind"] == "stop"
 
     async def test_reflex_run_seeded_skill(self, client: AsyncClient) -> None:
-        # The five built-in skills are seeded; "run <name>" is a reflex.
+        # Built-in skills are seeded; "run <name>" is a reflex.
         r = await client.post("/api/intent/route", json={"text": "run organize-workspace"})
         body = r.json()
         assert body["tier"] == "reflex"
         assert body["reflex_kind"] == "run_skill"
         assert body["target"] == "organize-workspace"
+
+    async def test_natural_test_command_routes_to_seeded_skill(self, client: AsyncClient) -> None:
+        r = await client.post("/api/intent/route", json={"text": "Thoth, run the tests."})
+        body = r.json()
+        assert body["tier"] == "reflex"
+        assert body["reflex_kind"] == "run_skill"
+        assert body["target"] == "run-project-tests"
 
     async def test_reflex_open_known_app(self, client: AsyncClient) -> None:
         r = await client.post("/api/intent/route", json={"text": "open Finder"})

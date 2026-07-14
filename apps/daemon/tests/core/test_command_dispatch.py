@@ -3,7 +3,16 @@ from typing import Any
 
 from thoth_daemon.core.command_dispatch import CommandDispatcher
 from thoth_daemon.core.intent_router import ReflexKind, RouteTier
-from thoth_daemon.schemas import ExecutionPlan, Task, TaskSource, TaskState, WorkspaceProfile
+from thoth_daemon.schemas import (
+    ExecutionPlan,
+    RiskLevel,
+    SkillDefinition,
+    SkillStep,
+    Task,
+    TaskSource,
+    TaskState,
+    WorkspaceProfile,
+)
 
 
 class FakeOrchestrator:
@@ -53,6 +62,25 @@ class FakeSpeech:
 class EmptySkills:
     async def list_skills(self) -> list[Any]:
         return []
+
+
+class TestSkills:
+    async def list_skills(self) -> list[SkillDefinition]:
+        return [
+            SkillDefinition(
+                name="run-project-tests",
+                description="Run tests",
+                inputs=["project_path"],
+                steps=[
+                    SkillStep(
+                        title="Run tests",
+                        tool_name="shell_run",
+                        arguments={"command": "make test", "cwd": "{project_path}"},
+                        declared_risk=RiskLevel.R2,
+                    )
+                ],
+            )
+        ]
 
 
 def _dispatcher(tmp_path: Path) -> tuple[CommandDispatcher, FakeOrchestrator, FakeStop]:
@@ -120,3 +148,25 @@ async def test_novel_command_enters_planner_once(tmp_path: Path) -> None:
     assert result.intent.tier is RouteTier.PLANNER
     assert result.task is not None
     assert orchestrator.submitted == [("inspect this project for problems", TaskSource.TEXT)]
+
+
+async def test_natural_test_command_uses_authoritative_skill_plan(tmp_path: Path) -> None:
+    orchestrator = FakeOrchestrator()
+    dispatcher = CommandDispatcher(
+        orchestrator=orchestrator,
+        stop=FakeStop(),
+        speech=FakeSpeech(),
+        skills=TestSkills(),
+        workspace=WorkspaceProfile(name="THOTH", root_path=str(tmp_path), trusted=True),
+        known_apps=set(),
+    )
+
+    result = await dispatcher.dispatch("Thoth, run the tests.", TaskSource.VOICE)
+
+    assert result.task is not None
+    assert orchestrator.submitted == []
+    assert len(orchestrator.plans) == 1
+    step = orchestrator.plans[0].steps[0]
+    assert step.tool_name == "shell_run"
+    assert step.arguments == {"command": "make test", "cwd": str(tmp_path)}
+    assert step.declared_risk is RiskLevel.R2

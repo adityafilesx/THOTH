@@ -10,7 +10,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from thoth_daemon.core.intent_router import IntentRouter, ReflexKind, RoutedIntent, RouteTier
+from thoth_daemon.core.intent_router import (
+    IntentRouter,
+    ReflexKind,
+    RoutedIntent,
+    RouteTier,
+    build_skill_aliases,
+)
 from thoth_daemon.core.persona import (
     PersonaResponse,
     PersonaResponseComposer,
@@ -85,12 +91,12 @@ class CommandDispatcher:
 
     async def dispatch(self, text: str, source: TaskSource) -> CommandDispatchResult:
         skills = await self._skills.list_skills()
-        aliases = {skill.name.replace("-", " "): skill.name for skill in skills}
+        names = {skill.name for skill in skills if skill.enabled}
         router = IntentRouter(
             known_apps=self._known_apps,
-            known_skills={skill.name for skill in skills if skill.enabled},
+            known_skills=names,
             known_workspaces={self._workspace.name, "THOTH"},
-            skill_aliases=aliases,
+            skill_aliases=build_skill_aliases(names),
         )
         intent = router.route(text)
 
@@ -202,6 +208,10 @@ class CommandDispatcher:
     def _default_skill_inputs(self, skill: SkillDefinition) -> dict[str, str] | None:
         if not skill.inputs:
             return {}
-        if skill.inputs == ["project_path"] and self._workspace.trusted:
-            return {"project_path": self._workspace.root_path}
+        if (
+            len(skill.inputs) == 1
+            and skill.inputs[0] in {"project_path", "repo_path", "workspace_path"}
+            and self._workspace.trusted
+        ):
+            return {skill.inputs[0]: self._workspace.root_path}
         return None

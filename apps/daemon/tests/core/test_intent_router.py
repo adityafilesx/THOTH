@@ -19,7 +19,11 @@ from thoth_daemon.core.intent_router import (
 ROUTER = IntentRouter(
     known_apps={"Safari", "Terminal", "TextEdit"},
     known_skills={"project-health-check", "continue-project", "prepare-commit"},
-    skill_aliases={"health check": "project-health-check", "prep commit": "prepare-commit"},
+    skill_aliases={
+        "health check": "project-health-check",
+        "prep commit": "prepare-commit",
+        "prepare a commit": "prepare-commit",
+    },
     known_workspaces={"THOTH", "demo"},
 )
 
@@ -36,6 +40,7 @@ class TestReflexTier:
             ("status", ReflexKind.STATUS),
             ("what is the current status", ReflexKind.STATUS),
             ("Thoth, read the current task status.", ReflexKind.STATUS),
+            ("Thoth, what am I working on?", ReflexKind.STATUS),
             ("mute", ReflexKind.MUTE),
             ("interrupt", ReflexKind.INTERRUPT),
             ("be quiet", ReflexKind.INTERRUPT),
@@ -84,6 +89,12 @@ class TestReflexTier:
         assert intent.tier is RouteTier.REFLEX
         assert intent.reflex_kind is ReflexKind.RUN_SKILL
         assert intent.target == "project-health-check"
+
+    def test_exact_natural_skill_phrase_is_model_free(self) -> None:
+        intent = ROUTER.route("Thoth, prepare a commit.")
+        assert intent.tier is RouteTier.REFLEX
+        assert intent.reflex_kind is ReflexKind.RUN_SKILL
+        assert intent.target == "prepare-commit"
 
 
 class TestPlannerTier:

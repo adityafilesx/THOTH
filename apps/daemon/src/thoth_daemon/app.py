@@ -67,6 +67,7 @@ from thoth_daemon.macos.ax_helper import AXHelperClient, AXHelperSemanticAXAdapt
 from thoth_daemon.macos.ax_permission import AXPermissionService
 from thoth_daemon.schemas import ResourceScope, WorkspaceProfile
 from thoth_daemon.security.auth import mint_token, write_token_file
+from thoth_daemon.security.paths import expand_and_resolve
 from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
 from thoth_daemon.storage.permissions import PermissionStore
 from thoth_daemon.storage.skills import SkillStore
@@ -115,13 +116,38 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         permissions_store = PermissionStore(session_factory)
         existing = await permissions_store.list_workspaces()
-        if existing:
+        configured_profiles: list[WorkspaceProfile] = []
+        for configured_path in cfg.trusted_workspaces:
+            normalized = str(expand_and_resolve(configured_path))
+            match = next(
+                (
+                    workspace
+                    for workspace in existing
+                    if workspace.root_path
+                    and str(expand_and_resolve(workspace.root_path)) == normalized
+                ),
+                None,
+            )
+            if match is None:
+                match = WorkspaceProfile(
+                    name=expand_and_resolve(configured_path).name or "default",
+                    root_path=normalized,
+                    trusted=True,
+                )
+            elif match.root_path != normalized or not match.trusted:
+                match = match.model_copy(update={"root_path": normalized, "trusted": True})
+            await permissions_store.upsert_workspace(match)
+            configured_profiles.append(match)
+
+        if configured_profiles:
+            default_ws = configured_profiles[0]
+        elif existing:
             default_ws = existing[0]
         else:
             default_ws = WorkspaceProfile(
                 name="default",
-                root_path=cfg.trusted_workspaces[0] if cfg.trusted_workspaces else "",
-                trusted=bool(cfg.trusted_workspaces),
+                root_path="",
+                trusted=False,
             )
             await permissions_store.upsert_workspace(default_ws)
         app.state.permissions = permissions_store

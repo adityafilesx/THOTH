@@ -1,4 +1,10 @@
+from pathlib import Path
+
+from fastapi.testclient import TestClient
 from httpx import AsyncClient
+
+from thoth_daemon.app import create_app
+from thoth_daemon.config import Settings
 
 
 async def _default_ws(client: AsyncClient) -> dict:
@@ -69,3 +75,29 @@ async def test_grant_emits_system_audit_event(client: AsyncClient) -> None:
     )
     audit = (await client.get("/api/tasks/system/audit")).json()
     assert any(e["event_type"] == "permission.granted" for e in audit)
+
+
+async def test_explicit_workspace_config_supersedes_stale_empty_default(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "persistent.db"
+    common = {
+        "db_path": db_path,
+        "log_dir": tmp_path / "logs",
+        "session_token": "test-token",
+        "session_token_path": tmp_path / "session.token",
+    }
+    with TestClient(create_app(Settings(**common, trusted_workspaces=[]))):
+        pass
+
+    trusted = tmp_path / "THOTH"
+    trusted.mkdir()
+    app = create_app(Settings(**common, trusted_workspaces=[str(trusted)]))
+    with TestClient(app):
+        selected = app.state.default_workspace
+        assert selected.root_path == str(trusted.resolve())
+        assert selected.trusted is True
+        profiles = await app.state.permissions.list_workspaces()
+        # The stale row was preserved rather than silently elevated or overwritten.
+        assert any(profile.root_path == "" and not profile.trusted for profile in profiles)
+        assert any(profile.id == selected.id and profile.trusted for profile in profiles)

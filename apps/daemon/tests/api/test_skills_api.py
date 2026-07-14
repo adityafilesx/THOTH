@@ -6,7 +6,7 @@ from thoth_daemon.storage.skills import SkillStore
 
 
 async def test_skills_seeded_with_builtins(client: AsyncClient) -> None:
-    # Phase 4 slice 5: the five built-in skills are seeded idempotently.
+    # Built-in skills are seeded idempotently.
     r = await client.get("/api/skills")
     assert r.status_code == 200
     names = {s["name"] for s in r.json()}
@@ -16,6 +16,7 @@ async def test_skills_seeded_with_builtins(client: AsyncClient) -> None:
         "research-and-save",
         "prepare-git-commit",
         "organize-workspace",
+        "run-project-tests",
     } <= names
 
 
