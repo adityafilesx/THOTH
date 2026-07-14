@@ -18,13 +18,14 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict
 
 from thoth_daemon.core.orchestrator import Orchestrator
+from thoth_daemon.core.persona import SpokenResponse
 from thoth_daemon.schemas import TaskSource
 from thoth_daemon.voice.contracts import AudioCaptureMode
 from thoth_daemon.voice.service import VoiceCommandService, VoiceSessionRegistry
 from thoth_daemon.voice.session import TranscriptCorrectionExpired
 from thoth_daemon.voice.stop import GlobalStopAuthority
 from thoth_daemon.voice.stt import STTAdapter, STTUnavailableError
-from thoth_daemon.voice.tts import TTSSpeaker
+from thoth_daemon.voice.tts import SpeechSynthesisService
 
 router = APIRouter()
 
@@ -57,8 +58,8 @@ def _stt(request: Request) -> STTAdapter:
     return cast(STTAdapter, request.app.state.stt)
 
 
-def _tts(request: Request) -> TTSSpeaker:
-    return cast(TTSSpeaker, request.app.state.tts)
+def _tts(request: Request) -> SpeechSynthesisService:
+    return cast(SpeechSynthesisService, request.app.state.speech_synthesis)
 
 
 def _sessions(request: Request) -> VoiceSessionRegistry:
@@ -111,8 +112,8 @@ async def voice_task(request: Request) -> dict[str, Any]:
 
 @router.post("/api/voice/say")
 async def say(body: SayBody, request: Request) -> dict[str, Any]:
-    await _tts(request).speak(body.text)
-    return {"speaking": True}
+    handle = await _tts(request).speak(SpokenResponse(text=body.text))
+    return {"speaking": handle is not None}
 
 
 @router.post("/api/voice/interrupt")

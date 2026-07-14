@@ -41,7 +41,7 @@ def _prime(app: FastAPI, text: str, *, retain_transcripts: bool = False) -> None
     )
     stop = GlobalStopAuthority(
         sessions=sessions,
-        tts=app.state.tts,
+        tts=app.state.speech_synthesis,
         orchestrator=app.state.orchestrator,
     )
     app.state.voice_sessions = sessions
@@ -50,7 +50,7 @@ def _prime(app: FastAPI, text: str, *, retain_transcripts: bool = False) -> None
         sessions=sessions,
         stop=stop,
         orchestrator=app.state.orchestrator,
-        tts=app.state.tts,
+        tts=app.state.speech_synthesis,
     )
 
 

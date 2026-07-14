@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from httpx import AsyncClient
 
 from thoth_daemon.voice.stt import MockSTTAdapter, Transcript
-from thoth_daemon.voice.tts import TTSSpeaker
+from thoth_daemon.voice.tts import MacOSSpeechSynthesisProvider, SpeechSynthesisService
 
 
 def _prime_stt(app: FastAPI, text: str) -> None:
@@ -21,9 +21,14 @@ def _prime_stt(app: FastAPI, text: str) -> None:
 
 
 def _silent_tts(app: FastAPI) -> None:
-    app.state.tts = TTSSpeaker(
-        command=lambda text: [sys.executable, "-c", "import time; time.sleep(5)"]
+    provider = MacOSSpeechSynthesisProvider(
+        command=lambda segment, request: [
+            sys.executable,
+            "-c",
+            "import time; time.sleep(5)",
+        ]
     )
+    app.state.speech_synthesis = SpeechSynthesisService(provider)
 
 
 class TestTranscribe:

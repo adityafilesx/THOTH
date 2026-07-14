@@ -63,7 +63,7 @@ from thoth_daemon.voice.stt import (
     SpeechRecognitionSTTAdapter,
     WhisperCppSpeechRecognitionProvider,
 )
-from thoth_daemon.voice.tts import TTSSpeaker
+from thoth_daemon.voice.tts import MacOSSpeechSynthesisProvider, SpeechSynthesisService
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -106,7 +106,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.skills = SkillStore(session_factory)
         await seed_builtin_skills(app.state.skills)  # idempotent (Phase 4 slice 5)
 
-        app.state.tts = TTSSpeaker()
+        app.state.speech_synthesis_provider = MacOSSpeechSynthesisProvider()
+        app.state.speech_synthesis = SpeechSynthesisService(app.state.speech_synthesis_provider)
         app.state.speech_recognition = WhisperCppSpeechRecognitionProvider(
             executable=cfg.whisper_executable,
             model_path=cfg.whisper_model_path,
@@ -252,14 +253,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
         app.state.global_stop = GlobalStopAuthority(
             sessions=app.state.voice_sessions,
-            tts=app.state.tts,
+            tts=app.state.speech_synthesis,
             orchestrator=app.state.orchestrator,
         )
         app.state.voice_commands = VoiceCommandService(
             sessions=app.state.voice_sessions,
             stop=app.state.global_stop,
             orchestrator=app.state.orchestrator,
-            tts=app.state.tts,
+            tts=app.state.speech_synthesis,
         )
         log.info("daemon_started", extra={"data": {"host": cfg.host, "port": cfg.port}})
         yield

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Protocol
+from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -110,3 +110,60 @@ class SpeechRecognitionProvider(Protocol):
     async def transcribe(self, audio_bytes: bytes, mime: str) -> SpeechRecognitionResult: ...
 
     async def unload(self) -> None: ...
+
+
+class SpeechPlaybackState(StrEnum):
+    UNAVAILABLE = "unavailable"
+    IDLE = "idle"
+    SPEAKING = "speaking"
+    INTERRUPTED = "interrupted"
+    FAILED = "failed"
+
+
+class SpeechVoice(_VoiceModel):
+    identifier: str = Field(min_length=1, max_length=128)
+    display_name: str = Field(min_length=1, max_length=128)
+    language: str = Field(min_length=2, max_length=32)
+
+
+class SpeechSegment(_VoiceModel):
+    text: str = Field(default="", max_length=240)
+    cue: Literal["confirmation", "attention", "failure"] | None = None
+    pause_after_ms: int = Field(default=0, ge=0, le=2_000)
+
+    @model_validator(mode="after")
+    def _has_content(self) -> SpeechSegment:
+        if not self.text.strip() and self.cue is None:
+            raise ValueError("speech segment requires text or cue")
+        return self
+
+
+class SpeechRequest(_VoiceModel):
+    segments: tuple[SpeechSegment, ...] = Field(min_length=1, max_length=16)
+    voice: SpeechVoice | None = None
+    rate_wpm: int = Field(default=185, ge=80, le=350)
+
+
+class SpeechSynthesisHealth(_VoiceModel):
+    available: bool
+    provider: str
+    voice: str | None = None
+    detail: str
+
+
+class SpeechPlayback(Protocol):
+    async def wait(self) -> int: ...
+
+    @property
+    def running(self) -> bool: ...
+
+
+class SpeechSynthesisProvider(Protocol):
+    @property
+    def state(self) -> SpeechPlaybackState: ...
+
+    async def health(self) -> SpeechSynthesisHealth: ...
+
+    async def speak(self, request: SpeechRequest) -> SpeechPlayback: ...
+
+    async def interrupt(self) -> bool: ...
