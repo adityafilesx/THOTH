@@ -20,6 +20,7 @@ THOTH's local voice implementation, deterministic command routing, safety bounda
 - Temporary transcript sessions are single-use and removed on success, exception, explicit cancel, or bounded abandonment expiry. Active capture is cleared on daemon shutdown.
 - 996 daemon tests and 95 desktop tests pass (1,091 total), with one locked-screen focus test skipped. Python lint/format/typecheck, ESLint, TypeScript, Vite production build, Rust check/test, and Alembic migration pass. The daemon suite also passes with worker-thread warnings treated as errors.
 - The repaired daemon is currently running on loopback. Live typed Stop is model-free, live route classification distinguishes skill/clarification/reflex/planner, and cancelled voice sessions become inaccessible immediately.
+- All 11 recent persisted task audit chains verified, and the final temporary-directory check found no retained THOTH voice audio.
 
 ## Not yet verified
 
