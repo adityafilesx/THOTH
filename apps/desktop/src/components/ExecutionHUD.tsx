@@ -15,6 +15,12 @@ export function ExecutionHUD({ task }: { task: TaskPayload | null }) {
   const steps = task.plan?.steps ?? [];
   const current = steps.find((step) => ACTIVE_STEP_STATES.has(step.status));
   const index = current ? steps.indexOf(current) + 1 : 0;
+  const outcome =
+    task.result_summary ??
+    (task.error
+      ? task.presentation?.display_response ??
+        "The task failed. No completion was claimed."
+      : null);
   const status =
     task.state === "FAILED" || task.state === "FAILED_REQUIRES_USER"
       ? "Partial or failed"
@@ -61,11 +67,7 @@ export function ExecutionHUD({ task }: { task: TaskPayload | null }) {
           </span>
         )}
       </div>
-      {(task.result_summary || task.error) && (
-        <p className="mt-3 text-xs text-muted">
-          {task.result_summary ?? task.error}
-        </p>
-      )}
+      {outcome && <p className="mt-3 text-xs text-muted">{outcome}</p>}
     </aside>
   );
 }

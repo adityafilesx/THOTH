@@ -69,6 +69,10 @@ ToolConstraintChecker = Callable[[str, str], None]
 # Hard cap on tool executions per task (initial plan + retries + replans
 # combined). Exceeding it escalates to FAILED_REQUIRES_USER (slice 8).
 MAX_EXECUTIONS_PER_TASK = 25
+_AUTHORITATIVE_PLAN_FAILURE = (
+    "The requested operation could not be verified after bounded retries. "
+    "No completion was claimed."
+)
 
 
 class ExecutionStateError(Exception):
@@ -244,9 +248,11 @@ class _TaskRunner:
                 await self._audit_only("task.completed", {"steps": len(self.plan.steps)})
                 return
             if not self._allow_replan:
-                await self._escalate(
-                    f"authoritative plan failed; model-generated recovery is disabled: {outcome}"
+                await self._audit_only(
+                    "recovery.replan_blocked",
+                    {"reason": outcome, "source": "authoritative_plan"},
                 )
+                await self._escalate(_AUTHORITATIVE_PLAN_FAILURE)
                 return
             # Bounded replan: the RecoveryController approved a replan and
             # ``outcome`` carries the failure context. The machine is in

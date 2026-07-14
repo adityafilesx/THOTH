@@ -69,4 +69,23 @@ describe("ExecutionHUD", () => {
     expect(screen.getByText("Partial or failed")).toBeInTheDocument();
     expect(screen.getByText("Daemon started; frontend failed.")).toBeInTheDocument();
   });
+
+  it("renders the safe presentation instead of internal task errors", () => {
+    render(
+      <ExecutionHUD
+        task={task({
+          state: "FAILED_REQUIRES_USER",
+          error: "authoritative plan failed; model-generated recovery is disabled",
+          presentation: {
+            display_response: "TextEdit did not become frontmost. No completion was claimed.",
+          } as TaskPayload["presentation"],
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByText("TextEdit did not become frontmost. No completion was claimed."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/model-generated recovery/)).not.toBeInTheDocument();
+  });
 });

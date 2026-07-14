@@ -130,8 +130,16 @@ async def test_authoritative_submit_plan_never_replans_via_model(tmp_path: Path)
     settled = await _settle_terminal(orch, task.id)
 
     assert settled.state is TaskState.FAILED_REQUIRES_USER
-    assert "authoritative plan" in (settled.error or "")
+    assert settled.error == (
+        "The requested operation could not be verified after bounded retries. "
+        "No completion was claimed."
+    )
+    assert "model-generated" not in settled.error
     assert planner.calls == []
+    events = await orch.task_audit(task.id)
+    blocked = [event for event in events if event.event_type == "recovery.replan_blocked"]
+    assert len(blocked) == 1
+    assert "previous plan failed" in blocked[0].payload["reason"]
 
 
 async def test_budget_exhaustion_ends_in_failed_requires_user(tmp_path: Path) -> None:

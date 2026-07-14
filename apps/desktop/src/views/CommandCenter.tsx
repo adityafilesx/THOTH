@@ -108,8 +108,9 @@ export function CommandCenter() {
                 {active.error && (
                   <div>
                     <div className="eyebrow mb-1 text-danger">failure</div>
-                    <p className="font-mono text-xs text-danger">
-                      {active.error}
+                    <p className="text-xs text-danger">
+                      {active.presentation?.display_response ??
+                        "The task failed. No completion was claimed."}
                     </p>
                   </div>
                 )}
