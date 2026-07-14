@@ -220,6 +220,51 @@ class _TaskRunner:
             return False
         return self._approval_ok.get(invocation_id, False)
 
+    async def _approve_invocation(
+        self,
+        step: PlanStep,
+        invocation: ToolInvocation,
+        effective_risk: Any,
+        allowed_scope: ResourceScope,
+    ) -> bool:
+        """Obtain single-use authority for exactly one tool execution.
+
+        Recovery calls this with a newly minted invocation, so a retry can
+        never reuse the grant consumed by the previous attempt.
+        """
+        request = self._approvals.request(
+            task_id=self.task.id,
+            invocation_id=invocation.id,
+            step_id=step.id,
+            tool_name=step.tool_name,
+            arguments=invocation.arguments,
+            risk=effective_risk,
+            reason=f"{effective_risk.value} action requires explicit approval before execution",
+            target=self._target_of(step, invocation.arguments),
+        )
+        request.correlation_id = self._corr
+        await self._goto(TaskState.WAITING_FOR_APPROVAL, "awaiting approval")
+        await self._publish("approval.requested", {"approval": request.model_dump(mode="json")})
+        approved = await self._await_approval(invocation.id)
+        decided = self._approvals.get(request.id)
+        await self._publish("approval.decided", {"approval": decided.model_dump(mode="json")})
+        if self.cancelled:
+            await self._goto(TaskState.CANCELLED, "cancelled while awaiting approval")
+            return False
+        if not approved:
+            rec = self._recovery.on_denied(self.task.id, step.id, "approval denied")
+            await self._audit_only("recovery.decision", rec.model_dump(mode="json"))
+            await self._fail(f"approval denied for step '{step.title}'")
+            return False
+
+        # A user-approved argument edit is still untrusted input. Re-run the
+        # typed and scope gates against the exact invocation that will execute.
+        invocation.arguments = decided.arguments
+        if not await self._scope_gate(step, invocation, allowed_scope):
+            return False
+        await self._goto(TaskState.EXECUTING, "approved; executing")
+        return True
+
     # -- main loop -------------------------------------------------------
     async def run(self) -> None:
         try:
@@ -405,33 +450,8 @@ class _TaskRunner:
             await self._goto(TaskState.EXECUTING, "advance to next step")
 
         if requires_approval:
-            request = self._approvals.request(
-                task_id=self.task.id,
-                invocation_id=invocation.id,
-                step_id=step.id,
-                tool_name=step.tool_name,
-                arguments=step.arguments,
-                risk=effective_risk,
-                reason=f"{effective_risk.value} action requires explicit approval before execution",
-                target=self._target_of(step),
-            )
-            request.correlation_id = self._corr
-            await self._goto(TaskState.WAITING_FOR_APPROVAL, "awaiting approval")
-            await self._publish("approval.requested", {"approval": request.model_dump(mode="json")})
-            approved = await self._await_approval(invocation.id)
-            decided = self._approvals.get(request.id)
-            await self._publish("approval.decided", {"approval": decided.model_dump(mode="json")})
-            if self.cancelled:
-                await self._goto(TaskState.CANCELLED, "cancelled while awaiting approval")
+            if not await self._approve_invocation(step, invocation, effective_risk, allowed_scope):
                 return "stop"
-            if not approved:
-                rec = self._recovery.on_denied(self.task.id, step.id, "approval denied")
-                await self._audit_only("recovery.decision", rec.model_dump(mode="json"))
-                await self._fail(f"approval denied for step '{step.title}'")
-                return "stop"
-            # Refresh invocation arguments if the user modified them.
-            invocation.arguments = decided.arguments
-            await self._goto(TaskState.EXECUTING, "approved; executing")
         elif self.machine.state is TaskState.RISK_REVIEW:
             await self._goto(TaskState.EXECUTING, "executing")
 
@@ -624,7 +644,28 @@ class _TaskRunner:
                     f"({verification.detail}); produce a corrected plan"
                 )
             await self._goto(TaskState.RECOVERING, f"retry {rec.attempt}")
-            await self._goto(TaskState.EXECUTING, "retrying step")
+            if requires_approval:
+                # A grant authorizes one exact invocation only. Recovery is a
+                # new attempted side effect and therefore receives a fresh id,
+                # fresh scope check, and fresh approval request.
+                retry_arguments = invocation.arguments.copy()
+                invocation = ToolInvocation(
+                    correlation_id=self._corr,
+                    task_id=self.task.id,
+                    step_id=step.id,
+                    tool_name=step.tool_name,
+                    arguments=retry_arguments,
+                    effective_risk=effective_risk,
+                )
+                allowed_scope = await self._scope_provider()
+                if not await self._scope_gate(step, invocation, allowed_scope):
+                    return "stop"
+                if not await self._approve_invocation(
+                    step, invocation, effective_risk, allowed_scope
+                ):
+                    return "stop"
+            else:
+                await self._goto(TaskState.EXECUTING, "retrying step")
 
     async def _scope_gate(
         self, step: PlanStep, invocation: ToolInvocation, allowed_scope: ResourceScope
@@ -875,8 +916,8 @@ class _TaskRunner:
         await self._audit_only("task.failed_requires_user", {"error": error})
 
     @staticmethod
-    def _target_of(step: PlanStep) -> str:
-        args = step.arguments
+    def _target_of(step: PlanStep, arguments: dict[str, Any] | None = None) -> str:
+        args = step.arguments if arguments is None else arguments
         for key in ("recipient", "remote", "path", "app", "domain"):
             if key in args:
                 return f"{key}={args[key]}"

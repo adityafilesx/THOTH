@@ -49,6 +49,7 @@ TRANSITIONS: dict[TaskState, frozenset[TaskState]] = {
     TaskState.RECOVERING: frozenset(
         {
             TaskState.EXECUTING,  # retry the failed step
+            TaskState.WAITING_FOR_APPROVAL,  # fresh authority for an approved retry
             TaskState.PLANNING,  # bounded replan (slice 8)
             TaskState.FAILED_REQUIRES_USER,  # budgets exhausted; user must act
             TaskState.FAILED,

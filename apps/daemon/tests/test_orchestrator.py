@@ -187,6 +187,47 @@ class TestRecoveryFlow:
             e.event_type == "recovery.decision" and e.payload["action"] == "retry" for e in audit
         )
 
+    async def test_approved_retry_requires_fresh_exact_approval(
+        self, untrusted_orch: Orchestrator
+    ) -> None:
+        task = await untrusted_orch.submit("run the flaky unstable task")
+        assert (await untrusted_orch.settle(task.id)).state is TaskState.WAITING_FOR_APPROVAL
+        first = untrusted_orch.pending_approvals()
+        assert len(first) == 1
+
+        after_first_run = await untrusted_orch.decide_approval(first[0].id, approved=True)
+
+        assert after_first_run.state is TaskState.WAITING_FOR_APPROVAL
+        second = untrusted_orch.pending_approvals()
+        assert len(second) == 1
+        assert second[0].id != first[0].id
+        assert second[0].invocation_id != first[0].invocation_id
+        assert second[0].arguments == first[0].arguments
+        audit = await untrusted_orch.task_audit(task.id)
+        assert sum(event.event_type == "tool.result" for event in audit) == 1
+        assert not any(event.event_type == "execution_blocked" for event in audit)
+
+        final = await untrusted_orch.decide_approval(second[0].id, approved=True)
+
+        assert final.state is TaskState.COMPLETED
+        audit = await untrusted_orch.task_audit(task.id)
+        assert sum(event.event_type == "tool.result" for event in audit) == 2
+
+    async def test_denied_retry_approval_does_not_execute_again(
+        self, untrusted_orch: Orchestrator
+    ) -> None:
+        task = await untrusted_orch.submit("run the flaky unstable task")
+        await untrusted_orch.settle(task.id)
+        first = untrusted_orch.pending_approvals()
+        await untrusted_orch.decide_approval(first[0].id, approved=True)
+        second = untrusted_orch.pending_approvals()
+
+        final = await untrusted_orch.decide_approval(second[0].id, approved=False)
+
+        assert final.state is TaskState.FAILED
+        audit = await untrusted_orch.task_audit(task.id)
+        assert sum(event.event_type == "tool.result" for event in audit) == 1
+
 
 class TestCancellation:
     async def test_cancel_before_settle_yields_cancelled(self, trusted_orch: Orchestrator) -> None:
