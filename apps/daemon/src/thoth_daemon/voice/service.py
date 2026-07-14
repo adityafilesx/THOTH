@@ -1,0 +1,216 @@
+"""Push-to-talk session registry and normal-pipeline voice submission."""
+
+from __future__ import annotations
+
+import uuid
+from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from typing import Protocol
+
+from pydantic import BaseModel, ConfigDict
+
+from thoth_daemon.schemas import Task, TaskSource
+from thoth_daemon.voice.contracts import (
+    AudioCaptureMode,
+    PartialTranscript,
+    SpeechRecognitionProvider,
+    VoiceActivityState,
+    VoiceSessionSnapshot,
+)
+from thoth_daemon.voice.session import AudioCaptureSession
+from thoth_daemon.voice.stop import GlobalStopAuthority, GlobalStopResult, StopPhraseDetector
+
+
+def _now() -> datetime:
+    return datetime.now(UTC)
+
+
+class _Orchestrator(Protocol):
+    async def submit(self, goal: str, source: TaskSource = TaskSource.TEXT) -> Task: ...
+
+    async def settle(self, task_id: str) -> Task: ...
+
+
+class _SpeechInterruptor(Protocol):
+    async def interrupt(self) -> bool: ...
+
+
+@dataclass
+class _ManagedSession:
+    capture: AudioCaptureSession
+    mode: AudioCaptureMode
+    mime: str = "application/octet-stream"
+
+
+class VoiceSubmissionResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    stopped: bool
+    task: Task | None = None
+    stop: GlobalStopResult | None = None
+
+
+class VoiceSessionRegistry:
+    """Short-lived in-memory voice state with optional transcript retention."""
+
+    def __init__(
+        self,
+        provider: SpeechRecognitionProvider,
+        *,
+        retain_transcripts: bool = False,
+        correction_window: timedelta = timedelta(seconds=3),
+        clock: Callable[[], datetime] = _now,
+    ) -> None:
+        self._provider = provider
+        self._retain_transcripts = retain_transcripts
+        self._correction_window = correction_window
+        self._clock = clock
+        self._sessions: dict[str, _ManagedSession] = {}
+
+    def start(self, mode: AudioCaptureMode) -> VoiceSessionSnapshot:
+        session_id = str(uuid.uuid4())
+        capture = AudioCaptureSession(
+            session_id=session_id,
+            correction_window=self._correction_window,
+            clock=self._clock,
+        )
+        capture.start()
+        self._sessions[session_id] = _ManagedSession(capture=capture, mode=mode)
+        return self.snapshot(session_id)
+
+    def append_audio(self, session_id: str, chunk: bytes, mime: str) -> VoiceSessionSnapshot:
+        managed = self._get(session_id)
+        managed.capture.append_audio(chunk)
+        managed.mime = mime
+        return self.snapshot(session_id)
+
+    async def recognise_partial(self, session_id: str) -> VoiceSessionSnapshot:
+        managed = self._get(session_id)
+        audio = managed.capture.audio_bytes()
+        if not audio:
+            raise ValueError("voice session has no audio")
+        result = await self._provider.transcribe(audio, managed.mime)
+        previous = managed.capture.partials[-1].text if managed.capture.partials else ""
+        partial = PartialTranscript(
+            text=result.transcript.text,
+            stable_text=_stable_prefix(previous, result.transcript.text),
+            sequence=len(managed.capture.partials) + 1,
+            confidence=result.transcript.confidence,
+            language=result.transcript.language,
+            observed_at=self._clock(),
+        )
+        managed.capture.publish_partial(partial)
+        return self.snapshot(session_id)
+
+    async def finalise(self, session_id: str) -> VoiceSessionSnapshot:
+        managed = self._get(session_id)
+        audio = managed.capture.audio_bytes()
+        if not audio:
+            raise ValueError("voice session has no audio")
+        managed.capture.set_activity(VoiceActivityState.FINALISING)
+        try:
+            result = await self._provider.transcribe(audio, managed.mime)
+            managed.capture.finalise(result.transcript)
+        except BaseException:
+            managed.capture.fail()
+            raise
+        return self.snapshot(session_id)
+
+    def edit(self, session_id: str, text: str) -> VoiceSessionSnapshot:
+        managed = self._get(session_id)
+        managed.capture.edit(text)
+        return self.snapshot(session_id)
+
+    def consume(self, session_id: str) -> str:
+        return self._get(session_id).capture.submit()
+
+    def finish_submission(self, session_id: str) -> None:
+        if not self._retain_transcripts:
+            self._sessions.pop(session_id, None)
+
+    def cancel(self, session_id: str) -> VoiceSessionSnapshot:
+        managed = self._get(session_id)
+        managed.capture.cancel()
+        return self.snapshot(session_id)
+
+    def cancel_all(self) -> int:
+        count = 0
+        for managed in self._sessions.values():
+            if managed.capture.activity is not VoiceActivityState.CANCELLED:
+                managed.capture.cancel()
+                count += 1
+        return count
+
+    def snapshot(self, session_id: str) -> VoiceSessionSnapshot:
+        managed = self._get(session_id)
+        capture = managed.capture
+        microphone_visible = capture.activity in {
+            VoiceActivityState.LISTENING,
+            VoiceActivityState.SPEAKING,
+            VoiceActivityState.SILENCE,
+        }
+        return VoiceSessionSnapshot(
+            session_id=session_id,
+            mode=managed.mode,
+            activity=capture.activity,
+            microphone_visible=microphone_visible,
+            partial=capture.partials[-1] if capture.partials else None,
+            final=capture.final,
+            editable_text=capture.editable_text,
+            correction_expires_at=capture.correction_expires_at,
+            submitted=capture.submitted,
+        )
+
+    def _get(self, session_id: str) -> _ManagedSession:
+        try:
+            return self._sessions[session_id]
+        except KeyError as exc:
+            raise KeyError(f"voice session {session_id!r} was not found") from exc
+
+
+class VoiceCommandService:
+    """Barge-in and submit voice text through the existing orchestrator."""
+
+    def __init__(
+        self,
+        *,
+        sessions: VoiceSessionRegistry,
+        stop: GlobalStopAuthority,
+        orchestrator: _Orchestrator,
+        tts: _SpeechInterruptor,
+        detector: StopPhraseDetector | None = None,
+    ) -> None:
+        self._sessions = sessions
+        self._stop = stop
+        self._orchestrator = orchestrator
+        self._tts = tts
+        self._detector = detector or StopPhraseDetector()
+
+    async def start(self, mode: AudioCaptureMode) -> VoiceSessionSnapshot:
+        # Push-to-talk is authoritative user presence. Interrupt local speech
+        # before opening capture so THOTH cannot transcribe its own TTS.
+        await self._tts.interrupt()
+        return self._sessions.start(mode)
+
+    async def submit(self, session_id: str) -> VoiceSubmissionResult:
+        text = self._sessions.consume(session_id)
+        if self._detector.matches(text, push_to_talk_active=True, tts_playing=False):
+            stop = await self._stop.stop(reason="voice_phrase")
+            self._sessions.finish_submission(session_id)
+            return VoiceSubmissionResult(stopped=True, stop=stop)
+        task = await self._orchestrator.submit(text, TaskSource.VOICE)
+        settled = await self._orchestrator.settle(task.id)
+        self._sessions.finish_submission(session_id)
+        return VoiceSubmissionResult(stopped=False, task=settled)
+
+
+def _stable_prefix(previous: str, current: str) -> str:
+    previous_words = previous.split()
+    current_words = current.split()
+    matching: list[str] = []
+    for old, new in zip(previous_words, current_words, strict=False):
+        if old != new:
+            break
+        matching.append(new)
+    return " ".join(matching)

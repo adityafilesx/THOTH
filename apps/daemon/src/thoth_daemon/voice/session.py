@@ -74,6 +74,14 @@ class AudioCaptureSession:
         return self._editable_text
 
     @property
+    def final(self) -> FinalTranscript | None:
+        return self._final
+
+    @property
+    def submitted(self) -> bool:
+        return self._submitted
+
+    @property
     def correction_expires_at(self) -> datetime | None:
         return self._correction_expires_at
 
@@ -154,6 +162,10 @@ class AudioCaptureSession:
     def cancel(self) -> None:
         self._clear_audio()
         self._activity = VoiceActivityState.CANCELLED
+
+    def fail(self) -> None:
+        self._clear_audio()
+        self._activity = VoiceActivityState.FAILED
 
     def _clear_audio(self) -> None:
         for index in range(len(self._audio)):

@@ -34,6 +34,14 @@ class Settings(BaseSettings):
     inference_endpoint: str = "http://127.0.0.1:11434"
     network_isolation: bool = False
 
+    # Local voice (Phase 5.5). Missing runtimes are typed unavailable; no cloud
+    # speech service is ever selected as fallback.
+    whisper_executable: Path = Path("/opt/homebrew/bin/whisper-cli")
+    whisper_model_path: Path = Path("./data/models/whisper/ggml-base.en.bin")
+    whisper_language: str = "en"
+    voice_retain_transcripts: bool = False
+    voice_correction_window_seconds: float = 3.0
+
     session_token: str | None = None
     session_token_path: Path = Path("./data/session.token")
 

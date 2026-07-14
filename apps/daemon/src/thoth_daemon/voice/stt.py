@@ -5,10 +5,10 @@ the normal submit pipeline (source=voice) but it can NEVER approve an
 action, expand permissions, or modify policy — the API layer only ever
 turns it into a new task.
 
-``FasterWhisperSTTAdapter`` is the real local-model implementation and is
-**pending live verification** (requires the faster-whisper package, a
-downloaded model, and microphone-captured audio). ``MockSTTAdapter`` is
-the deterministic test double. Audio bytes are never logged.
+``WhisperCppSpeechRecognitionProvider`` is the primary local provider.
+``FasterWhisperSTTAdapter`` remains a legacy optional adapter and
+``MockSTTAdapter`` is an explicit deterministic test double. Audio bytes are
+never logged.
 
 Push-to-talk protocol (desktop side, future wiring): the desktop captures
 audio client-side while the PTT key is held (MediaRecorder), then POSTs
@@ -33,6 +33,7 @@ from pydantic import BaseModel, ConfigDict
 from thoth_daemon.voice.contracts import (
     FinalTranscript,
     SpeechRecognitionHealth,
+    SpeechRecognitionProvider,
     SpeechRecognitionResult,
     TranscriptSegment,
 )
@@ -71,6 +72,39 @@ class MockSTTAdapter:
     async def transcribe(self, audio_bytes: bytes, mime: str) -> Transcript:
         self.received.append((len(audio_bytes), mime))
         return self._transcript
+
+
+class MockSpeechRecognitionProvider:
+    """MOCK provider for hermetic session and API tests."""
+
+    def __init__(self, transcript: FinalTranscript) -> None:
+        self._transcript = transcript
+        self.received: list[tuple[int, str]] = []
+        self.loaded = False
+
+    async def health(self) -> SpeechRecognitionHealth:
+        return SpeechRecognitionHealth(
+            available=True,
+            provider="mock",
+            model="mock-local-speech",
+            loaded=self.loaded,
+            detail="deterministic mock speech provider",
+        )
+
+    async def transcribe(self, audio_bytes: bytes, mime: str) -> SpeechRecognitionResult:
+        self.received.append((len(audio_bytes), mime))
+        self.loaded = True
+        return SpeechRecognitionResult(
+            transcript=self._transcript,
+            provider="mock",
+            model="mock-local-speech",
+            language=self._transcript.language,
+            audio_deleted=True,
+            elapsed_ms=0,
+        )
+
+    async def unload(self) -> None:
+        self.loaded = False
 
 
 class FasterWhisperSTTAdapter:
@@ -251,6 +285,23 @@ class WhisperCppSpeechRecognitionProvider:
         self._loaded = False
 
 
+class SpeechRecognitionSTTAdapter:
+    """Compatibility adapter for the original one-shot voice endpoints."""
+
+    def __init__(self, provider: SpeechRecognitionProvider) -> None:
+        self._provider = provider
+
+    async def transcribe(self, audio_bytes: bytes, mime: str) -> Transcript:
+        result = await self._provider.transcribe(audio_bytes, mime)
+        final = result.transcript
+        return Transcript(
+            text=final.text,
+            confidence=final.confidence,
+            duration_s=final.duration_s,
+            language=final.language,
+        )
+
+
 def _audio_suffix(mime: str) -> str:
     normalized = mime.partition(";")[0].strip().lower()
     return {
@@ -268,8 +319,22 @@ def _bounded_error(stderr: str) -> str:
 
 
 def default_stt_adapter() -> STTAdapter:
-    """Mock unless THOTH_STT=whisper — the live path is opt-in and pending
-    live verification."""
-    if os.environ.get("THOTH_STT") == "whisper":
+    """Select local whisper.cpp by default; mocks require explicit opt-in."""
+    selection = os.environ.get("THOTH_STT", "whisper.cpp")
+    if selection == "mock":
+        return MockSTTAdapter()
+    if selection == "faster-whisper":
         return FasterWhisperSTTAdapter()
-    return MockSTTAdapter()
+    provider = WhisperCppSpeechRecognitionProvider(
+        executable=Path(
+            os.environ.get("THOTH_WHISPER_EXECUTABLE", "/opt/homebrew/bin/whisper-cli")
+        ),
+        model_path=Path(
+            os.environ.get(
+                "THOTH_WHISPER_MODEL_PATH",
+                "data/models/whisper/ggml-base.en.bin",
+            )
+        ),
+        language=os.environ.get("THOTH_WHISPER_LANGUAGE", "en"),
+    )
+    return SpeechRecognitionSTTAdapter(provider)

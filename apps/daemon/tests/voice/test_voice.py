@@ -18,11 +18,29 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.voice.stt import MockSTTAdapter, STTUnavailableError, Transcript
+from thoth_daemon.voice.stt import (
+    MockSTTAdapter,
+    SpeechRecognitionSTTAdapter,
+    STTUnavailableError,
+    Transcript,
+    default_stt_adapter,
+)
 from thoth_daemon.voice.tts import TTSSpeaker
 
 
 class TestSTT:
+    def test_default_adapter_is_local_whisper_not_mock(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("THOTH_STT", raising=False)
+        assert isinstance(default_stt_adapter(), SpeechRecognitionSTTAdapter)
+
+    def test_mock_default_requires_explicit_test_setting(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("THOTH_STT", "mock")
+        assert isinstance(default_stt_adapter(), MockSTTAdapter)
+
     async def test_mock_transcribe_round_trip(self) -> None:
         stt = MockSTTAdapter(
             Transcript(text="open my project", confidence=0.98, duration_s=1.2, language="en")

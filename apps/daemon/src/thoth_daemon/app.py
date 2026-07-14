@@ -1,6 +1,6 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import FastAPI
@@ -57,7 +57,12 @@ from thoth_daemon.tools.git_tools import register_git_tools
 from thoth_daemon.tools.mock_tools import build_registry
 from thoth_daemon.tools.semantic_ax_tools import register_semantic_ax_tools
 from thoth_daemon.tools.shell_tool import register_shell_tool
-from thoth_daemon.voice.stt import default_stt_adapter
+from thoth_daemon.voice.service import VoiceCommandService, VoiceSessionRegistry
+from thoth_daemon.voice.stop import GlobalStopAuthority
+from thoth_daemon.voice.stt import (
+    SpeechRecognitionSTTAdapter,
+    WhisperCppSpeechRecognitionProvider,
+)
 from thoth_daemon.voice.tts import TTSSpeaker
 
 
@@ -101,8 +106,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.skills = SkillStore(session_factory)
         await seed_builtin_skills(app.state.skills)  # idempotent (Phase 4 slice 5)
 
-        app.state.stt = default_stt_adapter()  # mock unless THOTH_STT=whisper
         app.state.tts = TTSSpeaker()
+        app.state.speech_recognition = WhisperCppSpeechRecognitionProvider(
+            executable=cfg.whisper_executable,
+            model_path=cfg.whisper_model_path,
+            language=cfg.whisper_language,
+        )
+        app.state.stt = SpeechRecognitionSTTAdapter(app.state.speech_recognition)
         audit_store = AuditStore(session_factory)
         app.state.audit = audit_store
 
@@ -234,6 +244,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             focus_manager=focus_manager,
             focus_result_sink=app.state.focus_results.__setitem__,
             constraint_checker=constraint_checker,
+        )
+        app.state.voice_sessions = VoiceSessionRegistry(
+            app.state.speech_recognition,
+            retain_transcripts=cfg.voice_retain_transcripts,
+            correction_window=timedelta(seconds=cfg.voice_correction_window_seconds),
+        )
+        app.state.global_stop = GlobalStopAuthority(
+            sessions=app.state.voice_sessions,
+            tts=app.state.tts,
+            orchestrator=app.state.orchestrator,
+        )
+        app.state.voice_commands = VoiceCommandService(
+            sessions=app.state.voice_sessions,
+            stop=app.state.global_stop,
+            orchestrator=app.state.orchestrator,
+            tts=app.state.tts,
         )
         log.info("daemon_started", extra={"data": {"host": cfg.host, "port": cfg.port}})
         yield

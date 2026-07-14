@@ -29,6 +29,11 @@ class VoiceActivityState(StrEnum):
     FAILED = "failed"
 
 
+class AudioCaptureMode(StrEnum):
+    HOLD = "hold"
+    TOGGLE = "toggle"
+
+
 class TranscriptSegment(_VoiceModel):
     text: str = Field(max_length=8_192)
     start_s: float = Field(ge=0)
@@ -84,6 +89,19 @@ class SpeechRecognitionHealth(_VoiceModel):
     model: str
     loaded: bool
     detail: str
+
+
+class VoiceSessionSnapshot(_VoiceModel):
+    session_id: str = Field(min_length=1, max_length=128)
+    mode: AudioCaptureMode
+    activity: VoiceActivityState
+    microphone_visible: bool
+    local_processing: bool = True
+    partial: PartialTranscript | None = None
+    final: FinalTranscript | None = None
+    editable_text: str | None = Field(default=None, max_length=32_768)
+    correction_expires_at: datetime | None = None
+    submitted: bool = False
 
 
 class SpeechRecognitionProvider(Protocol):
