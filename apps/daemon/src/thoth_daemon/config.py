@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     whisper_language: str = "en"
     voice_retain_transcripts: bool = False
     voice_correction_window_seconds: float = 3.0
+    voice_session_ttl_seconds: float = Field(default=120.0, gt=0)
 
     session_token: str | None = None
     session_token_path: Path = Path("./data/session.token")

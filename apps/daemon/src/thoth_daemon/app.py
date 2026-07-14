@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
 from datetime import UTC, datetime, timedelta
@@ -356,9 +357,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             app.state.speech_recognition,
             retain_transcripts=cfg.voice_retain_transcripts,
             correction_window=timedelta(seconds=cfg.voice_correction_window_seconds),
+            session_ttl=timedelta(seconds=cfg.voice_session_ttl_seconds),
             runtime=app.state.local_runtime,
             metrics=app.state.voice_metrics,
         )
+
+        async def reap_abandoned_voice_sessions() -> None:
+            interval = min(max(cfg.voice_session_ttl_seconds / 2, 1.0), 15.0)
+            while True:
+                await asyncio.sleep(interval)
+                expired = app.state.voice_sessions.purge_expired()
+                if expired:
+                    log.info(
+                        "voice_sessions_expired",
+                        extra={"data": {"count": expired}},
+                    )
+
+        voice_janitor = asyncio.create_task(reap_abandoned_voice_sessions())
         app.state.global_stop = GlobalStopAuthority(
             sessions=app.state.voice_sessions,
             tts=app.state.speech_synthesis,
@@ -379,9 +394,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             tts=app.state.speech_synthesis,
         )
         log.info("daemon_started", extra={"data": {"host": cfg.host, "port": cfg.port}})
-        yield
-        log.info("daemon_stopped")
-        await engine.dispose()
+        try:
+            yield
+        finally:
+            voice_janitor.cancel()
+            with suppress(asyncio.CancelledError):
+                await voice_janitor
+            app.state.voice_sessions.cancel_all()
+            log.info("daemon_stopped")
+            await engine.dispose()
 
     app = FastAPI(title="THOTH Daemon", lifespan=lifespan)
     app.add_middleware(BearerAuthMiddleware)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 
 from fastapi import FastAPI
 from httpx import AsyncClient
@@ -72,14 +73,22 @@ def _final(text: str) -> FinalTranscript:
     )
 
 
-def _prime(app: FastAPI, text: str, *, retain_transcripts: bool = False) -> None:
+def _prime(
+    app: FastAPI,
+    text: str,
+    *,
+    retain_transcripts: bool = False,
+    clock: Callable[[], datetime] = lambda: NOW,
+    session_ttl: timedelta = timedelta(minutes=2),
+) -> VoiceSessionRegistry:
     provider = MockSpeechRecognitionProvider(_final(text))
     speech_provider = _RecordingSpeechProvider()
     speech = SpeechSynthesisService(speech_provider)
     sessions = VoiceSessionRegistry(
         provider,
         retain_transcripts=retain_transcripts,
-        clock=lambda: NOW,
+        clock=clock,
+        session_ttl=session_ttl,
     )
     stop = GlobalStopAuthority(
         sessions=sessions,
@@ -103,6 +112,7 @@ def _prime(app: FastAPI, text: str, *, retain_transcripts: bool = False) -> None
         dispatcher=app.state.command_dispatcher,
         tts=speech,
     )
+    return sessions
 
 
 async def _start(client: AsyncClient) -> str:
@@ -182,6 +192,8 @@ class TestVoiceSessionLifecycle:
         assert cancelled.status_code == 200
         assert cancelled.json()["activity"] == "cancelled"
         assert cancelled.json()["microphone_visible"] is False
+        missing = await client.get(f"/api/voice/sessions/{session_id}")
+        assert missing.status_code == 404
 
     async def test_retention_setting_keeps_only_transcript_state(
         self,
@@ -201,6 +213,41 @@ class TestVoiceSessionLifecycle:
         assert retained.status_code == 200
         assert retained.json()["final"]["text"] == "what am I working on"
         assert "audio" not in retained.json()
+
+    async def test_cancel_discards_session_even_when_transcript_retention_is_enabled(
+        self,
+        client: AsyncClient,
+        app: FastAPI,
+    ) -> None:
+        _prime(app, "unused", retain_transcripts=True)
+        session_id = await _start(client)
+        cancelled = await client.delete(f"/api/voice/sessions/{session_id}")
+        assert cancelled.status_code == 200
+        assert cancelled.json()["activity"] == "cancelled"
+        assert (await client.get(f"/api/voice/sessions/{session_id}")).status_code == 404
+
+    async def test_abandoned_capture_expires_and_is_removed(
+        self,
+        client: AsyncClient,
+        app: FastAPI,
+    ) -> None:
+        now = [NOW]
+        sessions = _prime(
+            app,
+            "unused",
+            clock=lambda: now[0],
+            session_ttl=timedelta(seconds=30),
+        )
+        session_id = await _start(client)
+        await client.put(
+            f"/api/voice/sessions/{session_id}/audio",
+            content=b"private audio",
+            headers={"Content-Type": "audio/wav"},
+        )
+
+        now[0] += timedelta(seconds=31)
+        assert sessions.purge_expired() == 1
+        assert (await client.get(f"/api/voice/sessions/{session_id}")).status_code == 404
 
 
 class TestVoiceStopBypass:
@@ -239,9 +286,13 @@ class TestVoiceStopBypass:
         app: FastAPI,
     ) -> None:
         _prime(app, "unused")
+        session_id = await _start(client)
         response = await client.post("/api/stop", json={"reason": "global_button"})
         assert response.status_code == 200
         assert response.json()["reason"] == "global_button"
+        assert response.json()["voice_sessions_cancelled"] == 1
+        missing = await client.get(f"/api/voice/sessions/{session_id}")
+        assert missing.status_code == 404
 
     async def test_stop_speaking_returns_control_without_starting_new_speech(
         self,

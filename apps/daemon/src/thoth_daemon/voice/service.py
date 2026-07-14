@@ -40,6 +40,7 @@ class _SpeechInterruptor(Protocol):
 class _ManagedSession:
     capture: AudioCaptureSession
     mode: AudioCaptureMode
+    last_activity: datetime
     mime: str = "application/octet-stream"
 
 
@@ -62,13 +63,17 @@ class VoiceSessionRegistry:
         *,
         retain_transcripts: bool = False,
         correction_window: timedelta = timedelta(seconds=3),
+        session_ttl: timedelta = timedelta(minutes=2),
         clock: Callable[[], datetime] = _now,
         runtime: LocalAIRuntimeManager | None = None,
         metrics: VoiceLatencyMetrics | None = None,
     ) -> None:
+        if session_ttl.total_seconds() <= 0:
+            raise ValueError("session_ttl must be positive")
         self._provider = provider
         self._retain_transcripts = retain_transcripts
         self._correction_window = correction_window
+        self._session_ttl = session_ttl
         self._clock = clock
         self._runtime = runtime
         self._metrics = metrics
@@ -83,7 +88,11 @@ class VoiceSessionRegistry:
             clock=self._clock,
         )
         capture.start()
-        self._sessions[session_id] = _ManagedSession(capture=capture, mode=mode)
+        self._sessions[session_id] = _ManagedSession(
+            capture=capture,
+            mode=mode,
+            last_activity=self._clock(),
+        )
         snapshot = self.snapshot(session_id)
         if self._metrics is not None:
             self._metrics.record(
@@ -96,6 +105,7 @@ class VoiceSessionRegistry:
         managed = self._get(session_id)
         managed.capture.append_audio(chunk)
         managed.mime = mime
+        self._touch(managed)
         return self.snapshot(session_id)
 
     async def recognise_partial(self, session_id: str) -> VoiceSessionSnapshot:
@@ -116,6 +126,7 @@ class VoiceSessionRegistry:
             observed_at=self._clock(),
         )
         managed.capture.publish_partial(partial)
+        self._touch(managed)
         if first_partial and self._metrics is not None:
             self._metrics.record(
                 VoiceLatencyStage.FIRST_PARTIAL,
@@ -133,6 +144,7 @@ class VoiceSessionRegistry:
         try:
             result = await self._transcribe(audio, managed.mime)
             managed.capture.finalise(result.transcript)
+            self._touch(managed)
         except BaseException:
             managed.capture.fail()
             raise
@@ -147,10 +159,14 @@ class VoiceSessionRegistry:
     def edit(self, session_id: str, text: str) -> VoiceSessionSnapshot:
         managed = self._get(session_id)
         managed.capture.edit(text)
+        self._touch(managed)
         return self.snapshot(session_id)
 
     def consume(self, session_id: str) -> str:
-        return self._get(session_id).capture.submit()
+        managed = self._get(session_id)
+        text = managed.capture.submit()
+        self._touch(managed)
+        return text
 
     def finish_submission(self, session_id: str) -> None:
         if not self._retain_transcripts:
@@ -159,15 +175,55 @@ class VoiceSessionRegistry:
     def cancel(self, session_id: str) -> VoiceSessionSnapshot:
         managed = self._get(session_id)
         managed.capture.cancel()
-        return self.snapshot(session_id)
+        snapshot = self.snapshot(session_id)
+        # Cancellation is an explicit discard operation. Transcript retention
+        # applies only to successfully finalised submissions, never to an
+        # abandoned capture.
+        self._sessions.pop(session_id, None)
+        return snapshot
 
     def cancel_all(self) -> int:
         count = 0
-        for managed in self._sessions.values():
-            if managed.capture.activity is not VoiceActivityState.CANCELLED:
+        terminal = {
+            VoiceActivityState.COMPLETE,
+            VoiceActivityState.CANCELLED,
+            VoiceActivityState.FAILED,
+        }
+        discarded: list[str] = []
+        for session_id, managed in self._sessions.items():
+            if managed.capture.activity not in terminal:
                 managed.capture.cancel()
                 count += 1
+                discarded.append(session_id)
+            elif managed.capture.activity is not VoiceActivityState.COMPLETE:
+                discarded.append(session_id)
+        for session_id in discarded:
+            self._sessions.pop(session_id, None)
+        if not self._retain_transcripts:
+            # Default privacy mode retains no terminal transcript state.
+            self._sessions.clear()
         return count
+
+    def purge_expired(self) -> int:
+        """Zero and remove abandoned sessions after the bounded local TTL."""
+
+        now = self._clock()
+        expired: list[str] = []
+        for session_id, managed in self._sessions.items():
+            if now - managed.last_activity <= self._session_ttl:
+                continue
+            if self._retain_transcripts and managed.capture.submitted:
+                continue
+            if managed.capture.activity not in {
+                VoiceActivityState.COMPLETE,
+                VoiceActivityState.CANCELLED,
+                VoiceActivityState.FAILED,
+            }:
+                managed.capture.cancel()
+            expired.append(session_id)
+        for session_id in expired:
+            self._sessions.pop(session_id, None)
+        return len(expired)
 
     def snapshot(self, session_id: str) -> VoiceSessionSnapshot:
         managed = self._get(session_id)
@@ -194,6 +250,9 @@ class VoiceSessionRegistry:
             return self._sessions[session_id]
         except KeyError as exc:
             raise KeyError(f"voice session {session_id!r} was not found") from exc
+
+    def _touch(self, managed: _ManagedSession) -> None:
+        managed.last_activity = self._clock()
 
     async def _transcribe(self, audio: bytes, mime: str) -> SpeechRecognitionResult:
         if self._runtime is None:
