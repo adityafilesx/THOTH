@@ -12,6 +12,7 @@ Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation 
 - Foreground context is captured only on demand. It contains no screenshot, image, or Accessibility-tree field; titles and sensitive paths are redacted before bounded in-memory retention.
 - Six versioned application profiles exist. Unknown/forbidden/undeclared capabilities fail closed. VS Code workspace association is verified through the real running bundle plus authoritative THOTH path evidence; editor read/edit remain experimental.
 - Operational dialogue is in-memory, task-isolated, and expiring. It resolves only authoritative recent objects, cannot approve or expand scope, and enforces `no_push` before approval or execution.
+- The live Permissions page now supports explicit workspace-bound app/path/domain grants as well as immediate revocation. A grant is a direct user action, is audited by the daemon, and never approves or executes a task.
 - Push-to-talk uses visible hold/toggle capture, local whisper.cpp contracts, partial/final/editable transcripts, default audio/transcript deletion, and the same orchestrator as text. v1.8.6 and tiny.en/base.en/small.en are locally SHA-256 pinned; mismatches fail closed. There is no cloud/mock fallback.
 - Cancelled sessions are discarded after the single cancellation response. Abandoned unsubmitted sessions expire after a bounded two-minute local TTL, zero active audio, and are removed; daemon shutdown clears active capture state.
 - One deterministic Stop authority covers capture, TTS, all nonterminal tasks, and unconsumed approvals. Voice cannot approve R2/R3.
@@ -31,11 +32,11 @@ Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation 
 | Strict daemon teardown gate | **999 passed** with worker-thread warnings promoted to errors |
 | Ruff check / format | clean / 223 files formatted |
 | `mypy apps/daemon/src` (strict) | clean, 120 source files |
-| `pnpm -C apps/desktop test` | **95 passed** across 14 files |
+| `pnpm -C apps/desktop test` | **97 passed** across 14 files |
 | Desktop ESLint / TypeScript / Vite | clean / clean / built |
 | Cargo check / Rust tests | passed / 8 passed |
 | `alembic upgrade head` | passed through `0004_hash_chain` |
-| Combined daemon + desktop count | **1,094 passed** (999 daemon + 95 desktop) |
+| Combined daemon + desktop count | **1,096 passed** (999 daemon + 97 desktop) |
 | Phase 5.4 helper/AX targeted matrix | **110 passed** |
 | Swift AX helper release build/package/signature | passed |
 
@@ -77,6 +78,12 @@ usage declaration. The signed app and DMG now contain a bounded
 `NSMicrophoneUsageDescription` stating push-to-talk and local transcription.
 The next real capture will still require the user to accept macOS's THOTH-specific
 microphone prompt; no human speech result is inferred from the declaration.
+
+A real packaged `Open TextEdit` command then failed closed before execution
+because the default workspace had no approved-app grant. This was correct
+policy behavior, but it exposed that the desktop could only revoke grants. The
+Permissions view now provides an explicit workspace/type/value grant form. No
+scope was silently added during validation.
 
 ## Residual limits
 

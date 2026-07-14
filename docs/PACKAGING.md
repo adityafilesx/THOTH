@@ -27,6 +27,11 @@ only during push-to-talk and transcription is local. macOS grants microphone
 access per app identity, so Chrome's development permission does not grant it
 to `THOTH.app`; the user must accept the native app's first-use prompt.
 
+The desktop Permissions page is the user-controlled scope boundary. Select a
+workspace, choose Application / Workspace path / Browser domain, enter the
+exact value, and press **Grant access**. The daemon persists and audits that
+grant; it does not approve or execute any task. Revocation remains immediate.
+
 ## Build
 
 The builder must have the repository dependencies plus these integrity-pinned

@@ -91,8 +91,8 @@ remain manual blockers.
 | Gate | Result |
 |---|---|
 | Daemon | 999 passed, no skip |
-| Desktop | 95 passed across 14 files |
-| Aggregate daemon + desktop | 1,094 passed, no skip |
+| Desktop | 97 passed across 14 files |
+| Aggregate daemon + desktop | 1,096 passed, no skip |
 | Ruff / format | clean / 225 files |
 | Strict mypy | clean, 120 source files |
 | ESLint / TypeScript / Vite | clean / clean / built |
@@ -106,6 +106,11 @@ The native app and mounted DMG now include
 and transcribes locally. This repairs the packaging reason Chrome could receive
 audio while the native bundle could not request its own permission. It is not a
 substitute for the remaining real 30-command microphone evidence.
+
+The final operator check also proved scope refusal: `Open TextEdit` proposed the
+authoritative app tool but executed nothing because TextEdit was not granted in
+the workspace. The desktop now exposes an explicit audited grant form for app,
+path, and domain scope; validation did not auto-grant TextEdit.
 
 ## Mandatory blockers
 
