@@ -25,7 +25,7 @@ Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation 
 
 | Gate | Result |
 |---|---|
-| `uv run --project apps/daemon pytest` | **993 passed** in 44.52 seconds; repeated through `make test` in 37.84 seconds |
+| `uv run --project apps/daemon pytest` | **995 passed** through `make test` in 36.25 seconds |
 | Unlocked focus rerun | 6 foreground/focus live tests passed; no skip |
 | Ruff check / format | clean / 223 files formatted |
 | `mypy apps/daemon/src` (strict) | clean, 120 source files |
@@ -33,7 +33,7 @@ Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation 
 | Desktop ESLint / TypeScript / Vite | clean / clean / built |
 | Cargo check / Rust tests | passed / 1 passed |
 | `alembic upgrade head` | passed through `0004_hash_chain` |
-| `make test` | passed: **1,084 tests** (993 daemon + 91 desktop) |
+| `make test` | passed: **1,086 tests** (995 daemon + 91 desktop) |
 | Phase 5.4 helper/AX targeted matrix | **110 passed** |
 | Swift AX helper release build/package/signature | passed |
 

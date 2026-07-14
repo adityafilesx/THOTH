@@ -18,7 +18,7 @@ THOTH's local voice implementation, deterministic command routing, safety bounda
 - `run the tests` resolves to the installed authoritative skill and stops at exact R2 approval.
 - Failed app focus cannot be reported as completed.
 - Temporary transcript sessions are single-use and removed on success or exception.
-- 993 daemon tests and 91 desktop tests pass. Python lint/format/typecheck, ESLint, TypeScript, Vite production build, Rust check, and Alembic migration pass.
+- 995 daemon tests and 91 desktop tests pass. Python lint/format/typecheck, ESLint, TypeScript, Vite production build, Rust check, and Alembic migration pass.
 
 ## Not yet verified
 

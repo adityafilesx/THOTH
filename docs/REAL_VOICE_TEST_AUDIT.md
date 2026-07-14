@@ -77,6 +77,7 @@ The initial loopback CORS blocker is resolved. During recovery, the following ad
 16. The command endpoint treated its three-second settlement window as an exception and returned HTTP 500 while a legitimate task continued. Settlement now returns the current authoritative task snapshot at the timeout; WebSocket/task refresh carries later progress.
 17. App launch/focus success was accepted before the required final focus was independently observed. App tools now wait for the native foreground postcondition and re-probe it independently; the orchestrator converts a failed focus postcondition into tool failure and preserves the original focus baseline across retries.
 18. Voice transcript sessions could remain in memory if dispatch raised. Final submission now removes the single-use session in a `finally` path on every outcome.
+19. Live `show me the modified files` missed a natural skill alias, entered the local planner, and stored the validator's raw Pydantic detail in task state. The phrase now resolves to the authoritative `project-health-check` skill, and `PlanRejected` serializes only its closed rejection code while retaining typed detail in-process.
 
 Live recovery evidence on 2026-07-14:
 
@@ -89,7 +90,8 @@ Live recovery evidence on 2026-07-14:
 - Live `thoth stop`, `check the daemon`, and `start the backend` commands all returned deterministic no-task controls. Live `approve it` returned clarification and created no task.
 - Finder, TextEdit, and Visual Studio Code application grants were created through the authenticated permissions API from the user's explicit authorization. They are persistent, scoped records; no profile expanded itself from model output.
 - A real TextEdit launch attempt demonstrated that this Codex-hosted test process can delay macOS foreground transitions while terminal automation is active. THOTH therefore ended `FAILED_REQUIRES_USER`; it did not claim completion. A separate native AppKit probe could focus TextEdit once the controlling call yielded. This is recorded as an environment-limited focus capstone, not a pass.
-- The final combined automated gate passed: 993 daemon tests and 91 desktop tests. Ruff, Ruff formatting, strict mypy, ESLint, TypeScript, Vite build, Rust check, and Alembic upgrade also passed.
+- Live `show me the modified files` completed the authoritative three-step read-only skill (`git_status`, `git_log`, `fs_list_dir`) with no model call. A deliberately novel repository-status request produced `planning failed: bad_arguments` plus the safe persona response; neither task nor display payload contained Pydantic internals.
+- The final combined automated gate passed: 995 daemon tests and 91 desktop tests. Ruff, Ruff formatting, strict mypy, ESLint, TypeScript, Vite build, Rust check, and Alembic upgrade also passed.
 - Local macOS TTS playback and interruption were exercised successfully through authenticated voice endpoints. The runtime remained local-only.
 - A clean post-fix real microphone command remains pending. It will not be inferred from automated PCM tests, partial recognition, or typed commands.
 
