@@ -1,0 +1,103 @@
+# THOTH real voice test recovery audit
+
+Date: 2026-07-14  
+Branch: `phase-5/persona`  
+Starting commit: `f47a915 docs: publish v1 release report`
+
+## Scope
+
+This run is limited to real microphone and voice-path validation. It does not include signing, notarization, packaging, new integrations, new product features, or unrelated Accessibility work. Real-user microphone evidence will only be recorded when the user personally speaks the command.
+
+## Repository starting state
+
+- The tracked working tree was clean at the start of this run.
+- `.agents/` and `.codex/` were the only untracked paths. They are local support directories and will be preserved.
+- `git diff` and `git diff --cached` were empty.
+- `git stash list` was empty.
+- No reset, discard, amend, or push was performed.
+- The prior release-validation commits are present:
+  - `f47a915 docs: publish v1 release report`
+  - `bb57dd8 fix(voice): enforce integrity pins`
+  - `1ccc427 docs: add v1 validation plan`
+- The latest recorded automated baseline is 958 daemon tests and 75 desktop tests, 1,033 total, with Python, TypeScript, Vite, Rust, and migration gates green. This baseline is historical until rerun after any fix.
+
+## Required components and actual startup state
+
+| Component | How it is started or selected | Starting observation |
+|---|---|---|
+| FastAPI daemon | `uv run --project apps/daemon python -m thoth_daemon.main` | Running on `127.0.0.1:7710`; `/api/health` returned daemon `ok`, database `ok`. |
+| Desktop frontend | Vite through the Tauri dev command | Running on `http://localhost:5188` because 5173/5174 are occupied by unrelated local processes. |
+| Native desktop | `VITE_THOTH_TOKEN=... pnpm -C apps/desktop tauri dev --config ...` | Native `target/debug/thoth-desktop` started and the THOTH window was observed using Codex computer interaction. |
+| Local planner | Ollama on loopback, configured model `qwen3:4b` | Ollama is running locally. Runtime snapshot reported the planner unloaded until needed. No cloud fallback is configured. |
+| Whisper runtime | `THOTH_WHISPER_EXECUTABLE` | Local official whisper.cpp v1.8.6 binary exists at `data/runtime/whisper.cpp-v1.8.6/build/bin/whisper-cli`; the configured binary integrity pin was previously verified. |
+| Whisper model | `THOTH_WHISPER_MODEL_PATH` and `THOTH_WHISPER_MODEL_SHA256` | `ggml-base.en.bin` is selected. `/api/runtime` reported `idle_cached` and integrity verified. |
+| Local TTS | macOS local speech provider | Implemented and registered. Runtime snapshot reported unloaded until needed; readiness must be exercised in the real flow. |
+| AX helper | Existing native helper, when running | Not required to establish microphone capture. Accessibility permission was previously denied and must not block voice-only testing. |
+
+The runtime model files available for controlled comparison are:
+
+| Model | Path | Recorded SHA-256 |
+|---|---|---|
+| tiny.en | `data/models/whisper/ggml-tiny.en.bin` | `921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f` |
+| base.en | `data/models/whisper/ggml-base.en.bin` | `a03779c86df3323075f5e796cb2ce5029f00ec8869eee3fdfb897afe36c6d002` |
+| small.en | `data/models/whisper/ggml-small.en.bin` | `c6138d6d58ecc8322097e0f987c32f1be8bb0a18532a3f88f734d1bbf9c41e5d` |
+
+Model changes require restarting the daemon with the matching model path and integrity pin. Each model will be tested with the same ten user-spoken commands. The production default will change only if the measured result clearly beats the current base model under the required priority: Stop accuracy, intent accuracy, routing accuracy, latency, memory, then word accuracy.
+
+## Voice activation and observability
+
+- The native application registers global `Option+Space` through `tauri-plugin-global-shortcut` in `apps/desktop/src-tauri/src/lib.rs`.
+- The command-center microphone button emits the same pressed/released events.
+- `VoiceOverlay.tsx` requests `navigator.mediaDevices.getUserMedia({ audio: true })` and records mono signed 16-bit PCM locally. The daemon validates the declared rate/channels, wraps the bounded bytes in a private temporary WAV, and invokes the integrity-pinned local Whisper runtime. Partial recognition is throttled to avoid launching Whisper for every audio callback; final recognition always uses the complete capture.
+- The microphone indicator is active only while the overlay state is `listening`.
+- Daemon voice/runtime state and aggregate stage latency are available from authenticated `/api/runtime` and voice-session endpoints.
+- Route selection is observable through `/api/intent/route` and the overlay route label.
+- Task execution and verification are observable through the task API, WebSocket events, Execution HUD, operational presentation, and audit events.
+- whisper.cpp creates a bounded temporary input file for each transcription and deletes it in a `finally` path. The real run will check that no temporary audio remains after each command.
+
+## Recovered integration defects
+
+The initial loopback CORS blocker is resolved. During recovery, the following additional defects were reproduced, repaired, and covered by regression tests:
+
+1. Loopback/Tauri CORS preflight now succeeds while bearer authentication remains mandatory for protected requests.
+2. Browser development mode can read the local session token safely; token reads are single-flight and do not create an unbounded retry loop.
+3. Intentional WebSocket closure no longer changes the desktop to a false disconnected state, and the daemon observes client disconnects without hanging shutdown on an idle event queue.
+4. Push-to-talk release during asynchronous startup is retained, a minimum capture window is enforced, pending PCM is flushed before stop, and cancellation cannot trigger finalisation.
+5. Chromium/WebKit `MediaRecorder` output was incompatible with the pinned `whisper-cli`, which accepts WAV/FLAC/MP3/OGG rather than WebM/Opus. Capture now uses local PCM and the daemon constructs a bounded private WAV.
+6. Typed and voice commands now share one authoritative deterministic dispatcher. Stop, speech interruption, status, supported app launch/focus, and installed skills do not enter the local planner.
+7. Planner validation failures settle as terminal tasks and user-facing persona text no longer exposes Pydantic internals.
+8. Deterministic no-task controls return valid persona responses instead of HTTP 409 failures. “Stop speaking” does not immediately start another utterance.
+
+Live recovery evidence on 2026-07-14:
+
+- `/api/health` returned daemon `ok` and database `ok`.
+- The local runtime snapshot reported the Whisper binary/model integrity pin verified and no cloud fallback.
+- The Chrome development UI showed `CONNECTED`.
+- A typed `thoth stop` traversed `/api/commands`, returned HTTP 200, created no task, and visibly displayed `Stopped. No external action was taken.` without model use.
+- The final combined automated gate passed: 976 daemon tests and 87 desktop tests. Ruff, Ruff formatting, strict mypy, ESLint, TypeScript, Vite build, Rust check/test, and Alembic upgrade also passed.
+- Real microphone evidence remains pending. It will not be inferred from automated PCM tests or typed commands.
+
+## Exact continuation plan
+
+1. Ask the user to hold push-to-talk and personally speak `Thoth, stop.`; collect the real partial/final transcript, route, control result, latency, and temporary-file evidence.
+2. With `base.en`, ask the user to speak the remaining four required smoke commands one at a time. For each command collect partial/final text, correction, route, task/result verification, persona display/spoken result, stage latency, and temporary-audio deletion evidence.
+3. If all five commands enter the real task pipeline, compare tiny.en, base.en, and small.en with the same ten user-spoken commands per model.
+4. Run the remaining real-user command matrix to at least 30 total microphone commands, including safety/ambiguity and operational follow-ups.
+5. Run five real acoustic Stop trials, three real barge-in trials, the voice-approval safety gate, and an offline-localhost-only voice-to-action trial.
+6. Fix only defects exposed by those real tests, always with a failing regression test first, and rerun the exposing real command.
+7. Update `docs/VOICE_MODEL_EVALUATION.md` and `docs/V1_VOICE_COMMAND_MATRIX.md`, then write `docs/REAL_VOICE_TEST_REPORT.md` with only measured results and the required status vocabulary.
+
+## User participation required
+
+The user must personally speak every command used as real microphone evidence. Codex may operate push-to-talk, inspect transcripts, edit only when the test calls for correction, monitor execution, and verify visible results. The following actions cannot be completed autonomously:
+
+- granting macOS microphone permission in System Settings;
+- speaking the five smoke commands;
+- speaking each model-comparison and command-matrix utterance;
+- speaking each acoustic Stop and barge-in command.
+
+Generated audio, prerecorded synthetic audio, bundled samples, and typed transcripts will not be counted as real microphone results.
+
+## Starting claim ceiling
+
+At the current checkpoint, local voice transport, authoritative routing, and all automated gates are verified. Real microphone-to-action readiness remains unverified until the user personally speaks the required commands. No real voice pass is claimed yet.
