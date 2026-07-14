@@ -22,4 +22,31 @@ describe("api request auth", () => {
       "Bearer dev-token",
     );
   });
+
+  it("creates a typed permission grant", async () => {
+    vi.stubEnv("VITE_THOTH_TOKEN", "dev-token");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "g1",
+          workspace_id: "w1",
+          kind: "app",
+          value: "TextEdit",
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await api.createGrant("w1", "app", "TextEdit");
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("/api/permissions/grants");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({
+      workspace_id: "w1",
+      kind: "app",
+      value: "TextEdit",
+    });
+  });
 });

@@ -283,6 +283,15 @@ export interface AccessibilityStatus {
 export const api = {
   health: () => request<HealthResponse>("/api/health"),
   permissions: () => request<PermissionsResponse>("/api/permissions"),
+  createGrant: (
+    workspaceId: string,
+    kind: Grant["kind"],
+    value: string,
+  ) =>
+    request<Grant>("/api/permissions/grants", {
+      method: "POST",
+      body: JSON.stringify({ workspace_id: workspaceId, kind, value }),
+    }),
   revokeGrant: (id: string) =>
     request<{ revoked: string }>(`/api/permissions/grants/${id}`, {
       method: "DELETE",

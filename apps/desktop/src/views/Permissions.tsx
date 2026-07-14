@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppWindow, FolderOpen, Globe } from "lucide-react";
+import { type FormEvent, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { api, type Grant } from "@/lib/api";
 
 const KIND_META = {
@@ -21,6 +23,9 @@ const KIND_ORDER = ["app", "path", "domain"] as const;
  */
 export function Permissions() {
   const qc = useQueryClient();
+  const [workspaceId, setWorkspaceId] = useState("");
+  const [kind, setKind] = useState<Grant["kind"]>("app");
+  const [grantValue, setGrantValue] = useState("");
   const { data, isLoading, isError } = useQuery({
     queryKey: ["permissions"],
     queryFn: api.permissions,
@@ -29,6 +34,25 @@ export function Permissions() {
     mutationFn: (id: string) => api.revokeGrant(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["permissions"] }),
   });
+  const grant = useMutation({
+    mutationFn: (input: {
+      workspaceId: string;
+      kind: Grant["kind"];
+      value: string;
+    }) => api.createGrant(input.workspaceId, input.kind, input.value),
+    onSuccess: () => {
+      setGrantValue("");
+      qc.invalidateQueries({ queryKey: ["permissions"] });
+    },
+  });
+  const selectedWorkspaceId = workspaceId || data?.workspaces[0]?.id || "";
+
+  function submitGrant(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const value = grantValue.trim();
+    if (!selectedWorkspaceId || !value) return;
+    grant.mutate({ workspaceId: selectedWorkspaceId, kind, value });
+  }
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4">
@@ -43,6 +67,84 @@ export function Permissions() {
       {isLoading && <p className="text-xs text-muted">Loading permissions…</p>}
       {isError && (
         <p className="text-xs text-danger">Could not reach the daemon.</p>
+      )}
+
+      {data && data.workspaces.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Grant access</CardTitle>
+            <p className="text-xs text-muted">
+              Explicitly add persistent scope to one workspace. This does not
+              approve or execute an action.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form className="grid gap-3" onSubmit={submitGrant}>
+              <div className="grid gap-1">
+                <label className="text-xs text-muted" htmlFor="grant-workspace">
+                  Workspace
+                </label>
+                <select
+                  id="grant-workspace"
+                  className="h-9 rounded-md border border-line bg-raised px-3 text-sm text-ink"
+                  value={selectedWorkspaceId}
+                  onChange={(event) => setWorkspaceId(event.target.value)}
+                >
+                  {data.workspaces.map((workspace) => (
+                    <option key={workspace.id} value={workspace.id}>
+                      {workspace.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid gap-1">
+                <label className="text-xs text-muted" htmlFor="grant-kind">
+                  Scope type
+                </label>
+                <select
+                  id="grant-kind"
+                  className="h-9 rounded-md border border-line bg-raised px-3 text-sm text-ink"
+                  value={kind}
+                  onChange={(event) =>
+                    setKind(event.target.value as Grant["kind"])
+                  }
+                >
+                  <option value="app">Application</option>
+                  <option value="path">Workspace path</option>
+                  <option value="domain">Browser domain</option>
+                </select>
+              </div>
+              <div className="grid gap-1">
+                <label className="text-xs text-muted" htmlFor="grant-value">
+                  Grant value
+                </label>
+                <Input
+                  id="grant-value"
+                  value={grantValue}
+                  onChange={(event) => setGrantValue(event.target.value)}
+                  placeholder={
+                    kind === "app"
+                      ? "TextEdit"
+                      : kind === "domain"
+                        ? "example.com"
+                        : "/Users/you/project"
+                  }
+                />
+              </div>
+              {grant.isError && (
+                <p className="text-xs text-danger">
+                  Grant was rejected. Check the workspace, type, and value.
+                </p>
+              )}
+              <Button
+                type="submit"
+                disabled={grant.isPending || !grantValue.trim()}
+              >
+                Grant access
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       )}
 
       {data && data.workspaces.length > 0 && (

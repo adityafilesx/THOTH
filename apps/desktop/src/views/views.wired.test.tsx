@@ -22,7 +22,7 @@ function jsonResponse(body: unknown) {
 }
 
 let routes: Record<string, unknown>;
-let calls: { url: string; method: string }[];
+let calls: { url: string; method: string; body?: string }[];
 
 beforeEach(() => {
   vi.stubEnv("VITE_THOTH_TOKEN", "t");
@@ -64,8 +64,19 @@ beforeEach(() => {
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
       const u = new URL(url, "http://x");
-      calls.push({ url: u.pathname, method: init?.method ?? "GET" });
+      calls.push({
+        url: u.pathname,
+        method: init?.method ?? "GET",
+        body: init?.body as string | undefined,
+      });
       if (init?.method === "DELETE") return jsonResponse({ revoked: "g1" });
+      if (init?.method === "POST")
+        return jsonResponse({
+          id: "g2",
+          workspace_id: "w1",
+          kind: "app",
+          value: "TextEdit",
+        });
       if (init?.method === "PATCH")
         return jsonResponse({
           id: "s1",
@@ -100,6 +111,24 @@ describe("Permissions (live)", () => {
     await waitFor(() =>
       expect(calls.some((c) => c.method === "DELETE")).toBe(true),
     );
+  });
+
+  it("creates an explicit workspace-bound grant", async () => {
+    renderWithQuery(<Permissions />);
+    fireEvent.change(await screen.findByLabelText(/grant value/i), {
+      target: { value: "TextEdit" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /grant access/i }));
+
+    await waitFor(() => {
+      const call = calls.find((candidate) => candidate.method === "POST");
+      expect(call?.url).toBe("/api/permissions/grants");
+      expect(JSON.parse(call?.body ?? "{}")).toEqual({
+        workspace_id: "w1",
+        kind: "app",
+        value: "TextEdit",
+      });
+    });
   });
 });
 
