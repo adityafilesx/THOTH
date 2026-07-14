@@ -19,11 +19,23 @@ the encoded bytes to /api/voice/transcribe (preview) or /api/voice/task
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import tempfile
+import time
+from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict
+
+from thoth_daemon.voice.contracts import (
+    FinalTranscript,
+    SpeechRecognitionHealth,
+    SpeechRecognitionResult,
+    TranscriptSegment,
+)
 
 
 class Transcript(BaseModel):
@@ -37,6 +49,10 @@ class Transcript(BaseModel):
 
 class STTUnavailableError(Exception):
     """The STT backend is not installed/configured in this environment."""
+
+
+class SpeechRecognitionUnavailable(STTUnavailableError):
+    """The configured local speech provider cannot run on this host."""
 
 
 class STTAdapter(Protocol):
@@ -93,6 +109,162 @@ class FasterWhisperSTTAdapter:
                 os.unlink(path)
 
         return await asyncio.to_thread(_run)
+
+
+WhisperRunner = Callable[[list[str], Path], Awaitable[tuple[int, str, str]]]
+
+
+async def _run_whisper(argv: list[str], audio_path: Path) -> tuple[int, str, str]:
+    del audio_path
+    process = await asyncio.create_subprocess_exec(
+        *argv,
+        stdin=asyncio.subprocess.DEVNULL,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await process.communicate()
+    return (
+        int(process.returncode or 0),
+        stdout.decode("utf-8", errors="replace"),
+        stderr.decode("utf-8", errors="replace"),
+    )
+
+
+class WhisperCppSpeechRecognitionProvider:
+    """Fully local whisper.cpp command provider.
+
+    The command is argv-only and the operation-local audio file is mode 0600
+    and deleted in a ``finally`` block, including cancellation and crashes.
+    Model installation is explicit; absence is a typed degraded state and
+    never triggers a cloud fallback.
+    """
+
+    def __init__(
+        self,
+        *,
+        executable: Path = Path("/opt/homebrew/bin/whisper-cli"),
+        model_path: Path = Path("data/models/whisper/ggml-base.en.bin"),
+        language: str = "en",
+        runner: WhisperRunner = _run_whisper,
+        clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+    ) -> None:
+        self._executable = executable
+        self._model_path = model_path
+        self._language = language
+        self._runner = runner
+        self._clock = clock
+        self._loaded = False
+
+    async def health(self) -> SpeechRecognitionHealth:
+        if not self._executable.is_file() or not os.access(self._executable, os.X_OK):
+            return SpeechRecognitionHealth(
+                available=False,
+                provider="whisper.cpp",
+                model=str(self._model_path),
+                loaded=False,
+                detail="whisper.cpp executable is unavailable",
+            )
+        if not self._model_path.is_file():
+            return SpeechRecognitionHealth(
+                available=False,
+                provider="whisper.cpp",
+                model=str(self._model_path),
+                loaded=False,
+                detail="local Whisper model is unavailable",
+            )
+        return SpeechRecognitionHealth(
+            available=True,
+            provider="whisper.cpp",
+            model=str(self._model_path),
+            loaded=self._loaded,
+            detail="local whisper.cpp runtime is ready",
+        )
+
+    async def transcribe(self, audio_bytes: bytes, mime: str) -> SpeechRecognitionResult:
+        health = await self.health()
+        if not health.available:
+            raise SpeechRecognitionUnavailable(health.detail)
+        if not audio_bytes:
+            raise ValueError("audio is empty")
+        if len(audio_bytes) > 50 * 1024 * 1024:
+            raise ValueError("audio exceeds the bounded size limit")
+        suffix = _audio_suffix(mime)
+        descriptor, raw_path = tempfile.mkstemp(prefix="thoth-voice-", suffix=suffix)
+        audio_path = Path(raw_path)
+        started = time.perf_counter()
+        deleted = False
+        try:
+            os.fchmod(descriptor, 0o600)
+            with os.fdopen(descriptor, "wb") as handle:
+                handle.write(audio_bytes)
+            argv = [
+                str(self._executable),
+                "-m",
+                str(self._model_path),
+                "-f",
+                str(audio_path),
+                "-l",
+                self._language,
+                "--no-timestamps",
+            ]
+            self._loaded = True
+            return_code, stdout, stderr = await self._runner(argv, audio_path)
+            if return_code != 0:
+                detail = _bounded_error(stderr)
+                raise SpeechRecognitionUnavailable(
+                    f"local whisper.cpp transcription failed: {detail}"
+                )
+            text = stdout.strip()
+            if not text:
+                raise SpeechRecognitionUnavailable("local whisper.cpp returned no transcript")
+            completed_at = self._clock()
+            transcript = FinalTranscript(
+                text=text,
+                confidence=0.0,
+                language=self._language,
+                duration_s=0.0,
+                segments=(
+                    TranscriptSegment(
+                        text=text,
+                        start_s=0,
+                        end_s=0,
+                        confidence=0.0,
+                        final=True,
+                    ),
+                ),
+                completed_at=completed_at,
+            )
+        finally:
+            with contextlib.suppress(FileNotFoundError):
+                await asyncio.to_thread(os.unlink, audio_path)
+            deleted = True
+        return SpeechRecognitionResult(
+            transcript=transcript,
+            provider="whisper.cpp",
+            model=str(self._model_path),
+            language=self._language,
+            audio_deleted=deleted,
+            elapsed_ms=(time.perf_counter() - started) * 1_000,
+        )
+
+    async def unload(self) -> None:
+        self._loaded = False
+
+
+def _audio_suffix(mime: str) -> str:
+    normalized = mime.partition(";")[0].strip().lower()
+    return {
+        "audio/wav": ".wav",
+        "audio/x-wav": ".wav",
+        "audio/aiff": ".aiff",
+        "audio/webm": ".webm",
+        "audio/mp4": ".m4a",
+    }.get(normalized, ".audio")
+
+
+def _bounded_error(stderr: str) -> str:
+    cleaned = " ".join(stderr.split())
+    return cleaned[:512] or "unknown local runtime error"
 
 
 def default_stt_adapter() -> STTAdapter:
