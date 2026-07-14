@@ -9,13 +9,15 @@ wiring (stop/cancel/run-skill/continue-workspace) lands with the
 interaction surfaces and workspace profiles.
 """
 
+from time import perf_counter
 from typing import Any, cast
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, ConfigDict
 
-from thoth_daemon.core.intent_router import IntentRouter
+from thoth_daemon.core.intent_router import IntentRouter, ReflexKind, RouteTier
 from thoth_daemon.storage.skills import SkillStore
+from thoth_daemon.voice.metrics import VoiceLatencyMetrics, VoiceLatencyStage
 
 router = APIRouter()
 
@@ -47,4 +49,15 @@ async def _build_router(request: Request) -> IntentRouter:
 @router.post("/api/intent/route")
 async def route_intent(body: RouteBody, request: Request) -> dict[str, Any]:
     intent_router = await _build_router(request)
-    return intent_router.route(body.text).model_dump(mode="json")
+    started = perf_counter()
+    routed = intent_router.route(body.text)
+    elapsed_ms = (perf_counter() - started) * 1_000
+    metrics = cast(VoiceLatencyMetrics, request.app.state.voice_metrics)
+    if routed.tier is RouteTier.REFLEX:
+        stage = (
+            VoiceLatencyStage.SKILL_ROUTE
+            if routed.reflex_kind is ReflexKind.RUN_SKILL
+            else VoiceLatencyStage.REFLEX_ROUTE
+        )
+        metrics.record(stage, elapsed_ms)
+    return routed.model_dump(mode="json")

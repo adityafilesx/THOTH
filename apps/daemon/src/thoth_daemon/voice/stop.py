@@ -6,9 +6,12 @@ import asyncio
 import re
 import unicodedata
 from collections.abc import Sequence
+from time import perf_counter
 from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from thoth_daemon.voice.metrics import VoiceLatencyMetrics, VoiceLatencyStage
 
 
 class _SessionCanceller(Protocol):
@@ -42,25 +45,34 @@ class GlobalStopAuthority:
         sessions: _SessionCanceller,
         tts: _SpeechInterruptor,
         orchestrator: _TaskCanceller,
+        metrics: VoiceLatencyMetrics | None = None,
     ) -> None:
         self._sessions = sessions
         self._tts = tts
         self._orchestrator = orchestrator
+        self._metrics = metrics
 
     async def stop(self, *, reason: str) -> GlobalStopResult:
+        started = perf_counter()
         voice_sessions = self._sessions.cancel_all()
         speech, cancellation = await asyncio.gather(
             self._tts.interrupt(),
             self._orchestrator.cancel_all(),
         )
         tasks, invalidated = cancellation
-        return GlobalStopResult(
+        result = GlobalStopResult(
             reason=reason,
             voice_sessions_cancelled=voice_sessions,
             speech_interrupted=speech,
             tasks_cancelled=len(tasks),
             approvals_invalidated=len(invalidated),
         )
+        if self._metrics is not None:
+            self._metrics.record(
+                VoiceLatencyStage.STOP_ACKNOWLEDGEMENT,
+                (perf_counter() - started) * 1_000,
+            )
+        return result
 
 
 class StopPhraseDetector:

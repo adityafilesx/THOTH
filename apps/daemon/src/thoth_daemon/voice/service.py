@@ -6,6 +6,7 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from time import perf_counter
 from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict
@@ -20,6 +21,7 @@ from thoth_daemon.voice.contracts import (
     VoiceActivityState,
     VoiceSessionSnapshot,
 )
+from thoth_daemon.voice.metrics import VoiceLatencyMetrics, VoiceLatencyStage
 from thoth_daemon.voice.session import AudioCaptureSession
 from thoth_daemon.voice.stop import GlobalStopAuthority, GlobalStopResult, StopPhraseDetector
 
@@ -64,15 +66,18 @@ class VoiceSessionRegistry:
         correction_window: timedelta = timedelta(seconds=3),
         clock: Callable[[], datetime] = _now,
         runtime: LocalAIRuntimeManager | None = None,
+        metrics: VoiceLatencyMetrics | None = None,
     ) -> None:
         self._provider = provider
         self._retain_transcripts = retain_transcripts
         self._correction_window = correction_window
         self._clock = clock
         self._runtime = runtime
+        self._metrics = metrics
         self._sessions: dict[str, _ManagedSession] = {}
 
     def start(self, mode: AudioCaptureMode) -> VoiceSessionSnapshot:
+        started = perf_counter()
         session_id = str(uuid.uuid4())
         capture = AudioCaptureSession(
             session_id=session_id,
@@ -81,7 +86,13 @@ class VoiceSessionRegistry:
         )
         capture.start()
         self._sessions[session_id] = _ManagedSession(capture=capture, mode=mode)
-        return self.snapshot(session_id)
+        snapshot = self.snapshot(session_id)
+        if self._metrics is not None:
+            self._metrics.record(
+                VoiceLatencyStage.RECORDING_START,
+                (perf_counter() - started) * 1_000,
+            )
+        return snapshot
 
     def append_audio(self, session_id: str, chunk: bytes, mime: str) -> VoiceSessionSnapshot:
         managed = self._get(session_id)
@@ -90,7 +101,9 @@ class VoiceSessionRegistry:
         return self.snapshot(session_id)
 
     async def recognise_partial(self, session_id: str) -> VoiceSessionSnapshot:
+        started = perf_counter()
         managed = self._get(session_id)
+        first_partial = not managed.capture.partials
         audio = managed.capture.audio_bytes()
         if not audio:
             raise ValueError("voice session has no audio")
@@ -105,9 +118,15 @@ class VoiceSessionRegistry:
             observed_at=self._clock(),
         )
         managed.capture.publish_partial(partial)
+        if first_partial and self._metrics is not None:
+            self._metrics.record(
+                VoiceLatencyStage.FIRST_PARTIAL,
+                (perf_counter() - started) * 1_000,
+            )
         return self.snapshot(session_id)
 
     async def finalise(self, session_id: str) -> VoiceSessionSnapshot:
+        started = perf_counter()
         managed = self._get(session_id)
         audio = managed.capture.audio_bytes()
         if not audio:
@@ -119,7 +138,13 @@ class VoiceSessionRegistry:
         except BaseException:
             managed.capture.fail()
             raise
-        return self.snapshot(session_id)
+        snapshot = self.snapshot(session_id)
+        if self._metrics is not None:
+            self._metrics.record(
+                VoiceLatencyStage.FINALISATION,
+                (perf_counter() - started) * 1_000,
+            )
+        return snapshot
 
     def edit(self, session_id: str, text: str) -> VoiceSessionSnapshot:
         managed = self._get(session_id)

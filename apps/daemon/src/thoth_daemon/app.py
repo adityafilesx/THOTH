@@ -75,6 +75,7 @@ from thoth_daemon.tools.git_tools import register_git_tools
 from thoth_daemon.tools.mock_tools import build_registry
 from thoth_daemon.tools.semantic_ax_tools import register_semantic_ax_tools
 from thoth_daemon.tools.shell_tool import register_shell_tool
+from thoth_daemon.voice.metrics import VoiceLatencyMetrics
 from thoth_daemon.voice.service import VoiceCommandService, VoiceSessionRegistry
 from thoth_daemon.voice.stop import GlobalStopAuthority
 from thoth_daemon.voice.stt import (
@@ -124,8 +125,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.skills = SkillStore(session_factory)
         await seed_builtin_skills(app.state.skills)  # idempotent (Phase 4 slice 5)
 
+        app.state.voice_metrics = VoiceLatencyMetrics()
         app.state.speech_synthesis_provider = MacOSSpeechSynthesisProvider()
-        app.state.speech_synthesis = SpeechSynthesisService(app.state.speech_synthesis_provider)
+        app.state.speech_synthesis = SpeechSynthesisService(
+            app.state.speech_synthesis_provider,
+            metrics=app.state.voice_metrics,
+        )
         app.state.speech_recognition = WhisperCppSpeechRecognitionProvider(
             executable=cfg.whisper_executable,
             model_path=cfg.whisper_model_path,
@@ -316,11 +321,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             retain_transcripts=cfg.voice_retain_transcripts,
             correction_window=timedelta(seconds=cfg.voice_correction_window_seconds),
             runtime=app.state.local_runtime,
+            metrics=app.state.voice_metrics,
         )
         app.state.global_stop = GlobalStopAuthority(
             sessions=app.state.voice_sessions,
             tts=app.state.speech_synthesis,
             orchestrator=app.state.orchestrator,
+            metrics=app.state.voice_metrics,
         )
         app.state.voice_commands = VoiceCommandService(
             sessions=app.state.voice_sessions,

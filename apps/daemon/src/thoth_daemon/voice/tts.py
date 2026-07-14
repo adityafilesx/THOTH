@@ -15,6 +15,7 @@ import logging
 import os
 import re
 import tempfile
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
@@ -28,6 +29,7 @@ from thoth_daemon.voice.contracts import (
     SpeechSynthesisHealth,
     SpeechSynthesisProvider,
 )
+from thoth_daemon.voice.metrics import VoiceLatencyMetrics, VoiceLatencyStage
 
 if TYPE_CHECKING:
     from thoth_daemon.core.local_runtime import LocalAIRuntimeManager
@@ -341,10 +343,12 @@ class SpeechSynthesisService:
         *,
         rate_wpm: int = 185,
         runtime: LocalAIRuntimeManager | None = None,
+        metrics: VoiceLatencyMetrics | None = None,
     ) -> None:
         self._provider = provider
         self._rate_wpm = rate_wpm
         self._runtime = runtime
+        self._metrics = metrics
         self._managed_task: asyncio.Task[int] | None = None
 
     def bind_runtime(self, runtime: LocalAIRuntimeManager) -> None:
@@ -372,6 +376,7 @@ class SpeechSynthesisService:
         return await self._speak(SpeechRequest(segments=(segment,)))
 
     async def interrupt(self) -> bool:
+        started = time.perf_counter()
         interrupted = await self._provider.interrupt()
         task = self._managed_task
         if task is not None and not task.done():
@@ -379,6 +384,11 @@ class SpeechSynthesisService:
             with contextlib.suppress(asyncio.CancelledError):
                 await task
             interrupted = True
+        if self._metrics is not None:
+            self._metrics.record(
+                VoiceLatencyStage.TTS_INTERRUPTION,
+                (time.perf_counter() - started) * 1_000,
+            )
         return interrupted
 
     async def _speak(self, request: SpeechRequest) -> SpeechPlayback:
