@@ -67,6 +67,10 @@ The initial loopback CORS blocker is resolved. During recovery, the following ad
 6. Typed and voice commands now share one authoritative deterministic dispatcher. Stop, speech interruption, status, supported app launch/focus, and installed skills do not enter the local planner.
 7. Planner validation failures settle as terminal tasks and user-facing persona text no longer exposes Pydantic internals.
 8. Deterministic no-task controls return valid persona responses instead of HTTP 409 failures. “Stop speaking” does not immediately start another utterance.
+9. The first real microphone attempt proved that local PCM reached Whisper and produced partial transcripts, but it was not counted as a pass: pointer release could be lost outside the button, recognition was requested too early, and queued audio continued after cancellation. Pointer capture plus a global release listener now bounds capture to 30 seconds, batches uploads, delays the first partial, and prevents post-cancel uploads.
+10. A typed `run the tests` preflight exposed a hollow-success route: the local planner listed applications and the task was marked complete without running tests. Natural project operations now resolve to authoritative installed skills; `run the tests` produces an exact `shell_run make test` step with R2 approval and exit-code verification.
+11. A stale untrusted database workspace could override an explicitly configured trusted workspace. Startup now reconciles exact normalized paths from trusted launch configuration, preserves unrelated records, and selects the configured profile as the default.
+12. Reconnecting desktop clients could miss task events and falsely show `No task running`. WebSocket connection is now considered established only after the authenticated server acknowledgement, and every authenticated reconnect refreshes tasks and pending approvals before presenting state.
 
 Live recovery evidence on 2026-07-14:
 
@@ -74,8 +78,10 @@ Live recovery evidence on 2026-07-14:
 - The local runtime snapshot reported the Whisper binary/model integrity pin verified and no cloud fallback.
 - The Chrome development UI showed `CONNECTED`.
 - A typed `thoth stop` traversed `/api/commands`, returned HTTP 200, created no task, and visibly displayed `Stopped. No external action was taken.` without model use.
-- The final combined automated gate passed: 976 daemon tests and 87 desktop tests. Ruff, Ruff formatting, strict mypy, ESLint, TypeScript, Vite build, Rust check/test, and Alembic upgrade also passed.
-- Real microphone evidence remains pending. It will not be inferred from automated PCM tests or typed commands.
+- The first real microphone attempt delivered PCM to the daemon and local Whisper returned partial recognition. Because the release/cancellation defect interrupted finalisation, it is recorded as an unsuccessful diagnostic attempt, not a passed command.
+- A live typed `Thoth, run the tests.` command now stops at `WAITING_FOR_APPROVAL` with an exact R2 `shell_run make test` invocation and an exit-code verifier. No approval was bypassed.
+- The final combined automated gate passed: 981 daemon tests and 91 desktop tests. Ruff, Ruff formatting, strict mypy, ESLint, TypeScript, Vite build, Rust check/test, and Alembic upgrade also passed.
+- A clean post-fix real microphone command remains pending. It will not be inferred from automated PCM tests, partial recognition, or typed commands.
 
 ## Exact continuation plan
 
@@ -100,4 +106,4 @@ Generated audio, prerecorded synthetic audio, bundled samples, and typed transcr
 
 ## Starting claim ceiling
 
-At the current checkpoint, local voice transport, authoritative routing, and all automated gates are verified. Real microphone-to-action readiness remains unverified until the user personally speaks the required commands. No real voice pass is claimed yet.
+At the current checkpoint, local voice transport into Whisper, authoritative routing, reconnect reconciliation, and all automated gates are verified. Real microphone-to-action readiness remains unverified until the user personally completes a post-fix spoken command. No real voice pass is claimed yet.
