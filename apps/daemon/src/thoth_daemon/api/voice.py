@@ -13,12 +13,21 @@ missing runtime/model state returns 503 and never falls back to cloud speech.
 """
 
 import logging
+from datetime import UTC, datetime
 from typing import Any, Literal, cast
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict
 
 from thoth_daemon.api.operational import build_task_payload, refresh_dialogue
+from thoth_daemon.core.dialogue import (
+    ApprovalFollowUpRejected,
+    DialogueConstraint,
+    DialogueError,
+    DialogueIntent,
+    DialogueResolution,
+    OperationalDialogueStore,
+)
 from thoth_daemon.core.local_runtime import RuntimeUnavailable
 from thoth_daemon.core.orchestrator import Orchestrator
 from thoth_daemon.core.persona import (
@@ -28,6 +37,7 @@ from thoth_daemon.core.persona import (
     SpokenResponse,
 )
 from thoth_daemon.schemas import TaskSource
+from thoth_daemon.storage.permissions import PermissionStore
 from thoth_daemon.voice.contracts import AudioCaptureMode
 from thoth_daemon.voice.service import VoiceCommandService, VoiceSessionRegistry
 from thoth_daemon.voice.session import TranscriptCorrectionExpired
@@ -112,6 +122,98 @@ async def _speak_safely(request: Request, response: SpokenResponse) -> None:
         # A missing or failed local voice must not rewrite an authoritative
         # task result. Runtime health remains available through /api/runtime.
         logger.warning("voice_response_playback_failed", exc_info=True)
+
+
+def _dialogue_goal(
+    store: OperationalDialogueStore,
+    resolution: DialogueResolution,
+    now: datetime,
+) -> str:
+    if resolution.intent is DialogueIntent.OPEN_ARTIFACT:
+        path = store.authoritative_artifact_path(resolution, now)
+        return f"Open the authoritative recent artifact at {path}."
+    if resolution.intent is DialogueIntent.RUN_TESTS:
+        return "Run the tests in the current approved workspace."
+    if resolution.intent is DialogueIntent.COMMIT_CHANGES:
+        suffix = (
+            " Do not push."
+            if DialogueConstraint.NO_PUSH in resolution.constraints
+            else ""
+        )
+        return f"Commit the verified changes in the current approved workspace.{suffix}"
+    if resolution.intent is DialogueIntent.RETRY_VERIFIED_RESULT:
+        return "Retry the recent verified operation through the normal safety pipeline."
+    if resolution.intent is DialogueIntent.STOP_FRONTEND:
+        return "Stop the frontend in the current approved workspace."
+    raise ValueError("dialogue intent does not create a task")
+
+
+async def _submit_recent_follow_up(
+    session_id: str,
+    request: Request,
+) -> dict[str, Any] | None:
+    sessions = _sessions(request)
+    snapshot = sessions.snapshot(session_id)
+    text = snapshot.editable_text
+    if not text:
+        return None
+    now = datetime.now(UTC)
+    store = cast(OperationalDialogueStore, request.app.state.dialogue)
+    permissions = cast(PermissionStore, request.app.state.permissions)
+    authorized = {workspace.id for workspace in await permissions.list_workspaces()}
+    try:
+        resolution = store.resolve_recent_follow_up(
+            text,
+            now,
+            authorized_workspace_ids=authorized,
+        )
+    except (DialogueError, ApprovalFollowUpRejected) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if resolution is None:
+        return None
+
+    # Consume exactly once only after successful authoritative resolution.
+    sessions.consume(session_id)
+    sessions.finish_submission(session_id)
+    orch = cast(Orchestrator, request.app.state.orchestrator)
+    if resolution.intent in {
+        DialogueIntent.ADD_CONSTRAINT,
+        DialogueIntent.USE_WORKSPACE,
+        DialogueIntent.READ_BACK,
+    }:
+        task = orch.get_task(resolution.active_task_id)
+        if task is None:
+            raise HTTPException(status_code=409, detail="recent dialogue task no longer exists")
+        payload = await build_task_payload(request, task)
+        if resolution.intent is DialogueIntent.READ_BACK:
+            spoken = SpokenResponse.model_validate(
+                payload["presentation"]["response"]["spoken"]
+            )
+        else:
+            spoken = PersonaResponseComposer().compose(
+                ResponseFact(intent=ResponseIntent.ACKNOWLEDGEMENT)
+            ).spoken
+        await _speak_safely(request, spoken)
+        return {
+            "stopped": False,
+            "task": payload,
+            "stop": None,
+            "dialogue": resolution.model_dump(mode="json"),
+        }
+
+    goal = _dialogue_goal(store, resolution, now)
+    task = await orch.submit(goal, TaskSource.VOICE)
+    settled = await orch.settle(task.id)
+    refresh_dialogue(request, settled)
+    payload = await build_task_payload(request, settled)
+    spoken = SpokenResponse.model_validate(payload["presentation"]["response"]["spoken"])
+    await _speak_safely(request, spoken)
+    return {
+        "stopped": False,
+        "task": payload,
+        "stop": None,
+        "dialogue": resolution.model_dump(mode="json"),
+    }
 
 
 @router.post("/api/voice/transcribe")
@@ -206,7 +308,12 @@ async def edit_voice_transcript(
 @router.post("/api/voice/sessions/{session_id}/submit")
 async def submit_voice_session(session_id: str, request: Request) -> dict[str, Any]:
     try:
+        follow_up = await _submit_recent_follow_up(session_id, request)
+        if follow_up is not None:
+            return follow_up
         result = await _commands(request).submit(session_id)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise _voice_error(exc) from exc
     if result.stopped:

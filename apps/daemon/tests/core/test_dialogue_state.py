@@ -175,3 +175,38 @@ def test_named_operational_follow_ups(text: str, intent: DialogueIntent) -> None
     resolution = store.resolve_follow_up("t1", text, NOW)
     assert resolution.intent is intent
     assert resolution.active_task_id == "t1"
+
+
+def test_recent_voice_follow_up_requires_exactly_one_active_task() -> None:
+    store = OperationalDialogueStore()
+    store.put(_state())
+    resolution = store.resolve_recent_follow_up(
+        "Run the tests.", NOW, authorized_workspace_ids={"w1"}
+    )
+    assert resolution is not None
+    assert resolution.intent is DialogueIntent.RUN_TESTS
+
+    store.put(_state(active_task_id="t2", workspace_id="w1"))
+    with pytest.raises(DialogueAmbiguous, match="multiple active"):
+        store.resolve_recent_follow_up(
+            "Run the tests.", NOW, authorized_workspace_ids={"w1"}
+        )
+
+
+def test_non_follow_up_is_not_bound_to_recent_dialogue() -> None:
+    store = OperationalDialogueStore()
+    store.put(_state())
+    assert (
+        store.resolve_recent_follow_up(
+            "Write a new report.", NOW, authorized_workspace_ids={"w1"}
+        )
+        is None
+    )
+
+
+def test_read_that_back_resolves_without_creating_authority() -> None:
+    store = OperationalDialogueStore()
+    store.put(_state())
+    resolution = store.resolve_follow_up("t1", "Read that back.", NOW)
+    assert resolution.intent is DialogueIntent.READ_BACK
+    assert resolution.previous_verified_result_id == "result-1"

@@ -234,3 +234,52 @@ class TestVoiceStopBypass:
         response = await client.post("/api/stop", json={"reason": "global_button"})
         assert response.status_code == 200
         assert response.json()["reason"] == "global_button"
+
+
+class TestVoiceDialogueContinuity:
+    async def test_unique_recent_follow_up_reenters_normal_task_pipeline(
+        self,
+        client: AsyncClient,
+        app: FastAPI,
+    ) -> None:
+        original = (await client.post("/api/tasks", json={"goal": "read notes"})).json()
+        _prime(app, "Run the tests.")
+        session_id = await _start(client)
+        await client.put(
+            f"/api/voice/sessions/{session_id}/audio",
+            content=b"audio",
+            headers={"Content-Type": "audio/wav"},
+        )
+        await client.post(f"/api/voice/sessions/{session_id}/finalise")
+
+        response = await client.post(f"/api/voice/sessions/{session_id}/submit")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["dialogue"]["intent"] == "run_tests"
+        assert body["dialogue"]["active_task_id"] == original["id"]
+        assert body["task"]["source"] == "voice"
+        assert body["task"]["goal"] == "Run the tests in the current approved workspace."
+
+    async def test_multiple_recent_tasks_require_clarification(
+        self,
+        client: AsyncClient,
+        app: FastAPI,
+    ) -> None:
+        await client.post("/api/tasks", json={"goal": "read first notes"})
+        await client.post("/api/tasks", json={"goal": "read second notes"})
+        task_count = len((await client.get("/api/tasks")).json())
+        _prime(app, "Run the tests.")
+        session_id = await _start(client)
+        await client.put(
+            f"/api/voice/sessions/{session_id}/audio",
+            content=b"audio",
+            headers={"Content-Type": "audio/wav"},
+        )
+        await client.post(f"/api/voice/sessions/{session_id}/finalise")
+
+        response = await client.post(f"/api/voice/sessions/{session_id}/submit")
+
+        assert response.status_code == 409
+        assert "multiple active" in response.json()["detail"]
+        assert len((await client.get("/api/tasks")).json()) == task_count

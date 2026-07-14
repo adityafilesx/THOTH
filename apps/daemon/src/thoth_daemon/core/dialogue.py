@@ -27,6 +27,7 @@ class DialogueIntent(StrEnum):
     USE_WORKSPACE = "use_workspace"
     RETRY_VERIFIED_RESULT = "retry_verified_result"
     STOP_FRONTEND = "stop_frontend"
+    READ_BACK = "read_back"
     UNKNOWN = "unknown"
 
 
@@ -95,6 +96,18 @@ class ApprovalFollowUpRejected(DialogueError):
 
 _VAGUE_APPROVAL = re.compile(r"^(yes|approve( it)?|go ahead|do it)[.! ]*$", re.IGNORECASE)
 _NO_PUSH = re.compile(r"\b(?:do not|don't|never)\s+push\b", re.IGNORECASE)
+_OPERATIONAL_FOLLOW_UPS = frozenset(
+    {
+        "open it",
+        "don't push",
+        "use the other workspace",
+        "run the tests",
+        "commit those changes",
+        "try again",
+        "stop the frontend",
+        "read that back",
+    }
+)
 
 
 def _normalize(text: str) -> str:
@@ -197,7 +210,60 @@ class OperationalDialogueStore:
             return self._resolution(state, DialogueIntent.RETRY_VERIFIED_RESULT)
         if normalized in {"stop the frontend", "stop the frontend."}:
             return self._resolution(state, DialogueIntent.STOP_FRONTEND)
+        if normalized in {"read that back", "read that back."}:
+            if not state.previous_verified_result_id:
+                raise DialogueExpired("no recent verified result to read back")
+            return self._resolution(state, DialogueIntent.READ_BACK)
         return self._resolution(state, DialogueIntent.UNKNOWN)
+
+    def resolve_recent_follow_up(
+        self,
+        text: str,
+        now: datetime,
+        *,
+        authorized_workspace_ids: set[str],
+    ) -> DialogueResolution | None:
+        """Resolve voice follow-ups only when recent task context is unique."""
+        normalized = _normalize(text).rstrip(".! ")
+        if normalized not in _OPERATIONAL_FOLLOW_UPS and not _VAGUE_APPROVAL.fullmatch(
+            normalized
+        ):
+            return None
+        active: list[DialogueState] = []
+        for task_id in tuple(self._states):
+            try:
+                active.append(self.get(task_id, now))
+            except DialogueExpired:
+                continue
+        if not active:
+            raise DialogueExpired("no active dialogue state for the voice follow-up")
+        if len(active) > 1:
+            raise DialogueAmbiguous("multiple active task contexts require clarification")
+        return self.resolve_follow_up(
+            active[0].active_task_id,
+            text,
+            now,
+            authorized_workspace_ids=authorized_workspace_ids,
+        )
+
+    def authoritative_artifact_path(
+        self, resolution: DialogueResolution, now: datetime
+    ) -> str:
+        if resolution.intent is not DialogueIntent.OPEN_ARTIFACT or not resolution.artifact_id:
+            raise DialogueExpired("dialogue resolution does not identify an artifact")
+        state = self.get(resolution.active_task_id, now)
+        matches = [
+            artifact
+            for artifact in state.referenced_artifacts
+            if artifact.artifact_id == resolution.artifact_id
+            and artifact.authoritative
+            and artifact.task_id == state.active_task_id
+            and artifact.created_at <= now
+            and Path(artifact.path).is_file()
+        ]
+        if len(matches) != 1:
+            raise DialogueExpired("authoritative artifact is no longer available")
+        return matches[0].path
 
     def _resolve_artifact(self, state: DialogueState, now: datetime) -> DialogueResolution:
         candidates = [
