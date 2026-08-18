@@ -10,14 +10,14 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel, ConfigDict
 
-from thoth_daemon.audit.store import AuditStore
-from thoth_daemon.core.approvals import ApprovalEngine
-from thoth_daemon.core.orchestrator import Orchestrator
-from thoth_daemon.core.planner import PlannerAdapter
-from thoth_daemon.core.policy import PolicyEngine
-from thoth_daemon.core.recovery import RecoveryController
-from thoth_daemon.core.verification import VerificationEngine
-from thoth_daemon.schemas import (
+from omnimac_daemon.audit.store import AuditStore
+from omnimac_daemon.core.approvals import ApprovalEngine
+from omnimac_daemon.core.orchestrator import Orchestrator
+from omnimac_daemon.core.planner import PlannerAdapter
+from omnimac_daemon.core.policy import PolicyEngine
+from omnimac_daemon.core.recovery import RecoveryController
+from omnimac_daemon.core.verification import VerificationEngine
+from omnimac_daemon.schemas import (
     ExecutionPlan,
     PlanStep,
     RiskLevel,
@@ -27,10 +27,10 @@ from thoth_daemon.schemas import (
     VerifierKind,
     WorkspaceProfile,
 )
-from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
-from thoth_daemon.tools.base import IndependentToolVerification, ToolDefinition
-from thoth_daemon.tools.mock_tools import build_registry
-from thoth_daemon.tools.registry import ToolRegistry
+from omnimac_daemon.storage.db import init_schema, make_engine, make_session_factory
+from omnimac_daemon.tools.base import IndependentToolVerification, ToolDefinition
+from omnimac_daemon.tools.mock_tools import build_registry
+from omnimac_daemon.tools.registry import ToolRegistry
 
 
 class _CheckPlanner(PlannerAdapter):
@@ -47,9 +47,7 @@ class _CheckPlanner(PlannerAdapter):
             tool_name="mock_read_file",
             arguments={"path": "/notes.txt"},
             declared_risk=RiskLevel.R0,
-            verification_checks=[
-                VerificationCheck(kind=VerifierKind.FILE_EXISTS, params={"path": str(self._target)})
-            ],
+            verification_checks=[VerificationCheck(kind=VerifierKind.FILE_EXISTS, params={"path": str(self._target)})],
         )
         return ExecutionPlan(task_id=task_id, summary="check", steps=[step])
 

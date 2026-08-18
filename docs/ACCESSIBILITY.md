@@ -2,7 +2,7 @@
 
 ## Permission boundary
 
-Accessibility is an optional macOS capability. THOTH must distinguish these
+Accessibility is an optional macOS capability. OmniMac must distinguish these
 states deterministically:
 
 - `not_determined`: trust is absent and this service has not opened the

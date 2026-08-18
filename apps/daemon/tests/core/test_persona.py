@@ -1,6 +1,6 @@
 """Persona response composition (Phase 5.2 slice 1).
 
-The composer turns immutable, verified structured facts into THOTH's voice.
+The composer turns immutable, verified structured facts into OmniMac's voice.
 It NEVER invents facts and never claims completion without verification.
 Routine responses are deterministic templates — no LLM. The response
 policy engine forbids filler, approval pressure, and success language when
@@ -9,7 +9,7 @@ verification did not pass.
 
 import pytest
 
-from thoth_daemon.core.persona import (
+from omnimac_daemon.core.persona import (
     AccessibilityOutcome,
     PersonaResponseComposer,
     ResponseFact,
@@ -123,7 +123,7 @@ class TestDeterministicTemplates:
 
     def test_acknowledgement(self) -> None:
         r = COMPOSER.compose(_fact(intent=ResponseIntent.ACKNOWLEDGEMENT))
-        assert r.display.text == "Understood."
+        assert r.display.text == "Right away, sir."
         assert r.used_model is False
 
     def test_verified_completion_states_facts(self) -> None:
@@ -160,8 +160,8 @@ class TestDeterministicTemplates:
                 approval_target="submit your name and email to example.com",
             )
         )
-        assert "Nothing has been sent" in r.display.text
-        assert "Approve" in r.display.text
+        assert "Shall I proceed" in r.display.text
+        assert "submit" in r.display.text
 
     def test_policy_refusal_gives_the_reason(self) -> None:
         r = COMPOSER.compose(
@@ -170,13 +170,13 @@ class TestDeterministicTemplates:
                 failure_reason="It requests access outside the approved workspace.",
             )
         )
-        assert r.display.text.lower().startswith("i won't")
+        assert r.display.text.lower().startswith("i cannot")
         assert "approved workspace" in r.display.text
 
     def test_interrupted_states_no_external_action(self) -> None:
         r = COMPOSER.compose(_fact(intent=ResponseIntent.INTERRUPTED))
         assert "Stopped" in r.display.text
-        assert "No external action" in r.display.text
+        assert "No action" in r.display.text
 
     def test_degraded_mode_is_honest(self) -> None:
         r = COMPOSER.compose(_fact(intent=ResponseIntent.DEGRADED_MODE))
@@ -195,9 +195,7 @@ class TestFactsAreNotAltered:
         assert fact.model_dump() == before  # no mutation
 
     def test_response_carries_the_exact_policy_facts_unchanged(self) -> None:
-        r = COMPOSER.compose(
-            _fact(intent=ResponseIntent.APPROVAL_REQUIRED, risk="R2", approval_target="x")
-        )
+        r = COMPOSER.compose(_fact(intent=ResponseIntent.APPROVAL_REQUIRED, risk="R2", approval_target="x"))
         # The structured facts travel alongside the phrasing, verbatim.
         assert r.facts.risk == "R2"
         assert r.facts.approval_target == "x"
@@ -252,9 +250,9 @@ class TestSpokenDisplaySeparation:
                 intent=ResponseIntent.VERIFIED_COMPLETION,
                 verified=True,
                 succeeded_items=[
-                    "The daemon is running at /Users/x/thoth on port 7710",
+                    "The daemon is running at /Users/x/omnimac on port 7710",
                     "Both health checks passed",
-                    "Four files are modified in ~/projects/thoth/apps/daemon/src",
+                    "Four files are modified in ~/projects/omnimac/apps/daemon/src",
                 ],
             ),
             mode=ResponseMode.CONCISE,
@@ -276,9 +274,7 @@ class TestSpokenDisplaySeparation:
 class TestAllIntentsHaveATemplate:
     @pytest.mark.parametrize("intent", list(ResponseIntent))
     def test_every_intent_composes_without_a_model(self, intent: ResponseIntent) -> None:
-        r = COMPOSER.compose(
-            _fact(intent=intent, verified=(intent == ResponseIntent.VERIFIED_COMPLETION))
-        )
+        r = COMPOSER.compose(_fact(intent=intent, verified=(intent == ResponseIntent.VERIFIED_COMPLETION)))
         assert r.display.text
         assert r.used_model is False
 

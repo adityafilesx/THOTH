@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.inference import (
+from omnimac_daemon.inference import (
     AnthropicInferenceProvider,
     DeterministicInferenceProvider,
     InferenceRequest,
@@ -147,12 +147,8 @@ class _FakeOllama:
 class TestLlamaCppProvider:
     async def test_generate_constrained_json_via_local_server(self) -> None:
         fake = _FakeOllama()
-        provider = LlamaCppInferenceProvider(
-            endpoint="http://127.0.0.1:11434", model="qwen3:4b", http=fake
-        )
-        result = await provider.generate(
-            InferenceRequest(prompt="read notes", json_schema=PLAN_SCHEMA)
-        )
+        provider = LlamaCppInferenceProvider(endpoint="http://127.0.0.1:11434", model="qwen3:4b", http=fake)
+        result = await provider.generate(InferenceRequest(prompt="read notes", json_schema=PLAN_SCHEMA))
         assert result.parsed == {"summary": "Plan for: read notes", "steps": [{"tool_name": "x"}]}
         assert result.tokens_in == 12 and result.tokens_out == 20
         assert result.model_id == "qwen3:4b"
@@ -163,9 +159,7 @@ class TestLlamaCppProvider:
 
     async def test_refuses_non_loopback_endpoint(self) -> None:
         with pytest.raises(IsolationViolation):
-            LlamaCppInferenceProvider(
-                endpoint="http://10.0.0.5:11434", model="qwen3:4b", isolation=True
-            )
+            LlamaCppInferenceProvider(endpoint="http://10.0.0.5:11434", model="qwen3:4b", isolation=True)
 
     async def test_health_reports_server_version(self) -> None:
         provider = LlamaCppInferenceProvider(model="qwen3:4b", http=_FakeOllama())
@@ -197,13 +191,13 @@ class TestMLXProvider:
 
 class TestAnthropicProviderGating:
     def test_not_constructible_without_explicit_opt_in(self, monkeypatch) -> None:
-        monkeypatch.delenv("THOTH_ALLOW_CLOUD", raising=False)
+        monkeypatch.delenv("OmniMac_ALLOW_CLOUD", raising=False)
         monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-fake")
         with pytest.raises(InferenceUnavailableError, match="disabled"):
             AnthropicInferenceProvider()
 
     def test_refused_in_isolation_even_with_opt_in(self, monkeypatch) -> None:
-        monkeypatch.setenv("THOTH_ALLOW_CLOUD", "1")
+        monkeypatch.setenv("OmniMac_ALLOW_CLOUD", "1")
         monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-fake")
         with pytest.raises((IsolationViolation, InferenceUnavailableError)):
             AnthropicInferenceProvider(isolation=True)

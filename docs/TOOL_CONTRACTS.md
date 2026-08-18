@@ -1,4 +1,4 @@
-# THOTH Tool Contracts
+# OmniMac Tool Contracts
 
 Every tool registered with the tool registry MUST satisfy this contract. The registry rejects tools that don't; CI tests enforce it for every shipped tool.
 

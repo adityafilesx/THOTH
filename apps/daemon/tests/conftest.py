@@ -7,9 +7,9 @@ from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from thoth_daemon.app import create_app
-from thoth_daemon.config import Settings
-from thoth_daemon.storage import db as storage_db
+from omnimac_daemon.app import create_app
+from omnimac_daemon.config import Settings
+from omnimac_daemon.storage import db as storage_db
 
 
 @pytest.fixture(autouse=True)
@@ -39,6 +39,8 @@ def settings(tmp_path: Path) -> Settings:
         approval_ttl_seconds=60,
         session_token="test-token",
         session_token_path=tmp_path / "session.token",
+        planner="mock",
+        inference_provider="deterministic",
     )
 
 

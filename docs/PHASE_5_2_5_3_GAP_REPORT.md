@@ -46,4 +46,4 @@
 
 ## Claim ceiling
 
-After the gate: "THOTH provides a consistent local persona, understands short-lived operational context, detects the active macOS workspace, and manages supported application focus without unnecessary disruption." No voice, no proactivity claims.
+After the gate: "OmniMac provides a consistent local persona, understands short-lived operational context, detects the active macOS workspace, and manages supported application focus without unnecessary disruption." No voice, no proactivity claims.

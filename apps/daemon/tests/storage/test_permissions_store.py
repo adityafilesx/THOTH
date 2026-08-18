@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.schemas import PermissionGrant, WorkspaceProfile
-from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
-from thoth_daemon.storage.permissions import PermissionStore
+from omnimac_daemon.schemas import PermissionGrant, WorkspaceProfile
+from omnimac_daemon.storage.db import init_schema, make_engine, make_session_factory
+from omnimac_daemon.storage.permissions import PermissionStore
 
 
 @pytest.fixture()
@@ -16,11 +16,9 @@ async def store(tmp_path: Path) -> AsyncIterator[PermissionStore]:
 
 
 async def test_upsert_and_list_workspace(store: PermissionStore) -> None:
-    await store.upsert_workspace(
-        WorkspaceProfile(name="default", root_path="~/projects/thoth", trusted=True)
-    )
+    await store.upsert_workspace(WorkspaceProfile(name="default", root_path="~/projects/omnimac", trusted=True))
     listed = await store.list_workspaces()
-    assert len(listed) == 1 and listed[0].root_path == "~/projects/thoth"
+    assert len(listed) == 1 and listed[0].root_path == "~/projects/omnimac"
 
 
 async def test_add_list_revoke_grant(store: PermissionStore) -> None:
@@ -37,7 +35,7 @@ async def test_effective_scope_unions_workspace_and_grants(store: PermissionStor
         WorkspaceProfile(
             id="w1",
             name="default",
-            root_path="~/projects/thoth",
+            root_path="~/projects/omnimac",
             trusted=True,
             approved_domains=["docs.python.org"],
             approved_apps=["Safari"],
@@ -50,7 +48,7 @@ async def test_effective_scope_unions_workspace_and_grants(store: PermissionStor
     await store.revoke_grant(revoked.id)
 
     scope = await store.effective_scope("w1")
-    assert set(scope.paths) == {"~/projects/thoth", "~/scratch"}
+    assert set(scope.paths) == {"~/projects/omnimac", "~/scratch"}
     assert set(scope.domains) == {"docs.python.org", "example.com"}
     assert scope.apps == ["Safari"]  # revoked Terminal excluded
 
@@ -59,8 +57,6 @@ async def test_grants_persist_across_store_instances(tmp_path: Path) -> None:
     engine = make_engine(tmp_path / "persist.db")
     await init_schema(engine)
     sf = make_session_factory(engine)
-    await PermissionStore(sf).add_grant(
-        PermissionGrant(workspace_id="w1", kind="path", value="~/x")
-    )
+    await PermissionStore(sf).add_grant(PermissionGrant(workspace_id="w1", kind="path", value="~/x"))
     reopened = await PermissionStore(sf).list_grants()
     assert [g.value for g in reopened] == ["~/x"]

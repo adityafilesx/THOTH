@@ -107,7 +107,7 @@ function PresenceBridge() {
     let unlisten: (() => void) | undefined;
     void import("@tauri-apps/api/event")
       .then(async ({ listen }) => {
-        unlisten = await listen("thoth://stop", () => void api.globalStop("menu_bar"));
+        unlisten = await listen("omnimac://stop", () => void api.globalStop("menu_bar"));
       })
       .catch(() => {});
     return () => unlisten?.();

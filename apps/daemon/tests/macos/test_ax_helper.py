@@ -6,12 +6,12 @@ from typing import Any
 
 import pytest
 
-from thoth_daemon.macos.ax_helper import (
+from omnimac_daemon.macos.ax_helper import (
     AXHelperClient,
     AXHelperProtocolError,
     AXHelperSemanticAXAdapter,
 )
-from thoth_daemon.schemas.ax import AXElementSnapshot
+from omnimac_daemon.schemas.ax import AXElementSnapshot
 
 NOW = datetime(2026, 7, 14, 12, tzinfo=UTC)
 
@@ -50,7 +50,7 @@ class _RecordingTransport:
 def _element() -> AXElementSnapshot:
     return AXElementSnapshot(
         reference_id="ref",
-        application_bundle_id="me.adityalabs.thoth.axtest",
+        application_bundle_id="me.adityalabs.omnimac.axtest",
         window_identifier="main",
         role="AXTextField",
         identifier="profile-name",
@@ -77,7 +77,7 @@ def test_helper_adapter_uses_only_semantic_target_fields() -> None:
     payload = transport.requests[0]["payload"]
     assert payload["value"] == "Aditya"
     assert payload["target"] == {
-        "application_bundle_id": "me.adityalabs.thoth.axtest",
+        "application_bundle_id": "me.adityalabs.omnimac.axtest",
         "window_identifier": "main",
         "role": "AXTextField",
         "identifier": "profile-name",
@@ -93,9 +93,9 @@ def test_helper_snapshot_is_strictly_parsed_as_untrusted_data() -> None:
     transport = _RecordingTransport()
     adapter = AXHelperSemanticAXAdapter(AXHelperClient(transport=transport))
 
-    snapshot = adapter.inspect_application("me.adityalabs.thoth.axtest")
+    snapshot = adapter.inspect_application("me.adityalabs.omnimac.axtest")
 
-    assert snapshot.bundle_id == "me.adityalabs.thoth.axtest"
+    assert snapshot.bundle_id == "me.adityalabs.omnimac.axtest"
     assert snapshot.provenance.value == "TOOL_RESULT_UNTRUSTED"
 
 
@@ -117,6 +117,4 @@ def test_helper_rejects_mismatched_or_malformed_response() -> None:
 def test_default_socket_path_is_local_user_application_support() -> None:
     client = AXHelperClient(home=Path("/Users/test"))
 
-    assert client.socket_path == Path(
-        "/Users/test/Library/Application Support/THOTH/ax-helper.sock"
-    )
+    assert client.socket_path == Path("/Users/test/Library/Application Support/OmniMac/ax-helper.sock")

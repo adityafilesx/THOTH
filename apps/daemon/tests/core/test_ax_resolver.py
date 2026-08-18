@@ -2,11 +2,11 @@
 
 from datetime import UTC, datetime, timedelta
 
-from thoth_daemon.core.ax_resolver import AXResolutionMethod, AXResolver
-from thoth_daemon.schemas.ax import AXElementQuery, AXElementReference, AXElementSnapshot
+from omnimac_daemon.core.ax_resolver import AXResolutionMethod, AXResolver
+from omnimac_daemon.schemas.ax import AXElementQuery, AXElementReference, AXElementSnapshot
 
 NOW = datetime(2026, 7, 14, 14, tzinfo=UTC)
-BUNDLE = "me.adityalabs.thoth.axtest"
+BUNDLE = "me.adityalabs.omnimac.axtest"
 
 
 def _element(**updates: object) -> AXElementSnapshot:

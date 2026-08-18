@@ -3,6 +3,6 @@
 <plist version="1.0">
 <dict>
   <key>NSMicrophoneUsageDescription</key>
-  <string>THOTH records audio only while push-to-talk is active and transcribes it locally.</string>
+  <string>OmniMac records audio only while push-to-talk is active and transcribes it locally.</string>
 </dict>
 </plist>

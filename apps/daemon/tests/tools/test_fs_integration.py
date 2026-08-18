@@ -1,15 +1,13 @@
 from pathlib import Path
 
-from thoth_daemon.core.scope import ScopeEnforcer, ScopeViolation
-from thoth_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
-from thoth_daemon.tools.fs_tools import FsReadFile, register_fs_tools
-from thoth_daemon.tools.registry import ToolRegistry
+from omnimac_daemon.core.scope import ScopeEnforcer, ScopeViolation
+from omnimac_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
+from omnimac_daemon.tools.fs_tools import FsReadFile, register_fs_tools
+from omnimac_daemon.tools.registry import ToolRegistry
 
 
 def _inv(name: str, args: dict) -> ToolInvocation:
-    return ToolInvocation(
-        task_id="t", step_id="s", tool_name=name, arguments=args, effective_risk=RiskLevel.R0
-    )
+    return ToolInvocation(task_id="t", step_id="s", tool_name=name, arguments=args, effective_risk=RiskLevel.R0)
 
 
 async def test_registry_backstop_allows_in_scope_read(tmp_path: Path) -> None:
@@ -27,9 +25,7 @@ async def test_registry_backstop_refuses_out_of_scope(tmp_path: Path) -> None:
     reg = ToolRegistry()
     register_fs_tools(reg)
     allowed = ResourceScope(paths=[str(tmp_path / "approved")])
-    result = await reg.execute(
-        _inv("fs_read_file", {"path": str(tmp_path / "elsewhere.txt")}), allowed
-    )
+    result = await reg.execute(_inv("fs_read_file", {"path": str(tmp_path / "elsewhere.txt")}), allowed)
     assert not result.ok and "scope violation" in (result.error or "")
 
 

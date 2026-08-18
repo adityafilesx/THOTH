@@ -1,4 +1,4 @@
-# THOTH Test Plan
+# OmniMac Test Plan
 
 ## Scope
 
@@ -39,7 +39,7 @@ Phases 1–2: safety core + daemon + frontend rendering. All tests run locally a
 ## Quality gates (CI-enforced)
 
 - `ruff check` + `ruff format --check` clean.
-- `mypy` (strict) clean on `thoth_daemon`.
+- `mypy` (strict) clean on `omnimac_daemon`.
 - `eslint` + `tsc --noEmit` clean.
 - `vite build` succeeds.
 - No test may be weakened to pass; safety-core tests cover allowed **and** rejected paths.

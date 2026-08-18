@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.tools.git_io import run_git
-from thoth_daemon.tools.git_tools import GitAdd, GitCommit, GitDiff, GitLog, GitStatus
+from omnimac_daemon.tools.git_io import run_git
+from omnimac_daemon.tools.git_tools import GitAdd, GitCommit, GitDiff, GitLog, GitStatus
 
 
 async def _repo(tmp_path: Path) -> Path:
@@ -73,7 +73,7 @@ def test_read_tools_are_r0_and_diff_redacted() -> None:
 
 
 def test_add_requested_scope_includes_path_args(tmp_path: Path) -> None:
-    from thoth_daemon.security.paths import expand_and_resolve
+    from omnimac_daemon.security.paths import expand_and_resolve
 
     add = GitAdd()
     scope = add.requested_scope(add.input_model(cwd=str(tmp_path), paths=["sub/x"]))

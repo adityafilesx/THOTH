@@ -17,7 +17,7 @@ const KIND_META = {
 const KIND_ORDER = ["app", "path", "domain"] as const;
 
 /**
- * Live view over the daemon permissions API. THOTH may only touch what is
+ * Live view over the daemon permissions API. OmniMac may only touch what is
  * granted here; revoking hits DELETE /api/permissions/grants/{id} and the
  * scope enforcer honors it immediately.
  */
@@ -58,7 +58,7 @@ export function Permissions() {
     <div className="mx-auto flex max-w-3xl flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted">
-          THOTH may only touch what is granted here. Revoking takes effect
+          OmniMac may only touch what is granted here. Revoking takes effect
           immediately.
         </p>
         <Badge variant="success">live</Badge>
@@ -209,7 +209,7 @@ export function Permissions() {
 
       {data && data.grants.length === 0 && (
         <p className="text-xs text-muted">
-          No grants yet. THOTH can only act inside the trusted workspaces above.
+          No grants yet. OmniMac can only act inside the trusted workspaces above.
         </p>
       )}
     </div>

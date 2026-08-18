@@ -2,15 +2,15 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
-from thoth_daemon.audit.store import AuditStore
-from thoth_daemon.core.approvals import ApprovalEngine
-from thoth_daemon.core.orchestrator import Orchestrator
-from thoth_daemon.core.planner import PlannerAdapter
-from thoth_daemon.core.policy import PolicyEngine
-from thoth_daemon.core.recovery import RecoveryController
-from thoth_daemon.core.scope import ScopeEnforcer
-from thoth_daemon.core.verification import VerificationEngine
-from thoth_daemon.schemas import (
+from omnimac_daemon.audit.store import AuditStore
+from omnimac_daemon.core.approvals import ApprovalEngine
+from omnimac_daemon.core.orchestrator import Orchestrator
+from omnimac_daemon.core.planner import PlannerAdapter
+from omnimac_daemon.core.policy import PolicyEngine
+from omnimac_daemon.core.recovery import RecoveryController
+from omnimac_daemon.core.scope import ScopeEnforcer
+from omnimac_daemon.core.verification import VerificationEngine
+from omnimac_daemon.schemas import (
     ExecutionPlan,
     PlanStep,
     ResourceScope,
@@ -19,9 +19,9 @@ from thoth_daemon.schemas import (
     VerificationStrategy,
     WorkspaceProfile,
 )
-from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
-from thoth_daemon.tools.base import ToolDefinition
-from thoth_daemon.tools.registry import ToolRegistry
+from omnimac_daemon.storage.db import init_schema, make_engine, make_session_factory
+from omnimac_daemon.tools.base import ToolDefinition
+from omnimac_daemon.tools.registry import ToolRegistry
 
 
 class _ProbeIn(BaseModel):
@@ -74,9 +74,7 @@ class _OneStepPlanner(PlannerAdapter):
         )
 
 
-async def _build(
-    tmp_path: Path, allowed_paths: list[str], requested_path: str
-) -> tuple[Orchestrator, _ProbeTool]:
+async def _build(tmp_path: Path, allowed_paths: list[str], requested_path: str) -> tuple[Orchestrator, _ProbeTool]:
     engine = make_engine(tmp_path / "s.db")
     await init_schema(engine)
 
@@ -106,7 +104,7 @@ async def _build(
 
 
 async def test_in_scope_step_completes(tmp_path: Path) -> None:
-    root = str(Path.home() / "projects" / "thoth")
+    root = str(Path.home() / "projects" / "omnimac")
     orch, tool = await _build(tmp_path, [root], root + "/a.txt")
     task = await orch.submit("probe")
     settled = await orch.settle(task.id)
@@ -114,7 +112,7 @@ async def test_in_scope_step_completes(tmp_path: Path) -> None:
 
 
 async def test_out_of_scope_step_fails_before_executing(tmp_path: Path) -> None:
-    root = str(Path.home() / "projects" / "thoth")
+    root = str(Path.home() / "projects" / "omnimac")
     orch, tool = await _build(tmp_path, [root], str(Path.home() / "secret" / "a.txt"))
     task = await orch.submit("probe")
     settled = await orch.settle(task.id)
@@ -123,7 +121,5 @@ async def test_out_of_scope_step_fails_before_executing(tmp_path: Path) -> None:
     audit = await orch.task_audit(task.id)
     types = [e.event_type for e in audit]
     assert "scope.denied" in types
-    assert not any(
-        e.event_type == "state.transition" and e.payload.get("to") == "EXECUTING" for e in audit
-    )
+    assert not any(e.event_type == "state.transition" and e.payload.get("to") == "EXECUTING" for e in audit)
     assert not any(e.event_type == "tool.result" for e in audit)

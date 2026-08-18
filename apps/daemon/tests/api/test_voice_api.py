@@ -10,14 +10,12 @@ import sys
 from fastapi import FastAPI
 from httpx import AsyncClient
 
-from thoth_daemon.voice.stt import MockSTTAdapter, Transcript
-from thoth_daemon.voice.tts import MacOSSpeechSynthesisProvider, SpeechSynthesisService
+from omnimac_daemon.voice.stt import MockSTTAdapter, Transcript
+from omnimac_daemon.voice.tts import MacOSSpeechSynthesisProvider, SpeechSynthesisService
 
 
 def _prime_stt(app: FastAPI, text: str) -> None:
-    app.state.stt = MockSTTAdapter(
-        Transcript(text=text, confidence=0.97, duration_s=1.0, language="en")
-    )
+    app.state.stt = MockSTTAdapter(Transcript(text=text, confidence=0.97, duration_s=1.0, language="en"))
 
 
 def _silent_tts(app: FastAPI) -> None:
@@ -45,16 +43,12 @@ class TestTranscribe:
         assert 0 <= body["confidence"] <= 1
 
     async def test_empty_audio_422(self, client: AsyncClient) -> None:
-        resp = await client.post(
-            "/api/voice/transcribe", content=b"", headers={"Content-Type": "audio/wav"}
-        )
+        resp = await client.post("/api/voice/transcribe", content=b"", headers={"Content-Type": "audio/wav"})
         assert resp.status_code == 422
 
 
 class TestTranscriptIsolation:
-    async def test_transcript_cannot_approve_or_create_an_approval_task(
-        self, client: AsyncClient, app: FastAPI
-    ) -> None:
+    async def test_transcript_cannot_approve_or_create_an_approval_task(self, client: AsyncClient, app: FastAPI) -> None:
         """Approval language is rejected before planning and leaves the
         invocation-bound approval pending and unconsumed."""
         # Create an R2 task that halts for approval.
@@ -85,13 +79,11 @@ class TestTranscriptIsolation:
         assert pending_after[0]["id"] == pending_before[0]["id"]
         assert pending_after[0]["status"] == "pending"
 
-    async def test_legacy_voice_task_stop_uses_global_stop_without_creating_task(
-        self, client: AsyncClient, app: FastAPI
-    ) -> None:
+    async def test_legacy_voice_task_stop_uses_global_stop_without_creating_task(self, client: AsyncClient, app: FastAPI) -> None:
         pending_task = (await client.post("/api/tasks", json={"goal": "send the email"})).json()
         assert pending_task["state"] == "WAITING_FOR_APPROVAL"
 
-        _prime_stt(app, "Thoth, stop.")
+        _prime_stt(app, "Omnimac, stop.")
         response = await client.post(
             "/api/voice/task",
             content=b"fake-audio-bytes",

@@ -1,4 +1,4 @@
-import type { ExecutionPlan, PlanStep } from "@thoth/shared-schemas";
+import type { ExecutionPlan, PlanStep } from "@omnimac/shared-schemas";
 import {
   CheckCircle2,
   Circle,

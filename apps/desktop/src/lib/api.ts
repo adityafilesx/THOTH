@@ -1,9 +1,9 @@
 /**
- * Typed HTTP client for the THOTH daemon. The desktop is a thin client:
+ * Typed HTTP client for the OmniMac daemon. The desktop is a thin client:
  * every mutation here maps 1:1 to a daemon endpoint, and no business
  * logic lives on this side.
  */
-import type { ApprovalRequest, FocusPolicy, Task } from "@thoth/shared-schemas";
+import type { ApprovalRequest, FocusPolicy, Task } from "@omnimac/shared-schemas";
 
 import { getSessionToken } from "./auth";
 
@@ -331,7 +331,7 @@ export const api = {
       }),
     }),
   taskAudit: (id: string) =>
-    request<import("@thoth/shared-schemas").AuditEvent[]>(
+    request<import("@omnimac/shared-schemas").AuditEvent[]>(
       `/api/tasks/${id}/audit`,
     ),
   operationalStatus: (id: string) =>

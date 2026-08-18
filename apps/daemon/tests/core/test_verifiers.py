@@ -15,12 +15,12 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.core.verifiers import (
+from omnimac_daemon.core.verifiers import (
     BrowserStateProbe,
     VerifierContext,
     evaluate_check,
 )
-from thoth_daemon.schemas import ToolResult, VerificationCheck, VerifierKind
+from omnimac_daemon.schemas import ToolResult, VerificationCheck, VerifierKind
 
 
 def _ok(output: dict | None = None) -> ToolResult:
@@ -62,12 +62,8 @@ def test_file_content_contains(tmp_path: Path) -> None:
     f = tmp_path / "log.txt"
     f.write_text("build succeeded\n")
     ctx = VerifierContext(read_text=lambda p: Path(p).read_text())
-    ok = evaluate_check(
-        check(VerifierKind.FILE_CONTENT, path=str(f), contains="succeeded"), ctx, _ok()
-    )
-    bad = evaluate_check(
-        check(VerifierKind.FILE_CONTENT, path=str(f), contains="FAILED"), ctx, _ok()
-    )
+    ok = evaluate_check(check(VerifierKind.FILE_CONTENT, path=str(f), contains="succeeded"), ctx, _ok())
+    bad = evaluate_check(check(VerifierKind.FILE_CONTENT, path=str(f), contains="FAILED"), ctx, _ok())
     assert ok.passed and not bad.passed
 
 
@@ -75,15 +71,9 @@ def test_file_content_regex_and_equals(tmp_path: Path) -> None:
     f = tmp_path / "v.txt"
     f.write_text("v1.2.3")
     ctx = VerifierContext(read_text=lambda p: Path(p).read_text())
-    assert evaluate_check(
-        check(VerifierKind.FILE_CONTENT, path=str(f), regex=r"v\d+\.\d+\.\d+"), ctx, _ok()
-    ).passed
-    assert evaluate_check(
-        check(VerifierKind.FILE_CONTENT, path=str(f), equals="v1.2.3"), ctx, _ok()
-    ).passed
-    assert not evaluate_check(
-        check(VerifierKind.FILE_CONTENT, path=str(f), equals="other"), ctx, _ok()
-    ).passed
+    assert evaluate_check(check(VerifierKind.FILE_CONTENT, path=str(f), regex=r"v\d+\.\d+\.\d+"), ctx, _ok()).passed
+    assert evaluate_check(check(VerifierKind.FILE_CONTENT, path=str(f), equals="v1.2.3"), ctx, _ok()).passed
+    assert not evaluate_check(check(VerifierKind.FILE_CONTENT, path=str(f), equals="other"), ctx, _ok()).passed
 
 
 def test_file_content_missing_file_fails(tmp_path: Path) -> None:
@@ -91,9 +81,7 @@ def test_file_content_missing_file_fails(tmp_path: Path) -> None:
         return Path(p).read_text()
 
     ctx = VerifierContext(read_text=_read)
-    out = evaluate_check(
-        check(VerifierKind.FILE_CONTENT, path=str(tmp_path / "x"), contains="a"), ctx, _ok()
-    )
+    out = evaluate_check(check(VerifierKind.FILE_CONTENT, path=str(tmp_path / "x"), contains="a"), ctx, _ok())
     assert not out.passed
 
 
@@ -103,16 +91,12 @@ def test_file_content_missing_file_fails(tmp_path: Path) -> None:
 def test_process_running(monkeypatch) -> None:
     ctx = VerifierContext(process_running=lambda pat: pat == "vite")
     assert evaluate_check(check(VerifierKind.PROCESS_RUNNING, pattern="vite"), ctx, _ok()).passed
-    assert not evaluate_check(
-        check(VerifierKind.PROCESS_RUNNING, pattern="ghost"), ctx, _ok()
-    ).passed
+    assert not evaluate_check(check(VerifierKind.PROCESS_RUNNING, pattern="ghost"), ctx, _ok()).passed
 
 
 def test_process_should_not_run() -> None:
     ctx = VerifierContext(process_running=lambda pat: False)
-    out = evaluate_check(
-        check(VerifierKind.PROCESS_RUNNING, pattern="daemon", should_run=False), ctx, _ok()
-    )
+    out = evaluate_check(check(VerifierKind.PROCESS_RUNNING, pattern="daemon", should_run=False), ctx, _ok())
     assert out.passed
 
 
@@ -142,7 +126,7 @@ def test_http_health_real_server() -> None:
         def do_GET(self):
             self.send_response(200)
             self.end_headers()
-            self.wfile.write(b"THOTH-OK")
+            self.wfile.write(b"OmniMac-OK")
 
         def log_message(self, *a):  # silence
             pass
@@ -155,12 +139,8 @@ def test_http_health_real_server() -> None:
         ctx = VerifierContext.with_real_probes()
         url = f"http://127.0.0.1:{port}/health"
         assert evaluate_check(check(VerifierKind.HTTP_HEALTH, url=url), ctx, _ok()).passed
-        assert evaluate_check(
-            check(VerifierKind.HTTP_HEALTH, url=url, contains="THOTH-OK"), ctx, _ok()
-        ).passed
-        assert not evaluate_check(
-            check(VerifierKind.HTTP_HEALTH, url=url, expect_status=500), ctx, _ok()
-        ).passed
+        assert evaluate_check(check(VerifierKind.HTTP_HEALTH, url=url, contains="OmniMac-OK"), ctx, _ok()).passed
+        assert not evaluate_check(check(VerifierKind.HTTP_HEALTH, url=url, expect_status=500), ctx, _ok()).passed
     finally:
         httpd.shutdown()
 
@@ -183,17 +163,11 @@ def test_git_state_real_repo(tmp_path: Path) -> None:
     _git(repo, "commit", "-m", "init")
 
     ctx = VerifierContext.with_real_probes()
-    assert evaluate_check(
-        check(VerifierKind.GIT_STATE, repo=str(repo), branch="main", clean=True), ctx, _ok()
-    ).passed
+    assert evaluate_check(check(VerifierKind.GIT_STATE, repo=str(repo), branch="main", clean=True), ctx, _ok()).passed
     # Dirty the tree.
     (repo / "a.txt").write_text("y")
-    assert not evaluate_check(
-        check(VerifierKind.GIT_STATE, repo=str(repo), clean=True), ctx, _ok()
-    ).passed
-    assert evaluate_check(
-        check(VerifierKind.GIT_STATE, repo=str(repo), clean=False), ctx, _ok()
-    ).passed
+    assert not evaluate_check(check(VerifierKind.GIT_STATE, repo=str(repo), clean=True), ctx, _ok()).passed
+    assert evaluate_check(check(VerifierKind.GIT_STATE, repo=str(repo), clean=False), ctx, _ok()).passed
 
 
 # ------------------------------------------------------------- application/ax
@@ -202,9 +176,7 @@ def test_git_state_real_repo(tmp_path: Path) -> None:
 def test_application_running_probe() -> None:
     ctx = VerifierContext(application_running=lambda n: n == "Safari")
     assert evaluate_check(check(VerifierKind.APPLICATION_RUNNING, name="Safari"), ctx, _ok()).passed
-    assert not evaluate_check(
-        check(VerifierKind.APPLICATION_RUNNING, name="Xcode"), ctx, _ok()
-    ).passed
+    assert not evaluate_check(check(VerifierKind.APPLICATION_RUNNING, name="Xcode"), ctx, _ok()).passed
 
 
 def test_accessibility_value_probe() -> None:
@@ -223,9 +195,7 @@ def test_accessibility_value_probe() -> None:
 
 def test_accessibility_unavailable_is_not_a_pass() -> None:
     ctx = VerifierContext()  # no ax_value wired (no TCC)
-    out = evaluate_check(
-        check(VerifierKind.ACCESSIBILITY_VALUE, app="App", selector="#s", equals="x"), ctx, _ok()
-    )
+    out = evaluate_check(check(VerifierKind.ACCESSIBILITY_VALUE, app="App", selector="#s", equals="x"), ctx, _ok())
     assert not out.passed
     assert not out.available
 
@@ -234,20 +204,12 @@ def test_accessibility_unavailable_is_not_a_pass() -> None:
 
 
 def test_browser_url_and_element() -> None:
-    probe = BrowserStateProbe(
-        url="https://example.com/thanks", present_selectors=frozenset({"#confirmation"})
-    )
+    probe = BrowserStateProbe(url="https://example.com/thanks", present_selectors=frozenset({"#confirmation"}))
     ctx = VerifierContext(browser_probe=lambda: probe)
     assert evaluate_check(check(VerifierKind.BROWSER_URL, contains="/thanks"), ctx, _ok()).passed
-    assert evaluate_check(
-        check(VerifierKind.BROWSER_URL, prefix="https://example.com"), ctx, _ok()
-    ).passed
-    assert evaluate_check(
-        check(VerifierKind.BROWSER_ELEMENT, selector="#confirmation"), ctx, _ok()
-    ).passed
-    assert not evaluate_check(
-        check(VerifierKind.BROWSER_ELEMENT, selector="#error"), ctx, _ok()
-    ).passed
+    assert evaluate_check(check(VerifierKind.BROWSER_URL, prefix="https://example.com"), ctx, _ok()).passed
+    assert evaluate_check(check(VerifierKind.BROWSER_ELEMENT, selector="#confirmation"), ctx, _ok()).passed
+    assert not evaluate_check(check(VerifierKind.BROWSER_ELEMENT, selector="#error"), ctx, _ok()).passed
 
 
 def test_browser_unavailable_is_not_a_pass() -> None:
@@ -261,12 +223,8 @@ def test_browser_unavailable_is_not_a_pass() -> None:
 
 def test_exit_code_reads_tool_output() -> None:
     ctx = VerifierContext()
-    assert evaluate_check(
-        check(VerifierKind.EXIT_CODE, expected=0), ctx, _ok(output={"exit_code": 0})
-    ).passed
-    assert not evaluate_check(
-        check(VerifierKind.EXIT_CODE, expected=0), ctx, _ok(output={"exit_code": 1})
-    ).passed
+    assert evaluate_check(check(VerifierKind.EXIT_CODE, expected=0), ctx, _ok(output={"exit_code": 0})).passed
+    assert not evaluate_check(check(VerifierKind.EXIT_CODE, expected=0), ctx, _ok(output={"exit_code": 1})).passed
 
 
 # ------------------------------------------------------------------- composite
@@ -275,17 +233,11 @@ def test_exit_code_reads_tool_output() -> None:
 def test_composite_all_and_any(tmp_path: Path) -> None:
     f = tmp_path / "a.txt"
     f.write_text("done")
-    ctx = VerifierContext(
-        path_exists=lambda p: Path(p).exists(), read_text=lambda p: Path(p).read_text()
-    )
+    ctx = VerifierContext(path_exists=lambda p: Path(p).exists(), read_text=lambda p: Path(p).read_text())
     exists = check(VerifierKind.FILE_EXISTS, path=str(f))
     wrong = check(VerifierKind.FILE_CONTENT, path=str(f), contains="nope")
-    all_check = VerificationCheck(
-        kind=VerifierKind.COMPOSITE, require="all", children=[exists, wrong]
-    )
-    any_check = VerificationCheck(
-        kind=VerifierKind.COMPOSITE, require="any", children=[exists, wrong]
-    )
+    all_check = VerificationCheck(kind=VerifierKind.COMPOSITE, require="all", children=[exists, wrong])
+    any_check = VerificationCheck(kind=VerifierKind.COMPOSITE, require="any", children=[exists, wrong])
     assert not evaluate_check(all_check, ctx, _ok()).passed
     assert evaluate_check(any_check, ctx, _ok()).passed
 
@@ -297,8 +249,8 @@ def test_run_checks_composite_any_with_unwired_child_fails(tmp_path: Path) -> No
     """A COMPOSITE(any) containing an un-wired probe must NOT verify, even
     if a sibling child passes: available=False can never be part of a
     verified success (fail-closed)."""
-    from thoth_daemon.core.verification import VerificationEngine
-    from thoth_daemon.schemas import PlanStep, RiskLevel
+    from omnimac_daemon.core.verification import VerificationEngine
+    from omnimac_daemon.schemas import PlanStep, RiskLevel
 
     f = tmp_path / "present.txt"
     f.write_text("here")
@@ -342,9 +294,7 @@ def test_malformed_params_fail_closed() -> None:
     assert not bad_port.passed
     assert "malformed" in bad_port.detail
 
-    bad_regex = evaluate_check(
-        check(VerifierKind.FILE_CONTENT, path="/etc/hosts", regex="["), ctx, _ok()
-    )
+    bad_regex = evaluate_check(check(VerifierKind.FILE_CONTENT, path="/etc/hosts", regex="["), ctx, _ok())
     assert not bad_regex.passed
     assert "malformed" in bad_regex.detail
 
@@ -352,8 +302,8 @@ def test_malformed_params_fail_closed() -> None:
 def test_engine_verify_step_enforces_baseline_minimum(tmp_path: Path) -> None:
     """Declared checks AUGMENT the tool's own verification strategy — they
     never replace it. The baseline is the system-enforced minimum."""
-    from thoth_daemon.core.verification import VerificationEngine
-    from thoth_daemon.schemas import PlanStep, RiskLevel, VerificationStrategy
+    from omnimac_daemon.core.verification import VerificationEngine
+    from omnimac_daemon.schemas import PlanStep, RiskLevel, VerificationStrategy
 
     f = tmp_path / "present.txt"
     f.write_text("here")
@@ -382,8 +332,8 @@ def test_engine_verify_step_enforces_baseline_minimum(tmp_path: Path) -> None:
 
 
 def test_engine_run_checks_gates_on_tool_failure() -> None:
-    from thoth_daemon.core.verification import VerificationEngine
-    from thoth_daemon.schemas import PlanStep, RiskLevel
+    from omnimac_daemon.core.verification import VerificationEngine
+    from omnimac_daemon.schemas import PlanStep, RiskLevel
 
     step = PlanStep(
         index=0,
@@ -400,8 +350,8 @@ def test_engine_run_checks_gates_on_tool_failure() -> None:
 
 
 def test_engine_run_checks_independent_pass(tmp_path: Path) -> None:
-    from thoth_daemon.core.verification import VerificationEngine
-    from thoth_daemon.schemas import PlanStep, RiskLevel
+    from omnimac_daemon.core.verification import VerificationEngine
+    from omnimac_daemon.schemas import PlanStep, RiskLevel
 
     f = tmp_path / "out.txt"
     f.write_text("ok")
@@ -420,8 +370,8 @@ def test_engine_run_checks_independent_pass(tmp_path: Path) -> None:
 def test_engine_run_checks_fails_when_probe_false(tmp_path: Path) -> None:
     """Tool reports ok, but the independent probe says the file is absent —
     verification must fail. 'Exited 0' is never sufficient."""
-    from thoth_daemon.core.verification import VerificationEngine
-    from thoth_daemon.schemas import PlanStep, RiskLevel
+    from omnimac_daemon.core.verification import VerificationEngine
+    from omnimac_daemon.schemas import PlanStep, RiskLevel
 
     step = PlanStep(
         index=0,

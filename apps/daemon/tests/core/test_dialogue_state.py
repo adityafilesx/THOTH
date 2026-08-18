@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.core.dialogue import (
+from omnimac_daemon.core.dialogue import (
     ApprovalFollowUpRejected,
     ArtifactReference,
     DialogueAmbiguous,
@@ -92,9 +92,7 @@ class TestWorkspaceAndConstraints:
     def test_recent_workspace_resolves(self) -> None:
         store = OperationalDialogueStore()
         store.put(_state(workspace_id="w1"))
-        resolution = store.resolve_follow_up(
-            "t1", "Use the other workspace.", NOW, authorized_workspace_ids={"w1", "w2"}
-        )
+        resolution = store.resolve_follow_up("t1", "Use the other workspace.", NOW, authorized_workspace_ids={"w1", "w2"})
         assert resolution.intent is DialogueIntent.USE_WORKSPACE
         assert resolution.workspace_id == "w2"
 
@@ -180,9 +178,7 @@ def test_named_operational_follow_ups(text: str, intent: DialogueIntent) -> None
 def test_recent_voice_follow_up_requires_exactly_one_active_task() -> None:
     store = OperationalDialogueStore()
     store.put(_state())
-    resolution = store.resolve_recent_follow_up(
-        "Run the tests.", NOW, authorized_workspace_ids={"w1"}
-    )
+    resolution = store.resolve_recent_follow_up("Run the tests.", NOW, authorized_workspace_ids={"w1"})
     assert resolution is not None
     assert resolution.intent is DialogueIntent.RUN_TESTS
 
@@ -194,10 +190,7 @@ def test_recent_voice_follow_up_requires_exactly_one_active_task() -> None:
 def test_non_follow_up_is_not_bound_to_recent_dialogue() -> None:
     store = OperationalDialogueStore()
     store.put(_state())
-    assert (
-        store.resolve_recent_follow_up("Write a new report.", NOW, authorized_workspace_ids={"w1"})
-        is None
-    )
+    assert store.resolve_recent_follow_up("Write a new report.", NOW, authorized_workspace_ids={"w1"}) is None
 
 
 def test_read_that_back_resolves_without_creating_authority() -> None:

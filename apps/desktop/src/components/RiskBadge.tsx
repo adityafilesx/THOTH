@@ -1,4 +1,4 @@
-import type { RiskLevel } from "@thoth/shared-schemas";
+import type { RiskLevel } from "@omnimac/shared-schemas";
 
 import { cn } from "@/lib/utils";
 

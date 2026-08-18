@@ -39,7 +39,7 @@ export function Layout({ children }: { children: ReactNode }) {
     <div className="flex h-full">
       <nav className="flex w-44 shrink-0 flex-col border-r border-line bg-surface">
         <div className="border-b border-line px-4 py-4">
-          <div className="font-mono text-sm font-semibold tracking-[0.3em] text-ink">THOTH</div>
+          <div className="font-mono text-sm font-semibold tracking-[0.3em] text-ink">OmniMac</div>
           <div className="eyebrow mt-1">computer operator</div>
         </div>
         <ul className="flex flex-1 flex-col gap-0.5 p-2">

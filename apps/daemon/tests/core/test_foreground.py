@@ -9,12 +9,12 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from thoth_daemon.core.foreground import (
+from omnimac_daemon.core.foreground import (
     ForegroundContext,
     ForegroundContextBroker,
     ForegroundRedactor,
 )
-from thoth_daemon.macos.app_control import AppInfo, MockAppControl
+from omnimac_daemon.macos.app_control import AppInfo, MockAppControl
 
 T0 = datetime(2026, 7, 13, 12, 0, 0, tzinfo=UTC)
 
@@ -86,18 +86,16 @@ class TestCapture:
     def test_workspace_match_uses_injected_matcher(self) -> None:
         broker = ForegroundContextBroker(
             _control("Code", "com.microsoft.VSCode"),
-            workspace_matcher=lambda ctx: "thoth" if ctx.active_app_name == "Code" else None,
+            workspace_matcher=lambda ctx: "omnimac" if ctx.active_app_name == "Code" else None,
         )
         ctx = broker.capture(reason="invoked", task_id="t1", now=T0)
-        assert ctx.workspace_id == "thoth"
+        assert ctx.workspace_id == "omnimac"
         assert ctx.task_id == "t1"
 
 
 class TestRetention:
     def test_history_purges_beyond_retention(self) -> None:
-        broker = ForegroundContextBroker(
-            _control("Finder", "com.apple.finder"), retention_seconds=60
-        )
+        broker = ForegroundContextBroker(_control("Finder", "com.apple.finder"), retention_seconds=60)
         broker.capture(reason="invoked", task_id=None, now=T0)
         broker.capture(reason="invoked", task_id=None, now=T0 + timedelta(seconds=30))
         # 5 minutes later, the first two captures are beyond retention.
@@ -105,9 +103,7 @@ class TestRetention:
         assert recent == []
 
     def test_history_keeps_recent(self) -> None:
-        broker = ForegroundContextBroker(
-            _control("Finder", "com.apple.finder"), retention_seconds=300
-        )
+        broker = ForegroundContextBroker(_control("Finder", "com.apple.finder"), retention_seconds=300)
         broker.capture(reason="invoked", task_id=None, now=T0)
         recent = broker.history(now=T0 + timedelta(seconds=30))
         assert len(recent) == 1

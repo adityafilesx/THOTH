@@ -19,18 +19,18 @@
 
 Tracked modifications:
 
-- `apps/daemon/src/thoth_daemon/macos/app_control.py`
-- `apps/daemon/src/thoth_daemon/tools/app_tools.py`
-- `apps/daemon/src/thoth_daemon/tools/base.py`
-- `apps/daemon/src/thoth_daemon/tools/shell_tool.py`
+- `apps/daemon/src/omnimac_daemon/macos/app_control.py`
+- `apps/daemon/src/omnimac_daemon/tools/app_tools.py`
+- `apps/daemon/src/omnimac_daemon/tools/base.py`
+- `apps/daemon/src/omnimac_daemon/tools/shell_tool.py`
 
 Untracked partial work/configuration:
 
 - `.agents/`
 - `.codex/`
 - `AGENTS.md`
-- `apps/daemon/src/thoth_daemon/core/focus.py`
-- `apps/daemon/src/thoth_daemon/core/foreground.py`
+- `apps/daemon/src/omnimac_daemon/core/focus.py`
+- `apps/daemon/src/omnimac_daemon/core/foreground.py`
 - `apps/daemon/tests/core/test_focus.py`
 - `apps/daemon/tests/core/test_foreground.py`
 - `apps/daemon/tests/core/test_foreground_live.py`

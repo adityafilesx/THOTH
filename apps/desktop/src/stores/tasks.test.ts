@@ -3,7 +3,7 @@ import type {
   AuditEvent,
   Task,
   WsEnvelope,
-} from "@thoth/shared-schemas";
+} from "@omnimac/shared-schemas";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { useTasksStore } from "./tasks";

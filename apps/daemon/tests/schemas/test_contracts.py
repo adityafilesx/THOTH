@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from thoth_daemon.schemas import (
+from omnimac_daemon.schemas import (
     ApprovalDecision,
     ApprovalRequest,
     AuditEvent,

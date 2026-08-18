@@ -11,7 +11,7 @@ afterEach(() => {
 
 describe("api request auth", () => {
   it("attaches the bearer header when a token is available", async () => {
-    vi.stubEnv("VITE_THOTH_TOKEN", "dev-token");
+    vi.stubEnv("VITE_OmniMac_TOKEN", "dev-token");
     const fetchMock = vi
       .fn()
       .mockResolvedValue(new Response(JSON.stringify([]), { status: 200 }));
@@ -24,7 +24,7 @@ describe("api request auth", () => {
   });
 
   it("creates a typed permission grant", async () => {
-    vi.stubEnv("VITE_THOTH_TOKEN", "dev-token");
+    vi.stubEnv("VITE_OmniMac_TOKEN", "dev-token");
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({

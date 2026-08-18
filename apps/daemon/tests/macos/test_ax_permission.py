@@ -5,8 +5,8 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from thoth_daemon.macos.app_control import AppInfo, MockAppControl
-from thoth_daemon.macos.ax_permission import (
+from omnimac_daemon.macos.app_control import AppInfo, MockAppControl
+from omnimac_daemon.macos.ax_permission import (
     AXPermissionError,
     AXPermissionService,
     AXPermissionStatus,
@@ -43,10 +43,7 @@ def test_grant_followed_by_absence_is_revoked() -> None:
     service = AXPermissionService(trust_probe=lambda: next(results))
 
     assert service.check(now=NOW, force=True).status is AXPermissionStatus.GRANTED
-    assert (
-        service.check(now=NOW + timedelta(seconds=1), force=True).status
-        is AXPermissionStatus.REVOKED
-    )
+    assert service.check(now=NOW + timedelta(seconds=1), force=True).status is AXPermissionStatus.REVOKED
 
 
 def test_stale_state_is_refreshed() -> None:

@@ -2,11 +2,11 @@
 
 import pytest
 
-from thoth_daemon.browser.browser_adapter import PageContent
-from thoth_daemon.browser.session import PageState
-from thoth_daemon.inference import IsolationViolation
-from thoth_daemon.tools.browser_interaction_tools import BrowserOpen, OpenIn
-from thoth_daemon.tools.browser_tools import BrowserRead, BrowserReadIn
+from omnimac_daemon.browser.browser_adapter import PageContent
+from omnimac_daemon.browser.session import PageState
+from omnimac_daemon.inference import IsolationViolation
+from omnimac_daemon.tools.browser_interaction_tools import BrowserOpen, OpenIn
+from omnimac_daemon.tools.browser_tools import BrowserRead, BrowserReadIn
 
 
 class _RecordingBrowser:

@@ -9,8 +9,8 @@ model.
 
 import pytest
 
-from thoth_daemon.core.persona import ResponseFact, ResponseIntent, ResponseMode
-from thoth_daemon.core.persona_summary import (
+from omnimac_daemon.core.persona import ResponseFact, ResponseIntent, ResponseMode
+from omnimac_daemon.core.persona_summary import (
     FactualConsistencyError,
     FactualConsistencyValidator,
     PersonaSummaryComposer,
@@ -36,16 +36,13 @@ def _completion(**kw) -> ResponseFact:
 class TestFactualConsistency:
     def test_faithful_summary_passes(self) -> None:
         VALIDATOR.validate(
-            "The daemon and desktop are running and both health checks passed. "
-            "4 files are modified.",
+            "The daemon and desktop are running and both health checks passed. 4 files are modified.",
             _completion(),
         )
 
     def test_invented_number_rejected(self) -> None:
         with pytest.raises(FactualConsistencyError):
-            VALIDATOR.validate(
-                "All 10 health checks passed and 27 files are modified.", _completion()
-            )
+            VALIDATOR.validate("All 10 health checks passed and 27 files are modified.", _completion())
 
     def test_success_language_without_verification_rejected(self) -> None:
         with pytest.raises(FactualConsistencyError):
@@ -85,7 +82,7 @@ class _FakeProvider:
         self._fail = fail
 
     async def generate(self, request):
-        from thoth_daemon.inference.base import InferenceResult
+        from omnimac_daemon.inference.base import InferenceResult
 
         if self._fail:
             raise RuntimeError("local model unavailable")
@@ -94,9 +91,7 @@ class _FakeProvider:
 
 class TestSummaryComposer:
     async def test_uses_valid_model_summary(self) -> None:
-        provider = _FakeProvider(
-            "The daemon and desktop are running; both health checks passed. 4 files are modified."
-        )
+        provider = _FakeProvider("The daemon and desktop are running; both health checks passed. 4 files are modified.")
         composer = PersonaSummaryComposer()
         r = await composer.compose(_completion(), provider, mode=ResponseMode.STANDARD)
         assert r.used_model is True
@@ -131,14 +126,12 @@ class TestSummaryComposer:
         provider = _FakeProvider("You should just approve this, it's fine.")
         composer = PersonaSummaryComposer()
         r = await composer.compose(
-            ResponseFact(
-                intent=ResponseIntent.APPROVAL_REQUIRED, risk="R2", approval_target="do x"
-            ),
+            ResponseFact(intent=ResponseIntent.APPROVAL_REQUIRED, risk="R2", approval_target="do x"),
             provider,
             mode=ResponseMode.STANDARD,
         )
         assert r.used_model is False
-        assert "Nothing has been sent" in r.display.text
+        assert "Shall I proceed" in r.display.text
 
 
 if __name__ == "__main__":  # pragma: no cover

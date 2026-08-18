@@ -5,15 +5,15 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleDisplayName</key>
-    <string>THOTH Accessibility Helper</string>
+    <string>OmniMac Accessibility Helper</string>
     <key>CFBundleExecutable</key>
-    <string>THOTHAXHelper</string>
+    <string>OmniMacAXHelper</string>
     <key>CFBundleIdentifier</key>
-    <string>me.adityalabs.thoth.axhelper</string>
+    <string>me.adityalabs.omnimac.axhelper</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>THOTH Accessibility Helper</string>
+    <string>OmniMac Accessibility Helper</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

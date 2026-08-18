@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from thoth_daemon.voice.stop import GlobalStopAuthority
+from omnimac_daemon.voice.stop import GlobalStopAuthority
 
 
 class _Sessions:

@@ -1,6 +1,6 @@
 # Application capability profiles
 
-THOTH uses immutable, versioned application profiles as the authority for app-specific capabilities. A model, window title, webpage, tool result, or application cannot add a capability or change its status. Unknown applications and undeclared capabilities fail closed.
+OmniMac uses immutable, versioned application profiles as the authority for app-specific capabilities. A model, window title, webpage, tool result, or application cannot add a capability or change its status. Unknown applications and undeclared capabilities fail closed.
 
 Statuses:
 
@@ -16,14 +16,14 @@ Statuses:
 | TextEdit | `com.apple.TextEdit` | running/foreground detection, launch, focus | bounded window inspection and role-bound non-secure text read/set | unrestricted document access |
 | Visual Studio Code | `com.microsoft.VSCode` | running/foreground detection, launch, focus, authoritative workspace match | bounded window inspection and role-bound text reads | unrestricted editor control, extension install |
 | Terminal | `com.apple.Terminal` | running/foreground detection, launch, focus | safe working-directory metadata and bounded window-title inspection | shell execution through UI, terminal-history reads |
-| THOTH Accessibility Test App | `me.adityalabs.thoth.axtest` | none yet | ten semantic AX capabilities against fixture identifiers | production use, coordinate control, credential dialogs |
+| OmniMac Accessibility Test App | `me.adityalabs.omnimac.axtest` | none yet | ten semantic AX capabilities against fixture identifiers | production use, coordinate control, credential dialogs |
 | Chromium | `org.chromium.Chromium` | background read-only operations | browser interaction plus bounded AX window-title inspection | bypassing two-phase submission, profile/credential access |
 
-The native SwiftUI AX fixture is packaged and ad-hoc signed with the unique bundle identifier `me.adityalabs.thoth.axtest`. Its stable semantic identifiers are profile allowlisted. Its AX capabilities remain experimental because the daemon's real 2026-07-14 trust probe returned `not_determined`; unit evidence does not promote a capability to real-verified status.
+The native SwiftUI AX fixture is packaged and ad-hoc signed with the unique bundle identifier `me.adityalabs.omnimac.axtest`. Its stable semantic identifiers are profile allowlisted. Its AX capabilities remain experimental because the daemon's real 2026-07-14 trust probe returned `not_determined`; unit evidence does not promote a capability to real-verified status.
 
-Semantic AX execution is now hosted by the separate background bundle `me.adityalabs.thoth.axhelper`, not uv Python. The helper cannot add or promote application profiles; it accepts only the already-authorized semantic operation over authenticated local IPC and returns untrusted bounded observations. Its current live trust probe is false, so this host change promotes no application capability.
+Semantic AX execution is now hosted by the separate background bundle `me.adityalabs.omnimac.axhelper`, not uv Python. The helper cannot add or promote application profiles; it accepts only the already-authorized semantic operation over authenticated local IPC and returns untrusted bounded observations. Its current live trust probe is false, so this host change promotes no application capability.
 
-VS Code workspace matching was exercised on 2026-07-13 against the real running `com.microsoft.VSCode` process and the approved THOTH repository path. Authoritative sources were the approved path and active task workspace; the bundle id was a hint. Chromium form interaction and submission remain experimental despite unit/fixture coverage and are not described as generally verified web control.
+VS Code workspace matching was exercised on 2026-07-13 against the real running `com.microsoft.VSCode` process and the approved OmniMac repository path. Authoritative sources were the approved path and active task workspace; the bundle id was a hint. Chromium form interaction and submission remain experimental despite unit/fixture coverage and are not described as generally verified web control.
 
 The profile registry preserves private authoritative copies and returns deep copies at API/read boundaries. Model output and webpage/window content therefore cannot mutate the registry, self-add a capability, promote experimental status, or downgrade a forbidden operation.
 

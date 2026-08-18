@@ -1,26 +1,26 @@
 from pathlib import Path
 
-from thoth_daemon.security.paths import expand_and_resolve, is_denied_path, is_within
+from omnimac_daemon.security.paths import expand_and_resolve, is_denied_path, is_within
 
 
 def test_expand_user_home() -> None:
-    assert expand_and_resolve("~/projects/thoth") == (Path.home() / "projects" / "thoth").resolve()
+    assert expand_and_resolve("~/projects/omnimac") == (Path.home() / "projects" / "omnimac").resolve()
 
 
 def test_is_within_child_and_self() -> None:
-    root = Path.home() / "projects" / "thoth"
+    root = Path.home() / "projects" / "omnimac"
     assert is_within(root / "src" / "main.py", root)
     assert is_within(root, root)
 
 
 def test_is_within_rejects_parent_and_sibling() -> None:
-    root = Path.home() / "projects" / "thoth"
+    root = Path.home() / "projects" / "omnimac"
     assert not is_within(Path.home() / "projects", root)
     assert not is_within(Path.home() / "projects" / "other", root)
 
 
 def test_is_within_rejects_dotdot_escape() -> None:
-    root = Path.home() / "projects" / "thoth"
+    root = Path.home() / "projects" / "omnimac"
     assert not is_within(root / ".." / "secret.txt", root)
 
 
@@ -43,11 +43,11 @@ def test_denylist_credential_dirs() -> None:
 
 
 def test_denylist_name_globs() -> None:
-    assert is_denied_path(Path.home() / "projects" / "thoth" / ".env")
-    assert is_denied_path(Path.home() / "projects" / "thoth" / ".env.local")
+    assert is_denied_path(Path.home() / "projects" / "omnimac" / ".env")
+    assert is_denied_path(Path.home() / "projects" / "omnimac" / ".env.local")
     assert is_denied_path(Path.home() / "certs" / "server.pem")
     assert is_denied_path(Path.home() / ".netrc")
 
 
 def test_normal_project_path_not_denied() -> None:
-    assert not is_denied_path(Path.home() / "projects" / "thoth" / "README.md")
+    assert not is_denied_path(Path.home() / "projects" / "omnimac" / "README.md")

@@ -21,9 +21,9 @@
 
 | File | Create/Modify | Responsibility |
 |---|---|---|
-| `apps/daemon/src/thoth_daemon/security/shell_policy.py` | Create | allowlist, metachars, `parse_command`, `validate_executable`, `ShellPolicyError`. |
-| `apps/daemon/src/thoth_daemon/tools/shell_tool.py` | Create | `ShellRun` + `register_shell_tool`. |
-| `apps/daemon/src/thoth_daemon/app.py` | Modify | `register_shell_tool(registry)`. |
+| `apps/daemon/src/omnimac_daemon/security/shell_policy.py` | Create | allowlist, metachars, `parse_command`, `validate_executable`, `ShellPolicyError`. |
+| `apps/daemon/src/omnimac_daemon/tools/shell_tool.py` | Create | `ShellRun` + `register_shell_tool`. |
+| `apps/daemon/src/omnimac_daemon/app.py` | Modify | `register_shell_tool(registry)`. |
 | `docs/DECISIONS.md`, `docs/THREAT_MODEL.md`, `docs/STATUS.md`, `docs/MILESTONES.md` | Modify | ADR-014 + status. |
 
 Tests: `tests/security/test_shell_policy.py`, `tests/tools/test_shell_tool.py`, `tests/tools/test_shell_integration.py`.
@@ -44,7 +44,7 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.security.shell_policy import (
+from omnimac_daemon.security.shell_policy import (
     ShellPolicyError,
     parse_command,
     validate_executable,
@@ -104,7 +104,7 @@ def test_validate_executable_rejects(argv: list[str]) -> None:
 - [ ] **Step 3: Implement**
 
 ```python
-# apps/daemon/src/thoth_daemon/security/shell_policy.py
+# apps/daemon/src/omnimac_daemon/security/shell_policy.py
 """Restricted-shell command policy (pure). The shell tool runs an allowlisted
 executable via argv with NO shell interpretation; this module decides what is
 allowed and extracts the paths a command touches so the ScopeEnforcer can
@@ -116,7 +116,7 @@ import shlex
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from thoth_daemon.security.paths import expand_and_resolve
+from omnimac_daemon.security.paths import expand_and_resolve
 
 
 class ShellPolicyError(Exception):
@@ -196,7 +196,7 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.tools.shell_tool import ShellRun
+from omnimac_daemon.tools.shell_tool import ShellRun
 
 
 def _tool() -> ShellRun:
@@ -277,7 +277,7 @@ async def test_run_cancellation_terminates(tmp_path: Path) -> None:
 - [ ] **Step 3: Implement**
 
 ```python
-# apps/daemon/src/thoth_daemon/tools/shell_tool.py
+# apps/daemon/src/omnimac_daemon/tools/shell_tool.py
 """Restricted shell tool (Phase 3 slice 4). The ONLY tool that accepts a
 command string — but it is not a shell: allowlisted executable, argv via
 create_subprocess_exec (shell=False), scoped cwd + argument paths, R2 approval
@@ -292,16 +292,16 @@ from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict
 
-from thoth_daemon.schemas import ResourceScope, RiskLevel, VerificationStrategy
-from thoth_daemon.security.paths import expand_and_resolve
-from thoth_daemon.security.shell_policy import (
+from omnimac_daemon.schemas import ResourceScope, RiskLevel, VerificationStrategy
+from omnimac_daemon.security.paths import expand_and_resolve
+from omnimac_daemon.security.shell_policy import (
     CONTROLLED_PATH,
     ShellPolicyError,
     parse_command,
     validate_executable,
 )
-from thoth_daemon.tools.base import ToolDefinition
-from thoth_daemon.tools.registry import ToolRegistry
+from omnimac_daemon.tools.base import ToolDefinition
+from omnimac_daemon.tools.registry import ToolRegistry
 
 _MAX_OUTPUT = 32 * 1024
 _KILL_GRACE_S = 2.0
@@ -423,9 +423,9 @@ def register_shell_tool(registry: ToolRegistry) -> None:
 # apps/daemon/tests/tools/test_shell_integration.py
 from pathlib import Path
 
-from thoth_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
-from thoth_daemon.tools.registry import ToolRegistry
-from thoth_daemon.tools.shell_tool import register_shell_tool
+from omnimac_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
+from omnimac_daemon.tools.registry import ToolRegistry
+from omnimac_daemon.tools.shell_tool import register_shell_tool
 
 
 def _inv(args: dict) -> ToolInvocation:
@@ -469,7 +469,7 @@ async def test_backstop_refuses_denylisted_arg(tmp_path: Path) -> None:
 ```python
         register_shell_tool(registry)  # restricted shell (slice 4)
 ```
-and import `from thoth_daemon.tools.shell_tool import register_shell_tool`.
+and import `from omnimac_daemon.tools.shell_tool import register_shell_tool`.
 
 - [ ] **Step 4: Run** integration + full API suite (hang-guarded).
 

@@ -1,14 +1,14 @@
-# THOTH v1 release report
+# OmniMac v1 release report
 
 ## Release decision
 
 ```text
-THOTH v1.0 RELEASE CANDIDATE
+OmniMac v1.0 RELEASE CANDIDATE
 ```
 
 Implementation and automated safety gates are green, but mandatory real voice,
 Accessibility, distribution, and clean-install evidence is absent. The exact
-blockers below prevent `THOTH v1.0 VALIDATED`.
+blockers below prevent `OmniMac v1.0 VALIDATED`.
 
 ## Exact build and host
 
@@ -17,8 +17,8 @@ blockers below prevent `THOTH v1.0 VALIDATED`.
 - Validation commits: `1ccc427`, `bb57dd8` plus this report commit
 - Hardware: Apple M4, arm64, 16 GiB unified memory
 - macOS: 26.3, build 25D125
-- Desktop artifact: THOTH 0.1.0 / `dev.thoth.desktop`
-- AX helper: `me.adityalabs.thoth.axhelper`
+- Desktop artifact: OmniMac 0.1.0 / `dev.omnimac.desktop`
+- AX helper: `me.adityalabs.omnimac.axhelper`
 
 ## Local runtime and models
 
@@ -42,7 +42,7 @@ current validation configuration, not a production selection.
 
 All three models transcribed whisper.cpp's bundled JFK WAV locally. The real
 managed base.en sample produced first partial 743 ms and finalization 644 ms,
-supported edit/cancel, and left no `thoth-voice-*` temp file. This is bundled
+supported edit/cancel, and left no `omnimac-voice-*` temp file. This is bundled
 sample evidence only. Zero real microphone commands and zero acoustic Stop
 trials were completed, so WER, intent/routing accuracy, workflow completion,
 real Stop, and acoustic barge-in remain unmeasured. Automated voice approval,
@@ -53,7 +53,7 @@ Stop, retention, crash, and offline boundaries pass.
 The final exact helper executable SHA-256 is
 `ae0908575ab2ad2d88cdfb91f3879ded90f0ae7f221a0961863810f5dbb8054b`.
 It ran as the packaged background app with a current-user mode-0600 socket and
-parent PID 1. THOTH opened the Settings pane only through an explicit requested
+parent PID 1. OmniMac opened the Settings pane only through an explicit requested
 API action; the user did not grant trust during the run. Fresh state is
 `denied`, so fixture mutation, delayed/ambiguous/moving/modal capstones,
 TextEdit exact read-back, and real revocation were not run. Existing VS Code
@@ -102,7 +102,7 @@ remain manual blockers.
 | App / DMG | built, manifest matched, strict ad-hoc signature passed |
 
 The native app and mounted DMG now include
-`NSMicrophoneUsageDescription`: THOTH records only while push-to-talk is active
+`NSMicrophoneUsageDescription`: OmniMac records only while push-to-talk is active
 and transcribes locally. This repairs the packaging reason Chrome could receive
 audio while the native bundle could not request its own permission. It is not a
 substitute for the remaining real 30-command microphone evidence.
@@ -127,7 +127,7 @@ path, and domain scope; validation did not auto-grant TextEdit.
 
 ## Exact capability claim
 
-THOTH is a local-first release candidate with a deterministic safety core,
+OmniMac is a local-first release candidate with a deterministic safety core,
 verified local planning, a packaged integrity-pinned daemon/speech/helper core, and
 automated coverage for voice, focus, Accessibility boundaries, approvals,
 verification, recovery, and audit. Real broad speech accuracy, TCC-backed UI

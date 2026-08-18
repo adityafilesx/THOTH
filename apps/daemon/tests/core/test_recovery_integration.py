@@ -10,14 +10,14 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.audit.store import AuditStore
-from thoth_daemon.core.approvals import ApprovalEngine
-from thoth_daemon.core.orchestrator import MAX_EXECUTIONS_PER_TASK, Orchestrator
-from thoth_daemon.core.planner import PlannerAdapter
-from thoth_daemon.core.policy import PolicyEngine
-from thoth_daemon.core.recovery import RecoveryController
-from thoth_daemon.core.verification import VerificationEngine
-from thoth_daemon.schemas import (
+from omnimac_daemon.audit.store import AuditStore
+from omnimac_daemon.core.approvals import ApprovalEngine
+from omnimac_daemon.core.orchestrator import MAX_EXECUTIONS_PER_TASK, Orchestrator
+from omnimac_daemon.core.planner import PlannerAdapter
+from omnimac_daemon.core.policy import PolicyEngine
+from omnimac_daemon.core.recovery import RecoveryController
+from omnimac_daemon.core.verification import VerificationEngine
+from omnimac_daemon.schemas import (
     ExecutionPlan,
     PlanStep,
     RiskLevel,
@@ -26,8 +26,8 @@ from thoth_daemon.schemas import (
     VerifierKind,
     WorkspaceProfile,
 )
-from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
-from thoth_daemon.tools.mock_tools import build_registry
+from omnimac_daemon.storage.db import init_schema, make_engine, make_session_factory
+from omnimac_daemon.tools.mock_tools import build_registry
 
 
 def _step_probing(path: Path, index: int = 0) -> PlanStep:
@@ -39,9 +39,7 @@ def _step_probing(path: Path, index: int = 0) -> PlanStep:
         tool_name="mock_read_file",
         arguments={"path": "/notes.txt"},
         declared_risk=RiskLevel.R0,
-        verification_checks=[
-            VerificationCheck(kind=VerifierKind.FILE_EXISTS, params={"path": str(path)})
-        ],
+        verification_checks=[VerificationCheck(kind=VerifierKind.FILE_EXISTS, params={"path": str(path)})],
     )
 
 
@@ -59,9 +57,7 @@ class _SequencePlanner(PlannerAdapter):
         return plan.model_copy(update={"task_id": task_id}, deep=True)
 
 
-async def _orch(
-    tmp_path: Path, planner: PlannerAdapter, recovery: RecoveryController | None = None
-) -> Orchestrator:
+async def _orch(tmp_path: Path, planner: PlannerAdapter, recovery: RecoveryController | None = None) -> Orchestrator:
     engine = make_engine(tmp_path / "r.db")
     await init_schema(engine)
 
@@ -116,9 +112,7 @@ async def test_authoritative_submit_plan_never_replans_via_model(tmp_path: Path)
         summary="authoritative",
         steps=[_step_probing(missing)],
     )
-    planner = _SequencePlanner(
-        [ExecutionPlan(task_id="x", summary="model replacement", steps=[_step_probing(present)])]
-    )
+    planner = _SequencePlanner([ExecutionPlan(task_id="x", summary="model replacement", steps=[_step_probing(present)])])
     recovery = RecoveryController(
         max_retries_per_step=0,
         max_retries_per_task=0,
@@ -130,10 +124,7 @@ async def test_authoritative_submit_plan_never_replans_via_model(tmp_path: Path)
     settled = await _settle_terminal(orch, task.id)
 
     assert settled.state is TaskState.FAILED_REQUIRES_USER
-    assert settled.error == (
-        "The requested operation could not be verified after bounded retries. "
-        "No completion was claimed."
-    )
+    assert settled.error == ("The requested operation could not be verified after bounded retries. No completion was claimed.")
     assert "model-generated" not in settled.error
     assert planner.calls == []
     events = await orch.task_audit(task.id)

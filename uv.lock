@@ -4,8 +4,8 @@ requires-python = "==3.12.*"
 
 [manifest]
 members = [
-    "thoth-daemon",
-    "thoth-workspace",
+    "omnimac-daemon",
+    "omnimac-workspace",
 ]
 
 [[package]]
@@ -774,7 +774,7 @@ wheels = [
 ]
 
 [[package]]
-name = "thoth-daemon"
+name = "omnimac-daemon"
 version = "0.1.0"
 source = { editable = "apps/daemon" }
 dependencies = [
@@ -827,7 +827,7 @@ dev = [
 ]
 
 [[package]]
-name = "thoth-workspace"
+name = "omnimac-workspace"
 version = "0.1.0"
 source = { virtual = "." }
 

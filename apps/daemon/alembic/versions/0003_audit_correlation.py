@@ -22,9 +22,7 @@ def upgrade() -> None:
         "audit_events",
         sa.Column("correlation_id", sa.String(length=36), nullable=False, server_default=""),
     )
-    op.create_index(
-        op.f("ix_audit_events_correlation_id"), "audit_events", ["correlation_id"], unique=False
-    )
+    op.create_index(op.f("ix_audit_events_correlation_id"), "audit_events", ["correlation_id"], unique=False)
 
 
 def downgrade() -> None:

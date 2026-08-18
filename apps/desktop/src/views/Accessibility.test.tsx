@@ -15,8 +15,8 @@ const status = {
   },
   applications: [
     {
-      bundle_id: "me.adityalabs.thoth.axtest",
-      display_name: "THOTH Accessibility Test App",
+      bundle_id: "me.adityalabs.omnimac.axtest",
+      display_name: "OmniMac Accessibility Test App",
       version: "1.0.0",
       verified_capabilities: ["launch"],
       experimental_capabilities: ["ax_set_value"],
@@ -27,7 +27,7 @@ const status = {
     current_task_id: "task-ax",
     current_step_id: "step-ax",
     current_tool: "ax.perform_action",
-    bundle_id: "me.adityalabs.thoth.axtest",
+    bundle_id: "me.adityalabs.omnimac.axtest",
     semantic_target: {
       identifier: "ax-save-button",
       role: "AXButton",
@@ -56,7 +56,7 @@ function renderView() {
 let calls: { method: string; body: string | null }[];
 
 beforeEach(() => {
-  vi.stubEnv("VITE_THOTH_TOKEN", "test-token");
+  vi.stubEnv("VITE_OmniMac_TOKEN", "test-token");
   __resetTokenCache();
   calls = [];
   vi.stubGlobal(
@@ -87,7 +87,7 @@ describe("Accessibility live diagnostics", () => {
     expect(await screen.findByTestId("ax-permission-state")).toHaveTextContent(
       "not determined",
     );
-    expect(screen.getByText("THOTH Accessibility Test App")).toBeInTheDocument();
+    expect(screen.getByText("OmniMac Accessibility Test App")).toBeInTheDocument();
     expect(screen.getByText("launch")).toBeInTheDocument();
     expect(screen.getByText("ax set value")).toBeInTheDocument();
     expect(screen.getByText("credential dialog")).toBeInTheDocument();

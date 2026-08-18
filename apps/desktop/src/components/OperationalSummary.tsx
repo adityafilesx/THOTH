@@ -35,12 +35,12 @@ export function OperationalSummary({
 
   return (
     <Card
-      aria-label="THOTH operational status"
+      aria-label="OmniMac operational status"
       data-testid="operational-summary"
     >
       <CardContent className="space-y-4">
         <div>
-          <div className="eyebrow mb-1">THOTH</div>
+          <div className="eyebrow mb-1">OmniMac</div>
           <p
             data-testid="display-response"
             className={cn("text-sm text-ink", isPartial && "text-warning")}

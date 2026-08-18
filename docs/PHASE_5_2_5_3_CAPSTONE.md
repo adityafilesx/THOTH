@@ -29,7 +29,7 @@ Code → TextEdit action → Code restoration sequence reported
 | 2 | Detect Finder when foreground | Not verified | Finder was detected running; foreground transition was blocked by the locked desktop. |
 | 3 | Detect TextEdit when foreground | Not verified | TextEdit launched and was detected running; `loginwindow` remained frontmost. |
 | 4 | Detect VS Code | Pass | Real `Code` / `com.microsoft.VSCode` process detected. |
-| 5 | Match THOTH workspace in VS Code | Pass, bounded | Real Code bundle plus authoritative approved THOTH path/task workspace matched; no title-only authority. |
+| 5 | Match OmniMac workspace in VS Code | Pass, bounded | Real Code bundle plus authoritative approved OmniMac path/task workspace matched; no title-only authority. |
 | 6 | Open TextEdit and leave focused | Failed closed | Launch succeeded; final focus could not be verified while locked. |
 | 7 | Start background service without focus theft | Pass | Real loopback Python HTTP service ran; frontmost bundle remained `loginwindow`; service terminated. |
 | 8 | Temporarily focus app and restore original | Pass on unlocked rerun | Started with Code / `com.microsoft.VSCode`; invoked temporary TextEdit focus under `RESTORE_PREVIOUS_FOCUS`; final NSWorkspace probe was Code / `com.microsoft.VSCode`; result was restored and verified. |

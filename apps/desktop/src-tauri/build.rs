@@ -6,7 +6,7 @@ fn prepare_debug_placeholders() {
     if std::env::var("PROFILE").as_deref() == Ok("release") {
         return;
     }
-    let binary = Path::new("resources/runtime/thoth-daemon");
+    let binary = Path::new("resources/runtime/omnimac-daemon");
     std::fs::create_dir_all(binary.parent().expect("binary parent"))
         .expect("create debug sidecar directory");
     std::fs::write(&binary, b"#!/bin/sh\nexit 1\n").expect("write inert debug sidecar");
@@ -17,7 +17,7 @@ fn prepare_debug_placeholders() {
     std::fs::set_permissions(&binary, permissions).expect("set debug sidecar mode");
 
     for directory in [
-        "resources/THOTH Accessibility Helper.app",
+        "resources/OmniMac Accessibility Helper.app",
         "resources/models",
     ] {
         std::fs::create_dir_all(directory).expect("create debug resource placeholder");

@@ -2,15 +2,15 @@
 
 from datetime import UTC, datetime, timedelta
 
-from thoth_daemon.core.focus import FocusPolicy, FocusRestorationResult
-from thoth_daemon.core.foreground import ForegroundContext
-from thoth_daemon.core.persona import ResponseIntent
-from thoth_daemon.core.runtime_status import LocalRuntimeStatus
-from thoth_daemon.core.task_presentation import (
+from omnimac_daemon.core.focus import FocusPolicy, FocusRestorationResult
+from omnimac_daemon.core.foreground import ForegroundContext
+from omnimac_daemon.core.persona import ResponseIntent
+from omnimac_daemon.core.runtime_status import LocalRuntimeStatus
+from omnimac_daemon.core.task_presentation import (
     ApprovalStage,
     TaskPresentationComposer,
 )
-from thoth_daemon.schemas import (
+from omnimac_daemon.schemas import (
     ApprovalRequest,
     ExecutionPlan,
     PlanStep,
@@ -54,7 +54,7 @@ def _ax_step(
         title="Update fixture field",
         tool_name="ax.set_value",
         arguments={
-            "bundle_id": "me.adityalabs.thoth.axtest",
+            "bundle_id": "me.adityalabs.omnimac.axtest",
             "capability": "ax_set_value",
         },
         declared_risk=RiskLevel.R1,
@@ -99,7 +99,7 @@ class TestLifecycleIntents:
         )
         view = COMPOSER.compose(task, pending_approvals=[approval])
         assert view.response.intent is ResponseIntent.APPROVAL_REQUIRED
-        assert "Nothing has been sent" in view.display_response
+        assert "Shall I proceed" in view.display_response
         assert view.stages.approval is ApprovalStage.PENDING
         assert view.response.used_model is False
 
@@ -109,29 +109,21 @@ class TestLifecycleIntents:
         assert view.stages.executed is True
 
     def test_verified_completion(self) -> None:
-        view = COMPOSER.compose(
-            _task(TaskState.COMPLETED, [_step(status=StepStatus.SUCCEEDED, verified=True)])
-        )
+        view = COMPOSER.compose(_task(TaskState.COMPLETED, [_step(status=StepStatus.SUCCEEDED, verified=True)]))
         assert view.response.intent is ResponseIntent.VERIFIED_COMPLETION
         assert view.stages.verified is True
 
     def test_partial_completion_does_not_hide_failed_substep(self) -> None:
         ok = _step(status=StepStatus.SUCCEEDED, verified=True)
-        failed = _step(status=StepStatus.FAILED, verified=False).model_copy(
-            update={"id": "failed", "index": 1, "title": "Start frontend"}
-        )
-        view = COMPOSER.compose(
-            _task(TaskState.FAILED, [ok, failed], error="port 5173 is occupied")
-        )
+        failed = _step(status=StepStatus.FAILED, verified=False).model_copy(update={"id": "failed", "index": 1, "title": "Start frontend"})
+        view = COMPOSER.compose(_task(TaskState.FAILED, [ok, failed], error="port 5173 is occupied"))
         assert view.response.intent is ResponseIntent.PARTIAL_COMPLETION
         assert "Run checks" in view.display_response
         assert "Start frontend" in view.display_response
         assert "5173" in view.display_response
 
     def test_policy_refusal_uses_actual_reason_without_model(self) -> None:
-        view = COMPOSER.compose(
-            _task(TaskState.FAILED, [_step()], error="step blocked by scope: outside workspace")
-        )
+        view = COMPOSER.compose(_task(TaskState.FAILED, [_step()], error="step blocked by scope: outside workspace"))
         assert view.response.intent is ResponseIntent.POLICY_REFUSAL
         assert "outside workspace" in view.display_response
         assert view.response.used_model is False
@@ -157,9 +149,7 @@ class TestLifecycleIntents:
         assert "AppFocusIn" not in view.spoken_response_preview
 
     def test_resumable_task(self) -> None:
-        view = COMPOSER.compose(
-            _task(TaskState.FAILED_REQUIRES_USER, [_step()], error="retry budget exhausted")
-        )
+        view = COMPOSER.compose(_task(TaskState.FAILED_REQUIRES_USER, [_step()], error="retry budget exhausted"))
         assert view.response.intent is ResponseIntent.RESUMABLE_TASK
 
 
@@ -253,7 +243,7 @@ class TestOperationalFacts:
             reason="status",
             active_bundle_id="com.microsoft.VSCode",
             active_app_name="Visual Studio Code",
-            workspace_id="thoth",
+            workspace_id="omnimac",
         )
         expires = NOW + timedelta(minutes=5)
         view = COMPOSER.compose(
@@ -264,12 +254,10 @@ class TestOperationalFacts:
         )
         assert view.runtime_status is LocalRuntimeStatus.DEGRADED
         assert view.foreground == foreground
-        assert view.matched_workspace_id == "thoth"
+        assert view.matched_workspace_id == "omnimac"
         assert view.dialogue_expires_at == expires
         assert view.planned_focus_policy is FocusPolicy.DO_NOT_STEAL_FOCUS
 
     def test_spoken_preview_is_not_longer_than_display(self) -> None:
-        view = COMPOSER.compose(
-            _task(TaskState.COMPLETED, [_step(status=StepStatus.SUCCEEDED, verified=True)])
-        )
+        view = COMPOSER.compose(_task(TaskState.COMPLETED, [_step(status=StepStatus.SUCCEEDED, verified=True)]))
         assert len(view.spoken_response_preview) <= len(view.display_response)

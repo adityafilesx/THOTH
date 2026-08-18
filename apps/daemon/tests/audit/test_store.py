@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from thoth_daemon.audit.store import AuditStore
-from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
+from omnimac_daemon.audit.store import AuditStore
+from omnimac_daemon.storage.db import init_schema, make_engine, make_session_factory
 
 
 @pytest.fixture()

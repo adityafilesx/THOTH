@@ -2,7 +2,7 @@
  * Reconnecting WebSocket client for the daemon event stream.
  * Dispatches every envelope to the handler; reconnects with capped backoff.
  */
-import type { WsEnvelope } from "@thoth/shared-schemas";
+import type { WsEnvelope } from "@omnimac/shared-schemas";
 
 import { DAEMON_URL } from "./api";
 import { getSessionToken } from "./auth";

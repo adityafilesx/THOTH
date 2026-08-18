@@ -10,11 +10,7 @@ def _drain(ws, limit: int = 80) -> list[dict]:
             break
         payload = msg.get("payload", {})
         task = payload.get("task")
-        if (
-            msg["type"] == "task.state_changed"
-            and task
-            and task["state"] in {"COMPLETED", "FAILED", "CANCELLED"}
-        ):
+        if msg["type"] == "task.state_changed" and task and task["state"] in {"COMPLETED", "FAILED", "CANCELLED"}:
             break
     return events
 
@@ -33,9 +29,7 @@ def test_ws_streams_ordered_task_events(ws_client: TestClient) -> None:
         assert "audit.appended" in types
 
         # State transitions arrive in lifecycle order.
-        states = [
-            e["payload"]["task"]["state"] for e in events if e["type"] == "task.state_changed"
-        ]
+        states = [e["payload"]["task"]["state"] for e in events if e["type"] == "task.state_changed"]
         for expected in ["UNDERSTANDING", "PLANNING", "RISK_REVIEW", "EXECUTING"]:
             assert expected in states
         assert states.index("PLANNING") < states.index("EXECUTING")

@@ -1,4 +1,4 @@
-# THOTH v1.0 release validation plan
+# OmniMac v1.0 release validation plan
 
 **Audit date:** 2026-07-14  
 **Branch:** `phase-5/persona`  
@@ -41,7 +41,7 @@ operation is development evidence only, not clean-install evidence.
 ## Local speech runtime and models
 
 No `whisper-cli`, CMake, Ninja, ffmpeg, or sox executable was present. No
-Whisper GGML model was found in the repository data directory, THOTH
+Whisper GGML model was found in the repository data directory, OmniMac
 Application Support, user cache/share directories, or Homebrew shared data.
 Consequently no production STT model is selected and no real WER, intent,
 routing, Stop, partial/final latency, memory, or concurrent-Qwen measurement
@@ -59,18 +59,18 @@ Integrity mismatch must prevent use.
 
 | Property | Observed value |
 |---|---|
-| Helper path | `apps/ax-helper/dist/THOTH Accessibility Helper.app` |
-| Bundle identifier | `me.adityalabs.thoth.axhelper` |
-| Executable | `THOTHAXHelper` |
+| Helper path | `apps/ax-helper/dist/OmniMac Accessibility Helper.app` |
+| Bundle identifier | `me.adityalabs.omnimac.axhelper` |
+| Executable | `OmniMacAXHelper` |
 | Executable SHA-256 | `ae0908575ab2ad2d88cdfb91f3879ded90f0ae7f221a0961863810f5dbb8054b` |
 | Signature | valid ad-hoc hardened-runtime signature; no TeamIdentifier |
 | Gatekeeper | rejected as an unnotarized/ad-hoc artifact |
-| Socket | `~/Library/Application Support/THOTH/ax-helper.sock` |
+| Socket | `~/Library/Application Support/OmniMac/ax-helper.sock` |
 | Socket mode / owner | `srw-------`, current user `aditya1981:staff` |
 | Process | running as the exact packaged helper, parent PID 1 |
 | AX trust | `not_determined` / helper reports untrusted |
 
-THOTH will not automate permission granting or modify TCC. The user must
+OmniMac will not automate permission granting or modify TCC. The user must
 manually grant Accessibility access to this exact bundle. Only a fresh helper
 probe returning `AXIsProcessTrusted() == true` can begin real AX capstones.
 
@@ -116,7 +116,7 @@ the developer checkout cannot substitute for it.
 13. Run the adversarial matrix, all automated gates, audit-chain validation,
     and publish the release report with exactly one release decision.
 
-## Evidence required for `THOTH v1.0 VALIDATED`
+## Evidence required for `OmniMac v1.0 VALIDATED`
 
 - Integrity-pinned whisper.cpp runtime and candidate models.
 - Production STT selection from real microphone measurements.
@@ -125,7 +125,7 @@ the developer checkout cannot substitute for it.
   zero voice approvals, zero scope escape, and zero unapproved external effect.
 - Real visible microphone lifecycle, transcript correction, retention cleanup,
   acoustic Stop/barge-in, and complete offline local voice-to-action evidence.
-- Fresh trust for exact helper `me.adityalabs.thoth.axhelper`, independent AX
+- Fresh trust for exact helper `me.adityalabs.omnimac.axhelper`, independent AX
   read-back for every promoted capability, and fail-closed real revocation.
 - Signed/notarized artifacts when credentials are available, plus a real
   clean-account/machine installation and uninstall pass.
@@ -133,7 +133,7 @@ the developer checkout cannot substitute for it.
   and a fully green final automated gate.
 
 Until every mandatory item is evidenced, the only permitted decision is
-`THOTH v1.0 RELEASE CANDIDATE` with each blocker stated explicitly.
+`OmniMac v1.0 RELEASE CANDIDATE` with each blocker stated explicitly.
 
 ## Current environment-dependent blockers
 

@@ -1,11 +1,11 @@
-from thoth_daemon.main import _managed_parent_pid, _monitor_parent
+from omnimac_daemon.main import _managed_parent_pid, _monitor_parent
 
 
 def test_managed_parent_pid_is_optional_and_strict() -> None:
     assert _managed_parent_pid({}) is None
-    assert _managed_parent_pid({"THOTH_DESKTOP_PARENT_PID": "not-a-pid"}) is None
-    assert _managed_parent_pid({"THOTH_DESKTOP_PARENT_PID": "1"}) is None
-    assert _managed_parent_pid({"THOTH_DESKTOP_PARENT_PID": "42"}) == 42
+    assert _managed_parent_pid({"OmniMac_DESKTOP_PARENT_PID": "not-a-pid"}) is None
+    assert _managed_parent_pid({"OmniMac_DESKTOP_PARENT_PID": "1"}) is None
+    assert _managed_parent_pid({"OmniMac_DESKTOP_PARENT_PID": "42"}) == 42
 
 
 def test_parent_monitor_requests_shutdown_when_parent_disappears() -> None:

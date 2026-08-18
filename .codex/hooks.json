@@ -1,0 +1,49 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 '/Users/aditya1981/Downloads/THOTH/.codex/hooks/log_commands.py'"
+          },
+          {
+            "type": "command",
+            "command": "python3 '/Users/aditya1981/Downloads/THOTH/.codex/hooks/block_dangerous.py'"
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 '/Users/aditya1981/Downloads/THOTH/.codex/hooks/block_dangerous.py'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 '/Users/aditya1981/Downloads/THOTH/.codex/hooks/format_after_edit.py'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 '/Users/aditya1981/Downloads/THOTH/.codex/hooks/test_before_complete.py'"
+          }
+        ]
+      }
+    ]
+  }
+}

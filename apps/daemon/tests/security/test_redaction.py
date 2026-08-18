@@ -1,4 +1,4 @@
-from thoth_daemon.security.redaction import REDACTED, redact
+from omnimac_daemon.security.redaction import REDACTED, redact
 
 
 def test_redacts_secret_keys_case_insensitive() -> None:

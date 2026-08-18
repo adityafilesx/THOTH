@@ -2,7 +2,7 @@ import importlib.util
 
 import pytest
 
-from thoth_daemon.macos.app_control import AppInfo, MockAppControl
+from omnimac_daemon.macos.app_control import AppInfo, MockAppControl
 
 _HAS_APPKIT = importlib.util.find_spec("AppKit") is not None
 
@@ -41,17 +41,17 @@ def test_mock_activate_accepts_exact_bundle_identifier() -> None:
     ac = MockAppControl(
         running=[
             AppInfo(name="Finder", bundle_id="com.apple.finder", active=True),
-            AppInfo(name="THOTH AX Test App", bundle_id="me.adityalabs.thoth.axtest", active=False),
+            AppInfo(name="OmniMac AX Test App", bundle_id="me.adityalabs.omnimac.axtest", active=False),
         ]
     )
-    assert ac.activate("me.adityalabs.thoth.axtest") is True
+    assert ac.activate("me.adityalabs.omnimac.axtest") is True
     assert ac.frontmost() is not None
-    assert ac.frontmost().name == "THOTH AX Test App"
+    assert ac.frontmost().name == "OmniMac AX Test App"
 
 
 @pytest.mark.skipif(not _HAS_APPKIT, reason="AppKit/pyobjc not available (non-macOS)")
 def test_real_list_running_nonintrusive() -> None:
-    from thoth_daemon.macos.app_control import AppKitAppControl
+    from omnimac_daemon.macos.app_control import AppKitAppControl
 
     ac = AppKitAppControl()
     running = ac.list_running()

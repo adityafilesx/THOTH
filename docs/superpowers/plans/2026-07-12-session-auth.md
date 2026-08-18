@@ -4,7 +4,7 @@
 
 **Goal:** A per-session bearer token gates every daemon call (HTTP + WebSocket), handed to the desktop over a 0600 file / dev env, closing threat T6 before real capabilities land.
 
-**Architecture:** Daemon mints (or reads from env) a token at startup, stores it on `app.state`, writes it 0600. An HTTP middleware requires `Authorization: Bearer <token>` (constant-time compare) on all routes except `/api/health`; the WS endpoint requires a first-message auth frame. The desktop attaches the token from a Tauri command (packaged) or `VITE_THOTH_TOKEN` (dev). Auth is always on.
+**Architecture:** Daemon mints (or reads from env) a token at startup, stores it on `app.state`, writes it 0600. An HTTP middleware requires `Authorization: Bearer <token>` (constant-time compare) on all routes except `/api/health`; the WS endpoint requires a first-message auth frame. The desktop attaches the token from a Tauri command (packaged) or `VITE_OmniMac_TOKEN` (dev). Auth is always on.
 
 **Tech Stack:** Python 3.12/FastAPI/Starlette, Rust/Tauri 2, TypeScript/vitest.
 
@@ -16,17 +16,17 @@
 - Constant-time token compare (`secrets.compare_digest`). Token never in SQLite; redaction already masks `token`/`authorization` keys.
 - `/api/health` stays unauthenticated (liveness).
 - Branch `phase-3/session-auth`. Every commit ends with `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>` (second `-m`). No push.
-- No real I/O; STATUS keeps "THOTH cannot control the computer".
+- No real I/O; STATUS keeps "OmniMac cannot control the computer".
 
 ## File Structure
 
 | File | Create/Modify | Responsibility |
 |---|---|---|
-| `apps/daemon/src/thoth_daemon/security/auth.py` | Create | `mint_token`, `write_token_file` (0600), `token_matches` (constant-time). |
-| `apps/daemon/src/thoth_daemon/api/middleware.py` | Create | `require_bearer` HTTP middleware. |
-| `apps/daemon/src/thoth_daemon/config.py` | Modify | `session_token`, `session_token_path`. |
-| `apps/daemon/src/thoth_daemon/app.py` | Modify | Resolve/store/write token; register middleware. |
-| `apps/daemon/src/thoth_daemon/api/ws.py` | Modify | First-message auth handshake. |
+| `apps/daemon/src/omnimac_daemon/security/auth.py` | Create | `mint_token`, `write_token_file` (0600), `token_matches` (constant-time). |
+| `apps/daemon/src/omnimac_daemon/api/middleware.py` | Create | `require_bearer` HTTP middleware. |
+| `apps/daemon/src/omnimac_daemon/config.py` | Modify | `session_token`, `session_token_path`. |
+| `apps/daemon/src/omnimac_daemon/app.py` | Modify | Resolve/store/write token; register middleware. |
+| `apps/daemon/src/omnimac_daemon/api/ws.py` | Modify | First-message auth handshake. |
 | `apps/daemon/tests/conftest.py` | Modify | Test token + authenticated `client`. |
 | `apps/desktop/src/lib/auth.ts` | Create | `getSessionToken` (Tauri invoke / dev env). |
 | `apps/desktop/src/lib/api.ts` | Modify | Attach bearer header. |
@@ -42,7 +42,7 @@ Tests: `tests/security/test_auth.py`, `tests/api/test_auth_http.py`, `tests/api/
 ### Task 1: Token primitives (`security/auth.py`)
 
 **Files:**
-- Create: `apps/daemon/src/thoth_daemon/security/auth.py`
+- Create: `apps/daemon/src/omnimac_daemon/security/auth.py`
 - Test: `apps/daemon/tests/security/test_auth.py`
 
 **Interfaces:**
@@ -55,7 +55,7 @@ Tests: `tests/security/test_auth.py`, `tests/api/test_auth_http.py`, `tests/api/
 import stat
 from pathlib import Path
 
-from thoth_daemon.security.auth import mint_token, token_matches, write_token_file
+from omnimac_daemon.security.auth import mint_token, token_matches, write_token_file
 
 
 def test_mint_token_is_long_and_unique() -> None:
@@ -90,12 +90,12 @@ def test_token_matches() -> None:
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `uv run --project apps/daemon pytest apps/daemon/tests/security/test_auth.py -q`
-Expected: FAIL — `ModuleNotFoundError: thoth_daemon.security.auth`.
+Expected: FAIL — `ModuleNotFoundError: omnimac_daemon.security.auth`.
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
-# apps/daemon/src/thoth_daemon/security/auth.py
+# apps/daemon/src/omnimac_daemon/security/auth.py
 """Session auth primitives.
 
 A per-session bearer token authenticates the desktop to the daemon,
@@ -140,7 +140,7 @@ Expected: PASS (4 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/daemon/src/thoth_daemon/security/auth.py apps/daemon/tests/security/test_auth.py
+git add apps/daemon/src/omnimac_daemon/security/auth.py apps/daemon/tests/security/test_auth.py
 git commit -m "feat(security): session token primitives (mint, 0600 write, constant-time compare)" \
            -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
@@ -150,8 +150,8 @@ git commit -m "feat(security): session token primitives (mint, 0600 write, const
 ### Task 2: HTTP guard (middleware + config + app + conftest)
 
 **Files:**
-- Create: `apps/daemon/src/thoth_daemon/api/middleware.py`
-- Modify: `apps/daemon/src/thoth_daemon/config.py`, `apps/daemon/src/thoth_daemon/app.py`, `apps/daemon/tests/conftest.py`
+- Create: `apps/daemon/src/omnimac_daemon/api/middleware.py`
+- Modify: `apps/daemon/src/omnimac_daemon/config.py`, `apps/daemon/src/omnimac_daemon/app.py`, `apps/daemon/tests/conftest.py`
 - Test: `apps/daemon/tests/api/test_auth_http.py`
 
 **Interfaces:**
@@ -195,7 +195,7 @@ Expected: FAIL — missing/blank token currently returns 200 (no auth yet); `ses
 
 - [ ] **Step 3a: Config fields**
 
-In `apps/daemon/src/thoth_daemon/config.py`, add after `planner`:
+In `apps/daemon/src/omnimac_daemon/config.py`, add after `planner`:
 
 ```python
     session_token: str | None = None
@@ -205,7 +205,7 @@ In `apps/daemon/src/thoth_daemon/config.py`, add after `planner`:
 - [ ] **Step 3b: Middleware**
 
 ```python
-# apps/daemon/src/thoth_daemon/api/middleware.py
+# apps/daemon/src/omnimac_daemon/api/middleware.py
 """HTTP auth middleware — every request needs the session bearer token
 except the liveness probe. WebSocket auth is handled in api/ws.py."""
 
@@ -215,7 +215,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.responses import Response
 
-from thoth_daemon.security.auth import token_matches
+from omnimac_daemon.security.auth import token_matches
 
 _OPEN_PATHS = frozenset({"/api/health"})
 
@@ -238,8 +238,8 @@ async def require_bearer(
 Add imports:
 
 ```python
-from thoth_daemon.api.middleware import require_bearer
-from thoth_daemon.security.auth import mint_token, write_token_file
+from omnimac_daemon.api.middleware import require_bearer
+from omnimac_daemon.security.auth import mint_token, write_token_file
 ```
 
 In `lifespan`, after `bus = EventBus()` and before building the orchestrator, resolve the token:
@@ -290,8 +290,8 @@ Expected: PASS — new auth tests pass; every existing HTTP API test still passe
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/daemon/src/thoth_daemon/api/middleware.py apps/daemon/src/thoth_daemon/config.py \
-        apps/daemon/src/thoth_daemon/app.py apps/daemon/tests/conftest.py \
+git add apps/daemon/src/omnimac_daemon/api/middleware.py apps/daemon/src/omnimac_daemon/config.py \
+        apps/daemon/src/omnimac_daemon/app.py apps/daemon/tests/conftest.py \
         apps/daemon/tests/api/test_auth_http.py
 git commit -m "feat(api): bearer-token HTTP middleware; mint+write session token at startup" \
            -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
@@ -302,7 +302,7 @@ git commit -m "feat(api): bearer-token HTTP middleware; mint+write session token
 ### Task 3: WebSocket auth handshake
 
 **Files:**
-- Modify: `apps/daemon/src/thoth_daemon/api/ws.py`, `apps/daemon/tests/api/test_ws.py`, `apps/daemon/tests/api/test_ws_tasks.py`
+- Modify: `apps/daemon/src/omnimac_daemon/api/ws.py`, `apps/daemon/tests/api/test_ws.py`, `apps/daemon/tests/api/test_ws_tasks.py`
 
 **Interfaces:**
 - Consumes: `token_matches` (Task 1); `app.state.session_token` (Task 2).
@@ -340,15 +340,15 @@ Expected: FAIL — server currently sends `connection.established` without auth,
 
 - [ ] **Step 3a: Add the handshake**
 
-Replace `apps/daemon/src/thoth_daemon/api/ws.py` with:
+Replace `apps/daemon/src/omnimac_daemon/api/ws.py` with:
 
 ```python
 import asyncio
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from thoth_daemon.events.bus import EventBus
-from thoth_daemon.security.auth import token_matches
+from omnimac_daemon.events.bus import EventBus
+from omnimac_daemon.security.auth import token_matches
 
 router = APIRouter()
 
@@ -405,7 +405,7 @@ Expected: PASS — reject cases disconnect; authenticated cases receive `connect
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/daemon/src/thoth_daemon/api/ws.py apps/daemon/tests/api/test_ws.py \
+git add apps/daemon/src/omnimac_daemon/api/ws.py apps/daemon/tests/api/test_ws.py \
         apps/daemon/tests/api/test_ws_tasks.py
 git commit -m "feat(api): WebSocket first-message auth handshake" \
            -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
@@ -444,8 +444,8 @@ describe("getSessionToken", () => {
     expect(invoke).toHaveBeenCalledWith("session_token");
   });
 
-  it("falls back to VITE_THOTH_TOKEN in the dev browser", async () => {
-    vi.stubEnv("VITE_THOTH_TOKEN", "dev-token");
+  it("falls back to VITE_OmniMac_TOKEN in the dev browser", async () => {
+    vi.stubEnv("VITE_OmniMac_TOKEN", "dev-token");
     expect(await getSessionToken()).toBe("dev-token");
     vi.unstubAllEnvs();
   });
@@ -467,7 +467,7 @@ afterEach(() => {
 
 describe("api request auth", () => {
   it("attaches the bearer header when a token is available", async () => {
-    vi.stubEnv("VITE_THOTH_TOKEN", "dev-token");
+    vi.stubEnv("VITE_OmniMac_TOKEN", "dev-token");
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify([]), { status: 200 }),
     );
@@ -511,7 +511,7 @@ afterEach(() => {
 
 describe("WsClient auth", () => {
   it("sends the auth frame on open", async () => {
-    vi.stubEnv("VITE_THOTH_TOKEN", "dev-token");
+    vi.stubEnv("VITE_OmniMac_TOKEN", "dev-token");
     vi.stubGlobal("WebSocket", FakeWebSocket as unknown as typeof WebSocket);
     const client = new WsClient({ onEvent: () => {}, onStatus: () => {} });
     client.connect();
@@ -535,7 +535,7 @@ Expected: FAIL — `./auth` does not exist; header/frame not attached.
 /**
  * Session token provider. Under Tauri the token comes from the daemon-written
  * file via the `session_token` command; in the dev browser it comes from
- * VITE_THOTH_TOKEN. Held in memory only — never persisted client-side.
+ * VITE_OmniMac_TOKEN. Held in memory only — never persisted client-side.
  */
 interface TauriInternals {
   invoke: (cmd: string, args?: unknown) => Promise<unknown>;
@@ -558,7 +558,7 @@ export async function getSessionToken(): Promise<string | null> {
       cached = null;
     }
   } else {
-    cached = (import.meta.env.VITE_THOTH_TOKEN as string | undefined) ?? null;
+    cached = (import.meta.env.VITE_OmniMac_TOKEN as string | undefined) ?? null;
   }
   return cached;
 }
@@ -661,18 +661,18 @@ git commit -m "feat(desktop): attach session token to HTTP + WS (Tauri command /
 Replace `apps/desktop/src-tauri/src/lib.rs`:
 
 ```rust
-// THOTH desktop shell. The `session_token` command is the first — and only —
+// OmniMac desktop shell. The `session_token` command is the first — and only —
 // custom command: it hands the daemon-issued session token to the webview so
 // the thin client can authenticate. Reviewed capability (Phase 3 slice 2).
 
 #[tauri::command]
 fn session_token() -> Option<String> {
-    if let Ok(t) = std::env::var("THOTH_SESSION_TOKEN") {
+    if let Ok(t) = std::env::var("OmniMac_SESSION_TOKEN") {
         if !t.is_empty() {
             return Some(t);
         }
     }
-    let path = std::env::var("THOTH_SESSION_TOKEN_PATH")
+    let path = std::env::var("OmniMac_SESSION_TOKEN_PATH")
         .unwrap_or_else(|_| "data/session.token".to_string());
     std::fs::read_to_string(path).ok().map(|s| s.trim().to_string())
 }
@@ -682,7 +682,7 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![session_token])
         .run(tauri::generate_context!())
-        .expect("error while running THOTH desktop");
+        .expect("error while running OmniMac desktop");
 }
 ```
 
@@ -696,17 +696,17 @@ Expected: `Finished`. (If the environment lacks the Rust/Tauri toolchain, note i
 In `Makefile`, add a variable near the top (after `DESKTOP :=`):
 
 ```make
-DEV_TOKEN := thoth-dev-token
+DEV_TOKEN := omnimac-dev-token
 ```
 
 and set it on both dev processes:
 
 ```make
 daemon: ## Run the FastAPI daemon (http://127.0.0.1:7710)
-	THOTH_SESSION_TOKEN=$(DEV_TOKEN) uv run --project $(DAEMON) python -m thoth_daemon.main
+	OmniMac_SESSION_TOKEN=$(DEV_TOKEN) uv run --project $(DAEMON) python -m omnimac_daemon.main
 
 desktop: ## Run the desktop dev server (browser mode)
-	VITE_THOTH_TOKEN=$(DEV_TOKEN) pnpm -C $(DESKTOP) dev
+	VITE_OmniMac_TOKEN=$(DEV_TOKEN) pnpm -C $(DESKTOP) dev
 ```
 
 - [ ] **Step 4: Docs**
@@ -716,7 +716,7 @@ Append to `docs/DECISIONS.md`:
 ```markdown
 ## ADR-012: Per-session bearer token for desktop↔daemon
 **Date:** 2026-07-12 · **Status:** Accepted
-The daemon mints a `secrets.token_urlsafe(32)` session token at startup (or reads `THOTH_SESSION_TOKEN`), stores it on `app.state`, and writes it 0600 for the desktop to read. An HTTP middleware requires `Authorization: Bearer <token>` (constant-time `secrets.compare_digest`) on every route except `/api/health`; the WebSocket requires a first-message `{type:"auth",token}` handshake (browsers can't set WS headers). Auth is always on — no disable flag to ship off. Rejected: query-param WS token (URL logging); a runtime bypass flag (ship-off risk); OS-keychain handoff (heavier than warranted for an ephemeral per-session token). This is a deliberate, scoped exception to "no secrets in frontend state": the token is IPC auth material, held in webview memory only, never persisted client-side, and redacted from logs/audit.
+The daemon mints a `secrets.token_urlsafe(32)` session token at startup (or reads `OmniMac_SESSION_TOKEN`), stores it on `app.state`, and writes it 0600 for the desktop to read. An HTTP middleware requires `Authorization: Bearer <token>` (constant-time `secrets.compare_digest`) on every route except `/api/health`; the WebSocket requires a first-message `{type:"auth",token}` handshake (browsers can't set WS headers). Auth is always on — no disable flag to ship off. Rejected: query-param WS token (URL logging); a runtime bypass flag (ship-off risk); OS-keychain handoff (heavier than warranted for an ephemeral per-session token). This is a deliberate, scoped exception to "no secrets in frontend state": the token is IPC auth material, held in webview memory only, never persisted client-side, and redacted from logs/audit.
 ```
 
 In `docs/THREAT_MODEL.md`, update the T6 row and residual-risk bullet: mitigation is now implemented (per-session bearer token + WS handshake), not "planned".
@@ -745,9 +745,9 @@ Start the daemon with a known token; confirm 401 without it, 200 with it, health
 
 ```bash
 SCRATCH=<scratchpad>
-THOTH_SESSION_TOKEN=smoketoken THOTH_DB_PATH="$SCRATCH/a.db" THOTH_LOG_DIR="$SCRATCH/logs" \
-  THOTH_SESSION_TOKEN_PATH="$SCRATCH/session.token" \
-  uv run --project apps/daemon uvicorn thoth_daemon.app:create_app --factory --port 7712 &
+OmniMac_SESSION_TOKEN=smoketoken OmniMac_DB_PATH="$SCRATCH/a.db" OmniMac_LOG_DIR="$SCRATCH/logs" \
+  OmniMac_SESSION_TOKEN_PATH="$SCRATCH/session.token" \
+  uv run --project apps/daemon uvicorn omnimac_daemon.app:create_app --factory --port 7712 &
 curl -s -o /dev/null -w "health=%{http_code}\n" http://127.0.0.1:7712/api/health          # 200
 curl -s -o /dev/null -w "noauth=%{http_code}\n" http://127.0.0.1:7712/api/tasks            # 401
 curl -s -o /dev/null -w "auth=%{http_code}\n" -H "Authorization: Bearer smoketoken" http://127.0.0.1:7712/api/tasks  # 200

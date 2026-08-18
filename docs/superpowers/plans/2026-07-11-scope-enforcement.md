@@ -16,25 +16,25 @@
 - Safety invariants unchanged: no execution outside `EXECUTING`; effective risk never downgrades; audit store append-only (no update/delete surface added); redaction runs at every serialization boundary.
 - **The existing 256 daemon + 42 desktop tests must stay green.** Mocks override nothing, so they request an empty scope and are always allowed. All new constructor/function params default so existing call sites compile unchanged.
 - Work on branch `phase-3/scope-enforcement`. Every commit message ends with the trailer `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>` (shown via a second `-m`). Do **not** push.
-- This slice adds **no** real I/O and makes **no** capability claim. `docs/STATUS.md` must continue to state THOTH cannot control the computer.
+- This slice adds **no** real I/O and makes **no** capability claim. `docs/STATUS.md` must continue to state OmniMac cannot control the computer.
 
 ## File Structure
 
 | File | Create/Modify | Responsibility |
 |---|---|---|
-| `apps/daemon/src/thoth_daemon/security/paths.py` | Create | `expand_and_resolve`, `is_within`, `is_denied_path` + denylists. |
-| `apps/daemon/src/thoth_daemon/core/scope.py` | Create | `ScopeViolation`, stateless `ScopeEnforcer.check`. |
-| `apps/daemon/src/thoth_daemon/schemas/contracts.py` | Modify | Add `PermissionKind`, `PermissionGrant`. |
-| `apps/daemon/src/thoth_daemon/schemas/__init__.py` | Modify | Export the two new names. |
-| `apps/daemon/src/thoth_daemon/storage/models.py` | Modify | Add `WorkspaceRow`, `PermissionGrantRow`. |
+| `apps/daemon/src/omnimac_daemon/security/paths.py` | Create | `expand_and_resolve`, `is_within`, `is_denied_path` + denylists. |
+| `apps/daemon/src/omnimac_daemon/core/scope.py` | Create | `ScopeViolation`, stateless `ScopeEnforcer.check`. |
+| `apps/daemon/src/omnimac_daemon/schemas/contracts.py` | Modify | Add `PermissionKind`, `PermissionGrant`. |
+| `apps/daemon/src/omnimac_daemon/schemas/__init__.py` | Modify | Export the two new names. |
+| `apps/daemon/src/omnimac_daemon/storage/models.py` | Modify | Add `WorkspaceRow`, `PermissionGrantRow`. |
 | `apps/daemon/alembic/versions/0002_permissions_and_workspaces.py` | Create | Migration for the two tables. |
-| `apps/daemon/src/thoth_daemon/storage/permissions.py` | Create | `PermissionStore` + `effective_scope`. |
-| `apps/daemon/src/thoth_daemon/tools/base.py` | Modify | Add `requested_scope(args) -> ResourceScope` (default empty). |
-| `apps/daemon/src/thoth_daemon/tools/registry.py` | Modify | Backstop scope check in `execute(invocation, allowed_scope=None)`. |
-| `apps/daemon/src/thoth_daemon/core/orchestrator.py` | Modify | Primary pre-EXECUTING gate; thread `enforcer` + `scope_provider`. |
-| `apps/daemon/src/thoth_daemon/api/permissions.py` | Create | REST router. |
-| `apps/daemon/src/thoth_daemon/app.py` | Modify | Build store, seed default workspace, wire enforcer + provider + router. |
-| `apps/daemon/src/thoth_daemon/schemas/export.py` | Modify | Add `PermissionGrant` to exported contracts. |
+| `apps/daemon/src/omnimac_daemon/storage/permissions.py` | Create | `PermissionStore` + `effective_scope`. |
+| `apps/daemon/src/omnimac_daemon/tools/base.py` | Modify | Add `requested_scope(args) -> ResourceScope` (default empty). |
+| `apps/daemon/src/omnimac_daemon/tools/registry.py` | Modify | Backstop scope check in `execute(invocation, allowed_scope=None)`. |
+| `apps/daemon/src/omnimac_daemon/core/orchestrator.py` | Modify | Primary pre-EXECUTING gate; thread `enforcer` + `scope_provider`. |
+| `apps/daemon/src/omnimac_daemon/api/permissions.py` | Create | REST router. |
+| `apps/daemon/src/omnimac_daemon/app.py` | Modify | Build store, seed default workspace, wire enforcer + provider + router. |
+| `apps/daemon/src/omnimac_daemon/schemas/export.py` | Modify | Add `PermissionGrant` to exported contracts. |
 | `docs/DECISIONS.md`, `docs/STATUS.md`, `docs/MILESTONES.md` | Modify | ADR + truthful status. |
 
 Tests: `tests/security/test_paths.py`, `tests/core/test_scope.py`, `tests/schemas/test_permission_schema.py`, `tests/storage/test_permissions_store.py`, `tests/tools/test_registry.py` (extend), `tests/core/test_scope_integration.py`, `tests/api/test_permissions_api.py`.
@@ -44,7 +44,7 @@ Tests: `tests/security/test_paths.py`, `tests/core/test_scope.py`, `tests/schema
 ### Task 1: Path safety primitives
 
 **Files:**
-- Create: `apps/daemon/src/thoth_daemon/security/paths.py`
+- Create: `apps/daemon/src/omnimac_daemon/security/paths.py`
 - Test: `apps/daemon/tests/security/test_paths.py`
 
 **Interfaces:**
@@ -56,27 +56,27 @@ Tests: `tests/security/test_paths.py`, `tests/core/test_scope.py`, `tests/schema
 # apps/daemon/tests/security/test_paths.py
 from pathlib import Path
 
-from thoth_daemon.security.paths import expand_and_resolve, is_denied_path, is_within
+from omnimac_daemon.security.paths import expand_and_resolve, is_denied_path, is_within
 
 
 def test_expand_user_home() -> None:
-    assert expand_and_resolve("~/projects/thoth") == (Path.home() / "projects" / "thoth").resolve()
+    assert expand_and_resolve("~/projects/omnimac") == (Path.home() / "projects" / "omnimac").resolve()
 
 
 def test_is_within_child_and_self() -> None:
-    root = Path.home() / "projects" / "thoth"
+    root = Path.home() / "projects" / "omnimac"
     assert is_within(root / "src" / "main.py", root)
     assert is_within(root, root)
 
 
 def test_is_within_rejects_parent_and_sibling() -> None:
-    root = Path.home() / "projects" / "thoth"
+    root = Path.home() / "projects" / "omnimac"
     assert not is_within(Path.home() / "projects", root)
     assert not is_within(Path.home() / "projects" / "other", root)
 
 
 def test_is_within_rejects_dotdot_escape() -> None:
-    root = Path.home() / "projects" / "thoth"
+    root = Path.home() / "projects" / "omnimac"
     assert not is_within(root / ".." / "secret.txt", root)
 
 
@@ -99,25 +99,25 @@ def test_denylist_credential_dirs() -> None:
 
 
 def test_denylist_name_globs() -> None:
-    assert is_denied_path(Path.home() / "projects" / "thoth" / ".env")
-    assert is_denied_path(Path.home() / "projects" / "thoth" / ".env.local")
+    assert is_denied_path(Path.home() / "projects" / "omnimac" / ".env")
+    assert is_denied_path(Path.home() / "projects" / "omnimac" / ".env.local")
     assert is_denied_path(Path.home() / "certs" / "server.pem")
     assert is_denied_path(Path.home() / ".netrc")
 
 
 def test_normal_project_path_not_denied() -> None:
-    assert not is_denied_path(Path.home() / "projects" / "thoth" / "README.md")
+    assert not is_denied_path(Path.home() / "projects" / "omnimac" / "README.md")
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `uv run --project apps/daemon pytest apps/daemon/tests/security/test_paths.py -q`
-Expected: FAIL — `ModuleNotFoundError: thoth_daemon.security.paths`.
+Expected: FAIL — `ModuleNotFoundError: omnimac_daemon.security.paths`.
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
-# apps/daemon/src/thoth_daemon/security/paths.py
+# apps/daemon/src/omnimac_daemon/security/paths.py
 """Path safety primitives for scoped filesystem and shell access.
 
 Pure functions over paths: user-directory expansion, symlink-safe
@@ -189,7 +189,7 @@ Expected: PASS (8 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/daemon/src/thoth_daemon/security/paths.py apps/daemon/tests/security/test_paths.py
+git add apps/daemon/src/omnimac_daemon/security/paths.py apps/daemon/tests/security/test_paths.py
 git commit -m "feat(security): path safety primitives (expand/resolve, containment, denylist)" \
            -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
@@ -199,7 +199,7 @@ git commit -m "feat(security): path safety primitives (expand/resolve, containme
 ### Task 2: ScopeEnforcer
 
 **Files:**
-- Create: `apps/daemon/src/thoth_daemon/core/scope.py`
+- Create: `apps/daemon/src/omnimac_daemon/core/scope.py`
 - Test: `apps/daemon/tests/core/test_scope.py`
 
 **Interfaces:**
@@ -214,8 +214,8 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.core.scope import ScopeEnforcer, ScopeViolation
-from thoth_daemon.schemas import ResourceScope
+from omnimac_daemon.core.scope import ScopeEnforcer, ScopeViolation
+from omnimac_daemon.schemas import ResourceScope
 
 
 @pytest.fixture()
@@ -228,12 +228,12 @@ def _allowed(root: str) -> ResourceScope:
 
 
 def test_in_scope_path_allowed(enforcer: ScopeEnforcer) -> None:
-    root = str(Path.home() / "projects" / "thoth")
+    root = str(Path.home() / "projects" / "omnimac")
     enforcer.check(ResourceScope(paths=[root + "/README.md"]), _allowed(root))
 
 
 def test_out_of_scope_path_denied(enforcer: ScopeEnforcer) -> None:
-    root = str(Path.home() / "projects" / "thoth")
+    root = str(Path.home() / "projects" / "omnimac")
     with pytest.raises(ScopeViolation) as exc:
         enforcer.check(ResourceScope(paths=[str(Path.home() / "other" / "x.txt")]), _allowed(root))
     assert exc.value.kind == "path"
@@ -269,12 +269,12 @@ def test_empty_requested_scope_always_allowed(enforcer: ScopeEnforcer) -> None:
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `uv run --project apps/daemon pytest apps/daemon/tests/core/test_scope.py -q`
-Expected: FAIL — `ModuleNotFoundError: thoth_daemon.core.scope`.
+Expected: FAIL — `ModuleNotFoundError: omnimac_daemon.core.scope`.
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
-# apps/daemon/src/thoth_daemon/core/scope.py
+# apps/daemon/src/omnimac_daemon/core/scope.py
 """Scope enforcement.
 
 A stateless decision: does an invocation's requested scope fall inside the
@@ -285,8 +285,8 @@ store) — no free text reaches this decision (threats T1/T3)."""
 
 from __future__ import annotations
 
-from thoth_daemon.schemas import ResourceScope
-from thoth_daemon.security.paths import is_denied_path, is_within
+from omnimac_daemon.schemas import ResourceScope
+from omnimac_daemon.security.paths import is_denied_path, is_within
 
 
 class ScopeViolation(Exception):
@@ -329,7 +329,7 @@ Expected: PASS (6 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/daemon/src/thoth_daemon/core/scope.py apps/daemon/tests/core/test_scope.py
+git add apps/daemon/src/omnimac_daemon/core/scope.py apps/daemon/tests/core/test_scope.py
 git commit -m "feat(core): stateless ScopeEnforcer over path/domain/app targets" \
            -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
@@ -339,9 +339,9 @@ git commit -m "feat(core): stateless ScopeEnforcer over path/domain/app targets"
 ### Task 3: PermissionGrant contract + tables + migration
 
 **Files:**
-- Modify: `apps/daemon/src/thoth_daemon/schemas/contracts.py`
-- Modify: `apps/daemon/src/thoth_daemon/schemas/__init__.py`
-- Modify: `apps/daemon/src/thoth_daemon/storage/models.py`
+- Modify: `apps/daemon/src/omnimac_daemon/schemas/contracts.py`
+- Modify: `apps/daemon/src/omnimac_daemon/schemas/__init__.py`
+- Modify: `apps/daemon/src/omnimac_daemon/storage/models.py`
 - Create: `apps/daemon/alembic/versions/0002_permissions_and_workspaces.py`
 - Test: `apps/daemon/tests/schemas/test_permission_schema.py`
 
@@ -355,12 +355,12 @@ git commit -m "feat(core): stateless ScopeEnforcer over path/domain/app targets"
 import pytest
 from pydantic import ValidationError
 
-from thoth_daemon.schemas import PermissionGrant
-from thoth_daemon.storage.models import Base
+from omnimac_daemon.schemas import PermissionGrant
+from omnimac_daemon.storage.models import Base
 
 
 def test_permission_grant_defaults() -> None:
-    g = PermissionGrant(workspace_id="w1", kind="path", value="~/projects/thoth")
+    g = PermissionGrant(workspace_id="w1", kind="path", value="~/projects/omnimac")
     assert g.revoked is False and g.id
 
 
@@ -386,7 +386,7 @@ Expected: FAIL — `ImportError: cannot import name 'PermissionGrant'`.
 
 - [ ] **Step 3a: Add the contract**
 
-In `apps/daemon/src/thoth_daemon/schemas/contracts.py`, after the `WorkspaceProfile` class, append:
+In `apps/daemon/src/omnimac_daemon/schemas/contracts.py`, after the `WorkspaceProfile` class, append:
 
 ```python
 PermissionKind = Literal["path", "domain", "app"]
@@ -403,7 +403,7 @@ class PermissionGrant(StrictModel):
 
 - [ ] **Step 3b: Export it**
 
-In `apps/daemon/src/thoth_daemon/schemas/__init__.py`, add `PermissionGrant` and `PermissionKind` to the `from thoth_daemon.schemas.contracts import (...)` block and to `__all__` (keep alphabetical grouping):
+In `apps/daemon/src/omnimac_daemon/schemas/__init__.py`, add `PermissionGrant` and `PermissionKind` to the `from omnimac_daemon.schemas.contracts import (...)` block and to `__all__` (keep alphabetical grouping):
 
 ```python
     PermissionGrant,
@@ -413,7 +413,7 @@ In `apps/daemon/src/thoth_daemon/schemas/__init__.py`, add `PermissionGrant` and
 
 - [ ] **Step 3c: Add the tables**
 
-In `apps/daemon/src/thoth_daemon/storage/models.py`, append (imports already cover `String, Text, Boolean, DateTime, JSON, Mapped, mapped_column`):
+In `apps/daemon/src/omnimac_daemon/storage/models.py`, append (imports already cover `String, Text, Boolean, DateTime, JSON, Mapped, mapped_column`):
 
 ```python
 class WorkspaceRow(Base):
@@ -506,8 +506,8 @@ Expected: PASS (4 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/daemon/src/thoth_daemon/schemas/contracts.py apps/daemon/src/thoth_daemon/schemas/__init__.py \
-        apps/daemon/src/thoth_daemon/storage/models.py \
+git add apps/daemon/src/omnimac_daemon/schemas/contracts.py apps/daemon/src/omnimac_daemon/schemas/__init__.py \
+        apps/daemon/src/omnimac_daemon/storage/models.py \
         apps/daemon/alembic/versions/0002_permissions_and_workspaces.py \
         apps/daemon/tests/schemas/test_permission_schema.py
 git commit -m "feat(storage): PermissionGrant contract, workspace/grant tables, migration 0002" \
@@ -519,7 +519,7 @@ git commit -m "feat(storage): PermissionGrant contract, workspace/grant tables, 
 ### Task 4: PermissionStore
 
 **Files:**
-- Create: `apps/daemon/src/thoth_daemon/storage/permissions.py`
+- Create: `apps/daemon/src/omnimac_daemon/storage/permissions.py`
 - Test: `apps/daemon/tests/storage/test_permissions_store.py`
 
 **Interfaces:**
@@ -535,9 +535,9 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.schemas import PermissionGrant, WorkspaceProfile
-from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
-from thoth_daemon.storage.permissions import PermissionStore
+from omnimac_daemon.schemas import PermissionGrant, WorkspaceProfile
+from omnimac_daemon.storage.db import init_schema, make_engine, make_session_factory
+from omnimac_daemon.storage.permissions import PermissionStore
 
 
 @pytest.fixture()
@@ -548,9 +548,9 @@ async def store(tmp_path: Path) -> AsyncIterator[PermissionStore]:
 
 
 async def test_upsert_and_list_workspace(store: PermissionStore) -> None:
-    await store.upsert_workspace(WorkspaceProfile(name="default", root_path="~/projects/thoth", trusted=True))
+    await store.upsert_workspace(WorkspaceProfile(name="default", root_path="~/projects/omnimac", trusted=True))
     listed = await store.list_workspaces()
-    assert len(listed) == 1 and listed[0].root_path == "~/projects/thoth"
+    assert len(listed) == 1 and listed[0].root_path == "~/projects/omnimac"
 
 
 async def test_add_list_revoke_grant(store: PermissionStore) -> None:
@@ -565,7 +565,7 @@ async def test_add_list_revoke_grant(store: PermissionStore) -> None:
 async def test_effective_scope_unions_workspace_and_grants(store: PermissionStore) -> None:
     await store.upsert_workspace(
         WorkspaceProfile(
-            id="w1", name="default", root_path="~/projects/thoth", trusted=True,
+            id="w1", name="default", root_path="~/projects/omnimac", trusted=True,
             approved_domains=["docs.python.org"], approved_apps=["Safari"],
         )
     )
@@ -576,7 +576,7 @@ async def test_effective_scope_unions_workspace_and_grants(store: PermissionStor
     await store.revoke_grant(revoked.id)
 
     scope = await store.effective_scope("w1")
-    assert set(scope.paths) == {"~/projects/thoth", "~/scratch"}
+    assert set(scope.paths) == {"~/projects/omnimac", "~/scratch"}
     assert set(scope.domains) == {"docs.python.org", "example.com"}
     assert scope.apps == ["Safari"]  # revoked Terminal excluded
 
@@ -593,12 +593,12 @@ async def test_grants_persist_across_store_instances(tmp_path: Path) -> None:
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `uv run --project apps/daemon pytest apps/daemon/tests/storage/test_permissions_store.py -q`
-Expected: FAIL — `ModuleNotFoundError: thoth_daemon.storage.permissions`.
+Expected: FAIL — `ModuleNotFoundError: omnimac_daemon.storage.permissions`.
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
-# apps/daemon/src/thoth_daemon/storage/permissions.py
+# apps/daemon/src/omnimac_daemon/storage/permissions.py
 """Permission store — persistent workspaces and scope grants.
 
 Mirrors AuditStore's async-session style. Resolves the effective allowed
@@ -611,8 +611,8 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from thoth_daemon.schemas import PermissionGrant, ResourceScope, WorkspaceProfile
-from thoth_daemon.storage.models import PermissionGrantRow, WorkspaceRow
+from omnimac_daemon.schemas import PermissionGrant, ResourceScope, WorkspaceProfile
+from omnimac_daemon.storage.models import PermissionGrantRow, WorkspaceRow
 
 
 class PermissionStore:
@@ -727,7 +727,7 @@ Expected: PASS (4 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/daemon/src/thoth_daemon/storage/permissions.py apps/daemon/tests/storage/test_permissions_store.py
+git add apps/daemon/src/omnimac_daemon/storage/permissions.py apps/daemon/tests/storage/test_permissions_store.py
 git commit -m "feat(storage): PermissionStore with effective_scope resolution" \
            -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
@@ -737,8 +737,8 @@ git commit -m "feat(storage): PermissionStore with effective_scope resolution" \
 ### Task 5: Tool `requested_scope` hook + registry backstop
 
 **Files:**
-- Modify: `apps/daemon/src/thoth_daemon/tools/base.py`
-- Modify: `apps/daemon/src/thoth_daemon/tools/registry.py`
+- Modify: `apps/daemon/src/omnimac_daemon/tools/base.py`
+- Modify: `apps/daemon/src/omnimac_daemon/tools/registry.py`
 - Test: `apps/daemon/tests/tools/test_registry.py` (extend)
 
 **Interfaces:**
@@ -754,7 +754,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
-from thoth_daemon.schemas import ResourceScope
+from omnimac_daemon.schemas import ResourceScope
 ```
 
 Append at the end:
@@ -812,7 +812,7 @@ Expected: FAIL — `execute()` takes no `allowed_scope` argument (TypeError).
 
 - [ ] **Step 3a: Add the base hook**
 
-In `apps/daemon/src/thoth_daemon/tools/base.py`, add this method to `ToolDefinition` (after `parse_arguments`; `ResourceScope` is already imported):
+In `apps/daemon/src/omnimac_daemon/tools/base.py`, add this method to `ToolDefinition` (after `parse_arguments`; `ResourceScope` is already imported):
 
 ```python
     def requested_scope(self, args: Any) -> ResourceScope:
@@ -824,11 +824,11 @@ In `apps/daemon/src/thoth_daemon/tools/base.py`, add this method to `ToolDefinit
 
 - [ ] **Step 3b: Add the registry backstop**
 
-In `apps/daemon/src/thoth_daemon/tools/registry.py`, add imports:
+In `apps/daemon/src/omnimac_daemon/tools/registry.py`, add imports:
 
 ```python
-from thoth_daemon.core.scope import ScopeEnforcer, ScopeViolation
-from thoth_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation, ToolResult
+from omnimac_daemon.core.scope import ScopeEnforcer, ScopeViolation
+from omnimac_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation, ToolResult
 ```
 
 Add an enforcer in `__init__`:
@@ -867,7 +867,7 @@ Expected: PASS (all prior tests + 3 new). The mock-tool tests are unaffected (em
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/daemon/src/thoth_daemon/tools/base.py apps/daemon/src/thoth_daemon/tools/registry.py \
+git add apps/daemon/src/omnimac_daemon/tools/base.py apps/daemon/src/omnimac_daemon/tools/registry.py \
         apps/daemon/tests/tools/test_registry.py
 git commit -m "feat(tools): requested_scope hook + registry scope backstop" \
            -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
@@ -878,7 +878,7 @@ git commit -m "feat(tools): requested_scope hook + registry scope backstop" \
 ### Task 6: Orchestrator primary scope gate
 
 **Files:**
-- Modify: `apps/daemon/src/thoth_daemon/core/orchestrator.py`
+- Modify: `apps/daemon/src/omnimac_daemon/core/orchestrator.py`
 - Test: `apps/daemon/tests/core/test_scope_integration.py`
 
 **Interfaces:**
@@ -894,15 +894,15 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel, ConfigDict
 
-from thoth_daemon.audit.store import AuditStore
-from thoth_daemon.core.approvals import ApprovalEngine
-from thoth_daemon.core.orchestrator import Orchestrator
-from thoth_daemon.core.planner import PlannerAdapter
-from thoth_daemon.core.policy import PolicyEngine
-from thoth_daemon.core.recovery import RecoveryController
-from thoth_daemon.core.scope import ScopeEnforcer
-from thoth_daemon.core.verification import VerificationEngine
-from thoth_daemon.schemas import (
+from omnimac_daemon.audit.store import AuditStore
+from omnimac_daemon.core.approvals import ApprovalEngine
+from omnimac_daemon.core.orchestrator import Orchestrator
+from omnimac_daemon.core.planner import PlannerAdapter
+from omnimac_daemon.core.policy import PolicyEngine
+from omnimac_daemon.core.recovery import RecoveryController
+from omnimac_daemon.core.scope import ScopeEnforcer
+from omnimac_daemon.core.verification import VerificationEngine
+from omnimac_daemon.schemas import (
     ExecutionPlan,
     PlanStep,
     ResourceScope,
@@ -911,9 +911,9 @@ from thoth_daemon.schemas import (
     VerificationStrategy,
     WorkspaceProfile,
 )
-from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
-from thoth_daemon.tools.base import ToolDefinition
-from thoth_daemon.tools.registry import ToolRegistry
+from omnimac_daemon.storage.db import init_schema, make_engine, make_session_factory
+from omnimac_daemon.tools.base import ToolDefinition
+from omnimac_daemon.tools.registry import ToolRegistry
 
 
 class _ProbeIn(BaseModel):
@@ -989,7 +989,7 @@ async def _build(tmp_path: Path, allowed_paths: list[str], requested_path: str):
 
 
 async def test_in_scope_step_completes(tmp_path: Path) -> None:
-    root = str(Path.home() / "projects" / "thoth")
+    root = str(Path.home() / "projects" / "omnimac")
     orch, tool = await _build(tmp_path, [root], root + "/a.txt")
     task = await orch.submit("probe")
     settled = await orch.settle(task.id)
@@ -997,7 +997,7 @@ async def test_in_scope_step_completes(tmp_path: Path) -> None:
 
 
 async def test_out_of_scope_step_fails_before_executing(tmp_path: Path) -> None:
-    root = str(Path.home() / "projects" / "thoth")
+    root = str(Path.home() / "projects" / "omnimac")
     orch, tool = await _build(tmp_path, [root], str(Path.home() / "secret" / "a.txt"))
     task = await orch.submit("probe")
     settled = await orch.settle(task.id)
@@ -1017,14 +1017,14 @@ Expected: FAIL — `Orchestrator.__init__() got an unexpected keyword argument '
 
 - [ ] **Step 3a: Thread scope through `guarded_execute`**
 
-In `apps/daemon/src/thoth_daemon/core/orchestrator.py`, add imports:
+In `apps/daemon/src/omnimac_daemon/core/orchestrator.py`, add imports:
 
 ```python
 from pydantic import ValidationError
 
-from thoth_daemon.core.scope import ScopeEnforcer, ScopeViolation
+from omnimac_daemon.core.scope import ScopeEnforcer, ScopeViolation
 ```
-and add `ResourceScope` to the existing `from thoth_daemon.schemas import (...)` block.
+and add `ResourceScope` to the existing `from omnimac_daemon.schemas import (...)` block.
 
 Add a module-level default provider (after the `Publish` type alias):
 
@@ -1154,7 +1154,7 @@ Expected: PASS — the 2 new integration tests plus the full existing orchestrat
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/daemon/src/thoth_daemon/core/orchestrator.py apps/daemon/tests/core/test_scope_integration.py
+git add apps/daemon/src/omnimac_daemon/core/orchestrator.py apps/daemon/tests/core/test_scope_integration.py
 git commit -m "feat(core): orchestrator pre-EXECUTING scope gate; thread scope to executor" \
            -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
@@ -1164,8 +1164,8 @@ git commit -m "feat(core): orchestrator pre-EXECUTING scope gate; thread scope t
 ### Task 7: Permissions API + app wiring
 
 **Files:**
-- Create: `apps/daemon/src/thoth_daemon/api/permissions.py`
-- Modify: `apps/daemon/src/thoth_daemon/app.py`
+- Create: `apps/daemon/src/omnimac_daemon/api/permissions.py`
+- Modify: `apps/daemon/src/omnimac_daemon/app.py`
 - Test: `apps/daemon/tests/api/test_permissions_api.py`
 
 **Interfaces:**
@@ -1257,15 +1257,15 @@ Expected: FAIL — 404s (routes not registered).
 - [ ] **Step 3a: Write the router**
 
 ```python
-# apps/daemon/src/thoth_daemon/api/permissions.py
+# apps/daemon/src/omnimac_daemon/api/permissions.py
 from typing import Any, cast
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict
 
-from thoth_daemon.audit.store import AuditStore
-from thoth_daemon.schemas import PermissionGrant, PermissionKind, WorkspaceProfile
-from thoth_daemon.storage.permissions import PermissionStore
+from omnimac_daemon.audit.store import AuditStore
+from omnimac_daemon.schemas import PermissionGrant, PermissionKind, WorkspaceProfile
+from omnimac_daemon.storage.permissions import PermissionStore
 
 router = APIRouter()
 
@@ -1349,10 +1349,10 @@ async def upsert_workspace(body: WorkspaceBody, request: Request) -> dict[str, A
 Add imports:
 
 ```python
-from thoth_daemon.api import health, permissions, tasks, ws
-from thoth_daemon.core.scope import ScopeEnforcer
-from thoth_daemon.schemas import ResourceScope, WorkspaceProfile
-from thoth_daemon.storage.permissions import PermissionStore
+from omnimac_daemon.api import health, permissions, tasks, ws
+from omnimac_daemon.core.scope import ScopeEnforcer
+from omnimac_daemon.schemas import ResourceScope, WorkspaceProfile
+from omnimac_daemon.storage.permissions import PermissionStore
 ```
 
 Inside `lifespan`, replace the workspace/orchestrator construction block with:
@@ -1411,7 +1411,7 @@ Expected: PASS (7 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/daemon/src/thoth_daemon/api/permissions.py apps/daemon/src/thoth_daemon/app.py \
+git add apps/daemon/src/omnimac_daemon/api/permissions.py apps/daemon/src/omnimac_daemon/app.py \
         apps/daemon/tests/api/test_permissions_api.py
 git commit -m "feat(api): permissions router; wire PermissionStore + scope provider into app" \
            -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
@@ -1422,13 +1422,13 @@ git commit -m "feat(api): permissions router; wire PermissionStore + scope provi
 ### Task 8: Schema export, docs, ADR, full-suite gate
 
 **Files:**
-- Modify: `apps/daemon/src/thoth_daemon/schemas/export.py`
+- Modify: `apps/daemon/src/omnimac_daemon/schemas/export.py`
 - Modify: `docs/DECISIONS.md`, `docs/STATUS.md`, `docs/MILESTONES.md`
 - Regenerate: `packages/shared-schemas/**` (via `make schemas`)
 
 - [ ] **Step 1: Add PermissionGrant to the exported contracts**
 
-In `apps/daemon/src/thoth_daemon/schemas/export.py`, add to the `CONTRACTS` list:
+In `apps/daemon/src/omnimac_daemon/schemas/export.py`, add to the `CONTRACTS` list:
 
 ```python
     schemas.PermissionGrant,
@@ -1465,7 +1465,7 @@ untrusted content can never widen scope.
 
 - [ ] **Step 4: Update STATUS and MILESTONES truthfully**
 
-In `docs/STATUS.md`, under "Mocked / not yet implemented", note that scope enforcement + the permission store/API now exist while capabilities remain mocked; keep the "THOTH cannot control the computer" statement. In `docs/MILESTONES.md` Phase 3, add a completed sub-line under the filesystem/permissions items:
+In `docs/STATUS.md`, under "Mocked / not yet implemented", note that scope enforcement + the permission store/API now exist while capabilities remain mocked; keep the "OmniMac cannot control the computer" statement. In `docs/MILESTONES.md` Phase 3, add a completed sub-line under the filesystem/permissions items:
 
 ```markdown
 - [x] Scope enforcement (`ScopeEnforcer`, orchestrator gate + registry backstop) + persistent permission store & `/api/permissions` (slice 1; no real I/O yet)
@@ -1485,7 +1485,7 @@ Expected: pytest all green (256 prior + new, no regressions); ruff clean; mypy n
 - [ ] **Step 6: Commit**
 
 ```bash
-git add apps/daemon/src/thoth_daemon/schemas/export.py packages/shared-schemas docs/DECISIONS.md docs/STATUS.md docs/MILESTONES.md
+git add apps/daemon/src/omnimac_daemon/schemas/export.py packages/shared-schemas docs/DECISIONS.md docs/STATUS.md docs/MILESTONES.md
 git commit -m "docs: ADR + status for scope enforcement; export PermissionGrant schema" \
            -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```

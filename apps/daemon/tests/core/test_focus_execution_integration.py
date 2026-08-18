@@ -6,16 +6,16 @@ from threading import Event
 
 from pydantic import BaseModel, ConfigDict
 
-from thoth_daemon.audit.store import AuditStore
-from thoth_daemon.core.approvals import ApprovalEngine
-from thoth_daemon.core.focus import FocusManager, FocusPolicy, FocusRestorationResult
-from thoth_daemon.core.orchestrator import Orchestrator
-from thoth_daemon.core.planner import PlannerAdapter
-from thoth_daemon.core.policy import PolicyEngine
-from thoth_daemon.core.recovery import RecoveryController
-from thoth_daemon.core.verification import VerificationEngine
-from thoth_daemon.macos.app_control import AppInfo, MockAppControl
-from thoth_daemon.schemas import (
+from omnimac_daemon.audit.store import AuditStore
+from omnimac_daemon.core.approvals import ApprovalEngine
+from omnimac_daemon.core.focus import FocusManager, FocusPolicy, FocusRestorationResult
+from omnimac_daemon.core.orchestrator import Orchestrator
+from omnimac_daemon.core.planner import PlannerAdapter
+from omnimac_daemon.core.policy import PolicyEngine
+from omnimac_daemon.core.recovery import RecoveryController
+from omnimac_daemon.core.verification import VerificationEngine
+from omnimac_daemon.macos.app_control import AppInfo, MockAppControl
+from omnimac_daemon.schemas import (
     ExecutionPlan,
     PlanStep,
     RiskLevel,
@@ -23,9 +23,9 @@ from thoth_daemon.schemas import (
     VerificationStrategy,
     WorkspaceProfile,
 )
-from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
-from thoth_daemon.tools.base import IndependentToolVerification, ToolDefinition
-from thoth_daemon.tools.registry import ToolRegistry
+from omnimac_daemon.storage.db import init_schema, make_engine, make_session_factory
+from omnimac_daemon.tools.base import IndependentToolVerification, ToolDefinition
+from omnimac_daemon.tools.registry import ToolRegistry
 
 
 class _In(BaseModel):
@@ -71,9 +71,7 @@ class _FocusTool(ToolDefinition[_In, _Out]):
 
     async def run(self, args: _In, dry_run: bool) -> _Out:
         self.runs += 1
-        self._control.set_frontmost(
-            AppInfo(name=args.app, bundle_id=f"com.test.{args.app}", active=True)
-        )
+        self._control.set_frontmost(AppInfo(name=args.app, bundle_id=f"com.test.{args.app}", active=True))
         return _Out(ran=True)
 
     def verify_independently(self, args: _In) -> IndependentToolVerification:
@@ -263,7 +261,5 @@ async def test_cancellation_remains_available_during_independent_verification(
     assert control.frontmost() is not None
     assert control.frontmost().bundle_id == "com.test.TextEdit"
     audit = await orch.task_audit(task.id)
-    verification_events = [
-        event for event in audit if event.event_type == "tool.independent_verification"
-    ]
+    verification_events = [event for event in audit if event.event_type == "tool.independent_verification"]
     assert verification_events[-1].payload["cancelled"] is True

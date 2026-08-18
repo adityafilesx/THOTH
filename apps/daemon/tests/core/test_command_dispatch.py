@@ -1,9 +1,9 @@
 from pathlib import Path
 from typing import Any
 
-from thoth_daemon.core.command_dispatch import CommandDispatcher
-from thoth_daemon.core.intent_router import ReflexKind, RouteTier
-from thoth_daemon.schemas import (
+from omnimac_daemon.core.command_dispatch import CommandDispatcher
+from omnimac_daemon.core.intent_router import ReflexKind, RouteTier
+from omnimac_daemon.schemas import (
     ExecutionPlan,
     RiskLevel,
     SkillDefinition,
@@ -86,7 +86,7 @@ class TestSkills:
 def _dispatcher(tmp_path: Path) -> tuple[CommandDispatcher, FakeOrchestrator, FakeStop]:
     orchestrator = FakeOrchestrator()
     stop = FakeStop()
-    workspace = WorkspaceProfile(name="THOTH", root_path=str(tmp_path), trusted=True)
+    workspace = WorkspaceProfile(name="OmniMac", root_path=str(tmp_path), trusted=True)
     dispatcher = CommandDispatcher(
         orchestrator=orchestrator,
         stop=stop,
@@ -101,13 +101,13 @@ def _dispatcher(tmp_path: Path) -> tuple[CommandDispatcher, FakeOrchestrator, Fa
 async def test_typed_stop_never_reaches_the_planner(tmp_path: Path) -> None:
     dispatcher, orchestrator, stop = _dispatcher(tmp_path)
 
-    result = await dispatcher.dispatch("thoth stop", TaskSource.TEXT)
+    result = await dispatcher.dispatch("omnimac stop", TaskSource.TEXT)
 
     assert result.intent.tier is RouteTier.REFLEX
     assert result.intent.reflex_kind is ReflexKind.STOP
     assert result.control == "stopped"
     assert result.response is not None
-    assert result.response.display.text == "Stopped. No external action was taken."
+    assert result.response.display.text == "Stopped as requested, sir. No action was taken."
     assert stop.reasons == ["typed_command"]
     assert orchestrator.submitted == []
     assert orchestrator.plans == []
@@ -143,8 +143,8 @@ async def test_speech_interrupt_is_a_model_free_no_task_control(tmp_path: Path) 
 async def test_daemon_service_commands_are_truthful_model_free_controls(tmp_path: Path) -> None:
     dispatcher, orchestrator, _ = _dispatcher(tmp_path)
 
-    health = await dispatcher.dispatch("Thoth, check the daemon.", TaskSource.VOICE)
-    start = await dispatcher.dispatch("Thoth, start the backend.", TaskSource.VOICE)
+    health = await dispatcher.dispatch("Omnimac, check the daemon.", TaskSource.VOICE)
+    start = await dispatcher.dispatch("Omnimac, start the backend.", TaskSource.VOICE)
 
     assert health.intent.reflex_kind is ReflexKind.DAEMON_STATUS
     assert health.control == "daemon_running"
@@ -175,11 +175,11 @@ async def test_natural_test_command_uses_authoritative_skill_plan(tmp_path: Path
         stop=FakeStop(),
         speech=FakeSpeech(),
         skills=TestSkills(),
-        workspace=WorkspaceProfile(name="THOTH", root_path=str(tmp_path), trusted=True),
+        workspace=WorkspaceProfile(name="OmniMac", root_path=str(tmp_path), trusted=True),
         known_apps=set(),
     )
 
-    result = await dispatcher.dispatch("Thoth, run the tests.", TaskSource.VOICE)
+    result = await dispatcher.dispatch("Omnimac, run the tests.", TaskSource.VOICE)
 
     assert result.task is not None
     assert orchestrator.submitted == []

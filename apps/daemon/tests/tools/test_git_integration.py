@@ -1,24 +1,20 @@
 from pathlib import Path
 
-from thoth_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
-from thoth_daemon.tools.git_io import run_git
-from thoth_daemon.tools.git_tools import register_git_tools
-from thoth_daemon.tools.registry import ToolRegistry
+from omnimac_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
+from omnimac_daemon.tools.git_io import run_git
+from omnimac_daemon.tools.git_tools import register_git_tools
+from omnimac_daemon.tools.registry import ToolRegistry
 
 
 def _inv(name: str, args: dict) -> ToolInvocation:
-    return ToolInvocation(
-        task_id="t", step_id="s", tool_name=name, arguments=args, effective_risk=RiskLevel.R0
-    )
+    return ToolInvocation(task_id="t", step_id="s", tool_name=name, arguments=args, effective_risk=RiskLevel.R0)
 
 
 async def test_status_in_scope_ok(tmp_path: Path) -> None:
     await run_git(tmp_path, ["init"])
     reg = ToolRegistry()
     register_git_tools(reg)
-    result = await reg.execute(
-        _inv("git_status", {"cwd": str(tmp_path)}), ResourceScope(paths=[str(tmp_path)])
-    )
+    result = await reg.execute(_inv("git_status", {"cwd": str(tmp_path)}), ResourceScope(paths=[str(tmp_path)]))
     assert result.ok
 
 

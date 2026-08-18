@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { TASK_STATES, type RiskLevel, type TaskState } from "@thoth/shared-schemas";
+import { TASK_STATES, type RiskLevel, type TaskState } from "@omnimac/shared-schemas";
 import { describe, expect, it } from "vitest";
 
 import { RiskBadge } from "./RiskBadge";

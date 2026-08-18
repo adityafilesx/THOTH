@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.core.planner import DeterministicMockPlanner, PlannerAdapter
-from thoth_daemon.evals.planner_eval import (
+from omnimac_daemon.core.planner import DeterministicMockPlanner, PlannerAdapter
+from omnimac_daemon.evals.planner_eval import (
     MOCK_CASES,
     EvalCase,
     EvalExpectation,
@@ -21,7 +21,7 @@ from thoth_daemon.evals.planner_eval import (
     run_planner_evals,
     write_report,
 )
-from thoth_daemon.schemas import ExecutionPlan, PlanStep, RiskLevel
+from omnimac_daemon.schemas import ExecutionPlan, PlanStep, RiskLevel
 
 
 def _plan(*steps: tuple[str, RiskLevel]) -> ExecutionPlan:
@@ -48,9 +48,7 @@ def case(**expect) -> EvalCase:
 class TestEvaluatePlan:
     def test_pass_within_expectations(self) -> None:
         plan = _plan(("mock_read_file", RiskLevel.R0))
-        result = evaluate_plan(
-            case(allowed_tools=["mock_read_file"], max_steps=3, max_risk=RiskLevel.R1), plan
-        )
+        result = evaluate_plan(case(allowed_tools=["mock_read_file"], max_steps=3, max_risk=RiskLevel.R1), plan)
         assert result.passed and result.failures == []
 
     def test_disallowed_tool_fails(self) -> None:

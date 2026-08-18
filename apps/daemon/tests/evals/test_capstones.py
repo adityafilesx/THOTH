@@ -15,14 +15,14 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.evals.capstones import (
+from omnimac_daemon.evals.capstones import (
     CAPSTONES,
     CapstoneResult,
     CapstoneWorkflow,
     render_capstone_report,
     run_capstone,
 )
-from thoth_daemon.schemas import (
+from omnimac_daemon.schemas import (
     PlanStep,
     RiskLevel,
     TaskState,
@@ -69,13 +69,7 @@ class TestHarness:
         ws.mkdir()
         capstone = _write_note_capstone(ws)
         capstone = capstone.model_copy(
-            update={
-                "final_checks": [
-                    VerificationCheck(
-                        kind=VerifierKind.FILE_EXISTS, params={"path": str(ws / "other.txt")}
-                    )
-                ]
-            }
+            update={"final_checks": [VerificationCheck(kind=VerifierKind.FILE_EXISTS, params={"path": str(ws / "other.txt")})]}
         )
         result = await run_capstone(capstone, workspace=ws, planner="scripted")
         assert result.task_state == TaskState.COMPLETED.value  # task itself succeeded
@@ -96,9 +90,7 @@ class TestHarness:
                     declared_risk=RiskLevel.R2,  # force approval
                 )
             ],
-            final_checks=[
-                VerificationCheck(kind=VerifierKind.FILE_EXISTS, params={"path": str(ws / "a.txt")})
-            ],
+            final_checks=[VerificationCheck(kind=VerifierKind.FILE_EXISTS, params={"path": str(ws / "a.txt")})],
         )
         result = await run_capstone(capstone, workspace=ws, planner="scripted")
         assert result.task_state == TaskState.COMPLETED.value

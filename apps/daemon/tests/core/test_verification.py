@@ -1,11 +1,11 @@
-from thoth_daemon.core.verification import VerificationEngine
-from thoth_daemon.schemas import (
+from omnimac_daemon.core.verification import VerificationEngine
+from omnimac_daemon.schemas import (
     PlanStep,
     RiskLevel,
     ToolResult,
     VerificationStrategy,
 )
-from thoth_daemon.tools.base import IndependentToolVerification
+from omnimac_daemon.tools.base import IndependentToolVerification
 
 engine = VerificationEngine()
 

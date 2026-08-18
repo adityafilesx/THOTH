@@ -30,7 +30,7 @@ afterEach(() => {
 
 describe("WsClient auth", () => {
   it("sends auth on open and connects only after server acknowledgement", async () => {
-    vi.stubEnv("VITE_THOTH_TOKEN", "dev-token");
+    vi.stubEnv("VITE_OmniMac_TOKEN", "dev-token");
     vi.stubGlobal("WebSocket", FakeWebSocket as unknown as typeof WebSocket);
     const statuses: string[] = [];
     const connected = vi.fn();
@@ -56,7 +56,7 @@ describe("WsClient auth", () => {
   });
 
   it("does not publish a false disconnection when intentionally disposed", async () => {
-    vi.stubEnv("VITE_THOTH_TOKEN", "dev-token");
+    vi.stubEnv("VITE_OmniMac_TOKEN", "dev-token");
     vi.stubGlobal("WebSocket", FakeWebSocket as unknown as typeof WebSocket);
     const statuses: string[] = [];
     const client = new WsClient({

@@ -1,6 +1,6 @@
 /**
  * TypeScript mirror of the daemon's Pydantic contracts
- * (apps/daemon/src/thoth_daemon/schemas/). Keep in lockstep — the JSON
+ * (apps/daemon/src/omnimac_daemon/schemas/). Keep in lockstep — the JSON
  * Schemas under ../schemas are generated from the same source via
  * `make schemas` and are the source of truth for shapes.
  */

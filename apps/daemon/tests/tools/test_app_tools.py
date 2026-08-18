@@ -1,9 +1,9 @@
 import pytest
 
-from thoth_daemon.macos.app_control import AppInfo, MockAppControl
-from thoth_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
-from thoth_daemon.tools.app_tools import AppFocus, AppLaunch, AppList, register_app_tools
-from thoth_daemon.tools.registry import ToolRegistry
+from omnimac_daemon.macos.app_control import AppInfo, MockAppControl
+from omnimac_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
+from omnimac_daemon.tools.app_tools import AppFocus, AppLaunch, AppList, register_app_tools
+from omnimac_daemon.tools.registry import ToolRegistry
 
 
 async def test_app_list_maps_running() -> None:

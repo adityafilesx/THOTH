@@ -9,7 +9,7 @@
 The semantic AX implementation, application fixture, safety boundaries, and
 desktop diagnostics are built and automated tests pass. Phase 5.4 is **not
 claimed complete** because the exact helper does not have macOS Accessibility
-trust. During v1 validation THOTH opened System Settings only through the
+trust. During v1 validation OmniMac opened System Settings only through the
 explicit requested endpoint; the fresh state became `denied`. No TCC control
 was automated and no real AX mutation ran.
 
@@ -21,11 +21,11 @@ unit or mock evidence.
 | Probe | Outcome | Evidence |
 |---|---|---|
 | Package native fixture | Pass | Release Swift build completed; ad-hoc signature passed `codesign --verify --deep --strict`. |
-| Unique fixture identity | Pass | Packaged plist and real running application both reported `me.adityalabs.thoth.axtest`; PID 57350 during the run. |
+| Unique fixture identity | Pass | Packaged plist and real running application both reported `me.adityalabs.omnimac.axtest`; PID 57350 during the run. |
 | Current AX permission | Fail closed | `AXIsProcessTrusted()` returned false. After an explicit Settings visit, typed status is `denied`; no permission control was automated. |
 | Real foreground capture | Pass, locked state | NSWorkspace returned `loginwindow` / `com.apple.loginwindow`, and the foreground broker reported that real state. |
 | Supported app inventory | Pass | Finder, TextEdit, and Code were observed as real running applications. |
-| VS Code workspace association | Pass | Running `com.microsoft.VSCode` plus the authoritative approved THOTH path/task workspace matched; title evidence remained a hint. |
+| VS Code workspace association | Pass | Running `com.microsoft.VSCode` plus the authoritative approved OmniMac path/task workspace matched; title evidence remained a hint. |
 | Current focus restoration rerun | Environment skip | `test_focus_live.py` skipped because loginwindow was frontmost. The earlier unlocked 2026-07-14 Code → TextEdit → Code run remains valid real evidence: final bundle `com.microsoft.VSCode`, `restored=True`, `verified=True` (see `PHASE_5_2_5_3_CAPSTONE.md`). |
 | Permission-free real AX inspection | Blocked | Profile remains experimental and TCC is absent. No adapter snapshot or action occurred. |
 
@@ -88,7 +88,7 @@ contains no capstone-generated screenshot or AX tree artifact.
 ## Remaining real gate
 
 The unstable Python host described in the original run has now been replaced
-by the background helper `me.adityalabs.thoth.axhelper`. Its release build,
+by the background helper `me.adityalabs.omnimac.axhelper`. Its release build,
 bundle identifier, ad-hoc development signature, mode-0600 Unix socket, peer
 UID authentication, launch, and live `trusted=false` response were verified.
 The daemon has no Python fallback. See `TCC_HOST_IDENTITY.md` and

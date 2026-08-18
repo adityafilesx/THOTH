@@ -4,14 +4,14 @@
 
 ## Decision
 
-Local inference sits behind a provider-neutral `InferenceProvider` protocol in `thoth_daemon/inference/`, consumed ONLY by planning/argument-extraction layers (never by tools, policy, approvals, or verification). Four providers:
+Local inference sits behind a provider-neutral `InferenceProvider` protocol in `omnimac_daemon/inference/`, consumed ONLY by planning/argument-extraction layers (never by tools, policy, approvals, or verification). Four providers:
 
 | Provider | Transport | Status on this machine |
 |---|---|---|
 | `DeterministicInferenceProvider` | in-process rules | always available; the fail-safe floor |
 | `LlamaCppInferenceProvider` | in-process `llama_cpp` when installed, else the **local llama.cpp-family server API** on `127.0.0.1` (Ollama-compatible: `/api/generate`, `format=<json-schema>`, `keep_alive`) | **verifiable now** — Ollama 0.31.1 is installed and running with no models pulled yet |
 | `MLXInferenceProvider` | lazy `mlx_lm` in-process | typed-unavailable until installed; benchmarked when present |
-| `AnthropicInferenceProvider` | HTTPS (cloud) | **disabled by default**; constructed only when `THOTH_ALLOW_CLOUD=1` AND a key exists; never a silent fallback |
+| `AnthropicInferenceProvider` | HTTPS (cloud) | **disabled by default**; constructed only when `OmniMac_ALLOW_CLOUD=1` AND a key exists; never a silent fallback |
 
 Why llama.cpp-family-over-local-server first: it is the only runtime PRESENT on the target machine (measured, not assumed), it already provides quantized model management, schema-constrained generation, streaming, warm/unload (`keep_alive`), and it binds to loopback. In-process `llama_cpp` support is implemented behind the same provider so nothing changes if the user prefers no server. MLX is compared in the benchmark when installed (M-series advantage is plausible but must be measured — spec: "measured performance, not assumption").
 
@@ -23,7 +23,7 @@ Every provider implements: `generate`, `generate_stream` (chunk iterator), `warm
 
 ## Network isolation mode
 
-`THOTH_NETWORK_ISOLATION=1` (or Settings flag): `NetworkIsolationGuard.check(endpoint)` refuses any endpoint that is not loopback (`127.0.0.1`, `::1`, `localhost`) or in-process. The Anthropic provider is refused outright in isolation mode regardless of flags. Guard is enforced at provider construction and per request, and external browser reads/navigation are now rejected before adapter invocation. Local files, subprocess tools, app control, reflex/skills, and loopback services remain available.
+`OmniMac_NETWORK_ISOLATION=1` (or Settings flag): `NetworkIsolationGuard.check(endpoint)` refuses any endpoint that is not loopback (`127.0.0.1`, `::1`, `localhost`) or in-process. The Anthropic provider is refused outright in isolation mode regardless of flags. Guard is enforced at provider construction and per request, and external browser reads/navigation are now rejected before adapter invocation. Local files, subprocess tools, app control, reflex/skills, and loopback services remain available.
 
 ## Model registry
 

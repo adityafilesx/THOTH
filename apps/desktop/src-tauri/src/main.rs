@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    thoth_desktop_lib::run()
+    omnimac_desktop_lib::run()
 }

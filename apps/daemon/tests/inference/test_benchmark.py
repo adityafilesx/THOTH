@@ -9,7 +9,7 @@ live model to write docs/LOCAL_MODEL_EVALUATION.md.
 
 import pytest
 
-from thoth_daemon.inference.benchmark import (
+from omnimac_daemon.inference.benchmark import (
     BENCH_CASES,
     BenchCase,
     HardwareInfo,
@@ -19,7 +19,7 @@ from thoth_daemon.inference.benchmark import (
     render_benchmark_markdown,
     score_plan,
 )
-from thoth_daemon.schemas import RiskLevel
+from omnimac_daemon.schemas import RiskLevel
 
 RISK_FLOOR = {
     "fs_read_file": RiskLevel.R0,
@@ -54,9 +54,7 @@ class TestScorePlan:
         return BenchCase(**base)
 
     def test_perfect_plan_scores_all_true(self) -> None:
-        plan = _plan(
-            {"tool_name": "fs_read_file", "declared_risk": "R0", "arguments": {"path": "/x"}}
-        )
+        plan = _plan({"tool_name": "fs_read_file", "declared_risk": "R0", "arguments": {"path": "/x"}})
         score = score_plan(plan, self._case(), RISK_FLOOR)
         assert score.schema_valid
         assert score.tool_selection_ok
@@ -77,12 +75,8 @@ class TestScorePlan:
 
     def test_risk_downgrade_fails_risk(self) -> None:
         # fs_write_file default is R1; a plan declaring R0 is a downgrade.
-        plan = _plan(
-            {"tool_name": "fs_write_file", "declared_risk": "R0", "arguments": {"path": "/x"}}
-        )
-        case = self._case(
-            allowed_tools=["fs_write_file"], required_tools=["fs_write_file"], expect_args={}
-        )
+        plan = _plan({"tool_name": "fs_write_file", "declared_risk": "R0", "arguments": {"path": "/x"}})
+        case = self._case(allowed_tools=["fs_write_file"], required_tools=["fs_write_file"], expect_args={})
         score = score_plan(plan, case, RISK_FLOOR)
         assert not score.risk_ok
 
@@ -118,7 +112,7 @@ class _FakeProvider:
     async def generate(self, request):
         import json
 
-        from thoth_daemon.inference.base import InferenceResult
+        from omnimac_daemon.inference.base import InferenceResult
 
         return InferenceResult(
             text=json.dumps(self._plan),
@@ -131,9 +125,7 @@ class _FakeProvider:
 
 class TestBenchmarkAggregation:
     async def test_all_pass_gives_full_scores(self) -> None:
-        good = _plan(
-            {"tool_name": "fs_read_file", "declared_risk": "R0", "arguments": {"path": "/x"}}
-        )
+        good = _plan({"tool_name": "fs_read_file", "declared_risk": "R0", "arguments": {"path": "/x"}})
         cases = [
             BenchCase(
                 name="read",
@@ -144,9 +136,7 @@ class TestBenchmarkAggregation:
                 expect_args={"fs_read_file": ["path"]},
             )
         ]
-        result = await benchmark_provider(
-            _FakeProvider(good), cases, RISK_FLOOR, iterations=2, model_id="fake"
-        )
+        result = await benchmark_provider(_FakeProvider(good), cases, RISK_FLOOR, iterations=2, model_id="fake")
         assert result.schema_valid_pct == 100.0
         assert result.tool_selection_pct == 100.0
         assert result.argument_extraction_pct == 100.0
@@ -165,9 +155,7 @@ class TestBenchmarkAggregation:
                 expect_args={},
             )
         ]
-        result = await benchmark_provider(
-            _FakeProvider(bad), cases, RISK_FLOOR, iterations=1, model_id="bad"
-        )
+        result = await benchmark_provider(_FakeProvider(bad), cases, RISK_FLOOR, iterations=1, model_id="bad")
         assert result.tool_selection_pct == 0.0
 
 

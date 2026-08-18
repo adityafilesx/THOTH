@@ -17,9 +17,9 @@ scope enforcer through `requested_scope(apps=[name])` → an app must be in the 
 | File | New? | Responsibility |
 |---|---|---|
 | `apps/daemon/pyproject.toml` | edit | add `pyobjc-framework-Cocoa; sys_platform=='darwin'` (macOS-only, lazy import). |
-| `src/thoth_daemon/macos/__init__.py` | new | package marker. |
-| `src/thoth_daemon/macos/app_control.py` | new | `AppInfo`, `AppControl` protocol, `AppKitAppControl` (real, lazy AppKit import), `MockAppControl`, `default_app_control()`. |
-| `src/thoth_daemon/tools/app_tools.py` | new | `AppList` (R0), `AppLaunch` (R1), `AppFocus` (R1) + `register_app_tools(registry, adapter=None)`. |
+| `src/omnimac_daemon/macos/__init__.py` | new | package marker. |
+| `src/omnimac_daemon/macos/app_control.py` | new | `AppInfo`, `AppControl` protocol, `AppKitAppControl` (real, lazy AppKit import), `MockAppControl`, `default_app_control()`. |
+| `src/omnimac_daemon/tools/app_tools.py` | new | `AppList` (R0), `AppLaunch` (R1), `AppFocus` (R1) + `register_app_tools(registry, adapter=None)`. |
 | `app.py` | edit | `register_app_tools(registry)`. |
 | docs | edit | ADR-017, STATUS, MILESTONES, THREAT_MODEL. |
 

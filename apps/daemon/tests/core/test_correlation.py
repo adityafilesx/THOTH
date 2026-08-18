@@ -3,16 +3,16 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.audit.store import AuditStore
-from thoth_daemon.core.approvals import ApprovalEngine
-from thoth_daemon.core.orchestrator import Orchestrator
-from thoth_daemon.core.planner import DeterministicMockPlanner
-from thoth_daemon.core.policy import PolicyEngine
-from thoth_daemon.core.recovery import RecoveryController
-from thoth_daemon.core.verification import VerificationEngine
-from thoth_daemon.schemas import TaskState, WorkspaceProfile
-from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
-from thoth_daemon.tools.mock_tools import build_registry
+from omnimac_daemon.audit.store import AuditStore
+from omnimac_daemon.core.approvals import ApprovalEngine
+from omnimac_daemon.core.orchestrator import Orchestrator
+from omnimac_daemon.core.planner import DeterministicMockPlanner
+from omnimac_daemon.core.policy import PolicyEngine
+from omnimac_daemon.core.recovery import RecoveryController
+from omnimac_daemon.core.verification import VerificationEngine
+from omnimac_daemon.schemas import TaskState, WorkspaceProfile
+from omnimac_daemon.storage.db import init_schema, make_engine, make_session_factory
+from omnimac_daemon.tools.mock_tools import build_registry
 
 
 @pytest.fixture()

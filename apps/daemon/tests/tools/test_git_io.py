@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from thoth_daemon.tools.git_io import run_git
+from omnimac_daemon.tools.git_io import run_git
 
 
 async def _init(repo: Path) -> None:

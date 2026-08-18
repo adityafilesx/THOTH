@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans (or subagent-driven-development). Steps use checkbox (`- [ ]`).
 
-**Goal:** Real, scoped `fs_read_file`/`fs_list_dir`/`fs_write_file`/`fs_stat` tools — THOTH's first real disk access — gated automatically by slice-1 scope enforcement.
+**Goal:** Real, scoped `fs_read_file`/`fs_list_dir`/`fs_write_file`/`fs_stat` tools — OmniMac's first real disk access — gated automatically by slice-1 scope enforcement.
 
 **Architecture:** Pure byte helpers (`fs_io.py`) under typed `ToolDefinition`s (`fs_tools.py`) that declare `requested_scope(paths=[path])`. Writes are atomic (temp + `os.replace`) and self-verified by read-back. Content is a redaction field. Tools are added alongside the mocks and registered in `app.py`.
 
@@ -20,9 +20,9 @@
 
 | File | Create/Modify | Responsibility |
 |---|---|---|
-| `apps/daemon/src/thoth_daemon/tools/fs_io.py` | Create | `read_text_capped`, `atomic_write`, `BinaryFileError`. |
-| `apps/daemon/src/thoth_daemon/tools/fs_tools.py` | Create | 4 tools + `register_fs_tools`. |
-| `apps/daemon/src/thoth_daemon/app.py` | Modify | `register_fs_tools(registry)`. |
+| `apps/daemon/src/omnimac_daemon/tools/fs_io.py` | Create | `read_text_capped`, `atomic_write`, `BinaryFileError`. |
+| `apps/daemon/src/omnimac_daemon/tools/fs_tools.py` | Create | 4 tools + `register_fs_tools`. |
+| `apps/daemon/src/omnimac_daemon/app.py` | Modify | `register_fs_tools(registry)`. |
 | `docs/DECISIONS.md`, `docs/STATUS.md`, `docs/MILESTONES.md` | Modify | ADR-013, status. |
 
 Tests: `tests/tools/test_fs_io.py`, `test_fs_tools.py`, `test_fs_integration.py`.
@@ -31,7 +31,7 @@ Tests: `tests/tools/test_fs_io.py`, `test_fs_tools.py`, `test_fs_integration.py`
 
 ### Task 1: Byte helpers (`fs_io.py`)
 
-**Files:** Create `apps/daemon/src/thoth_daemon/tools/fs_io.py`; Test `apps/daemon/tests/tools/test_fs_io.py`.
+**Files:** Create `apps/daemon/src/omnimac_daemon/tools/fs_io.py`; Test `apps/daemon/tests/tools/test_fs_io.py`.
 
 **Interfaces:** `read_text_capped(path: Path, max_bytes: int) -> tuple[str, int, bool]`; `atomic_write(path: Path, data: bytes) -> None`; `class BinaryFileError(ValueError)`.
 
@@ -43,7 +43,7 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.tools.fs_io import BinaryFileError, atomic_write, read_text_capped
+from omnimac_daemon.tools.fs_io import BinaryFileError, atomic_write, read_text_capped
 
 
 def test_read_small_file_not_truncated(tmp_path: Path) -> None:
@@ -101,7 +101,7 @@ Expected: FAIL — module missing.
 - [ ] **Step 3: Implement**
 
 ```python
-# apps/daemon/src/thoth_daemon/tools/fs_io.py
+# apps/daemon/src/omnimac_daemon/tools/fs_io.py
 """Low-level filesystem byte helpers for the fs tools: a size-capped UTF-8
 read and an atomic write. Operate on already-scope-validated paths."""
 
@@ -140,7 +140,7 @@ def read_text_capped(path: Path, max_bytes: int) -> tuple[str, int, bool]:
 def atomic_write(path: Path, data: bytes) -> None:
     """Write *data* to *path* atomically: temp file in the same directory,
     fsync, then os.replace. Parent must already exist."""
-    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".thoth-tmp-")
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".omnimac-tmp-")
     try:
         with os.fdopen(fd, "wb") as f:
             f.write(data)
@@ -160,7 +160,7 @@ Run: `uv run --project apps/daemon pytest apps/daemon/tests/tools/test_fs_io.py 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/daemon/src/thoth_daemon/tools/fs_io.py apps/daemon/tests/tools/test_fs_io.py
+git add apps/daemon/src/omnimac_daemon/tools/fs_io.py apps/daemon/tests/tools/test_fs_io.py
 git commit -m "feat(tools): fs byte helpers — capped UTF-8 read, atomic write" \
            -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
@@ -169,7 +169,7 @@ git commit -m "feat(tools): fs byte helpers — capped UTF-8 read, atomic write"
 
 ### Task 2: Read tools (`fs_read_file`, `fs_list_dir`, `fs_stat`)
 
-**Files:** Create `apps/daemon/src/thoth_daemon/tools/fs_tools.py`; Test `apps/daemon/tests/tools/test_fs_tools.py`.
+**Files:** Create `apps/daemon/src/omnimac_daemon/tools/fs_tools.py`; Test `apps/daemon/tests/tools/test_fs_tools.py`.
 
 **Interfaces:** `FsReadFile`, `FsListDir`, `FsStat` (`ToolDefinition`s, R0, NONE_READONLY, `requested_scope(paths=[path])`).
 
@@ -181,7 +181,7 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.tools.fs_tools import FsListDir, FsReadFile, FsStat
+from omnimac_daemon.tools.fs_tools import FsListDir, FsReadFile, FsStat
 
 
 async def test_fs_read_file_reads_real_content(tmp_path: Path) -> None:
@@ -234,7 +234,7 @@ def test_read_tools_declare_scope_and_redaction() -> None:
 - [ ] **Step 3: Implement** (create `fs_tools.py` with the shared bases + the three read tools; the write tool is Task 3)
 
 ```python
-# apps/daemon/src/thoth_daemon/tools/fs_tools.py
+# apps/daemon/src/omnimac_daemon/tools/fs_tools.py
 """Real, scoped filesystem tools (Phase 3 slice 3). Unlike the mocks these
 touch the actual disk — but only within approved scope, enforced by the
 ScopeEnforcer gate + registry backstop via requested_scope()."""
@@ -243,11 +243,11 @@ from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from thoth_daemon.schemas import ResourceScope, RiskLevel, VerificationStrategy
-from thoth_daemon.security.paths import expand_and_resolve
-from thoth_daemon.tools.base import ToolDefinition
-from thoth_daemon.tools.fs_io import atomic_write, read_text_capped
-from thoth_daemon.tools.registry import ToolRegistry
+from omnimac_daemon.schemas import ResourceScope, RiskLevel, VerificationStrategy
+from omnimac_daemon.security.paths import expand_and_resolve
+from omnimac_daemon.tools.base import ToolDefinition
+from omnimac_daemon.tools.fs_io import atomic_write, read_text_capped
+from omnimac_daemon.tools.registry import ToolRegistry
 
 
 class _In(BaseModel):
@@ -371,7 +371,7 @@ To keep tasks independently green, **add the `FsWriteFile` class body in this st
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/daemon/src/thoth_daemon/tools/fs_tools.py apps/daemon/tests/tools/test_fs_tools.py
+git add apps/daemon/src/omnimac_daemon/tools/fs_tools.py apps/daemon/tests/tools/test_fs_tools.py
 git commit -m "feat(tools): scoped fs_read_file/fs_list_dir/fs_stat over real disk" \
            -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
@@ -388,7 +388,7 @@ git commit -m "feat(tools): scoped fs_read_file/fs_list_dir/fs_stat over real di
 
 ```python
 async def test_fs_write_creates_file(tmp_path: Path) -> None:
-    from thoth_daemon.tools.fs_tools import FsWriteFile
+    from omnimac_daemon.tools.fs_tools import FsWriteFile
 
     p = tmp_path / "w.txt"
     tool = FsWriteFile()
@@ -398,7 +398,7 @@ async def test_fs_write_creates_file(tmp_path: Path) -> None:
 
 
 async def test_fs_write_dry_run_writes_nothing(tmp_path: Path) -> None:
-    from thoth_daemon.tools.fs_tools import FsWriteFile
+    from omnimac_daemon.tools.fs_tools import FsWriteFile
 
     p = tmp_path / "w.txt"
     tool = FsWriteFile()
@@ -408,7 +408,7 @@ async def test_fs_write_dry_run_writes_nothing(tmp_path: Path) -> None:
 
 
 async def test_fs_write_overwrites(tmp_path: Path) -> None:
-    from thoth_daemon.tools.fs_tools import FsWriteFile
+    from omnimac_daemon.tools.fs_tools import FsWriteFile
 
     p = tmp_path / "w.txt"
     p.write_text("old")
@@ -418,7 +418,7 @@ async def test_fs_write_overwrites(tmp_path: Path) -> None:
 
 
 async def test_fs_write_missing_parent_fails(tmp_path: Path) -> None:
-    from thoth_daemon.tools.fs_tools import FsWriteFile
+    from omnimac_daemon.tools.fs_tools import FsWriteFile
 
     tool = FsWriteFile()
     with pytest.raises(FileNotFoundError):
@@ -470,7 +470,7 @@ class FsWriteFile(ToolDefinition[FsWriteFileIn, FsWriteFileOut]):
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/daemon/src/thoth_daemon/tools/fs_tools.py apps/daemon/tests/tools/test_fs_tools.py
+git add apps/daemon/src/omnimac_daemon/tools/fs_tools.py apps/daemon/tests/tools/test_fs_tools.py
 git commit -m "feat(tools): scoped atomic fs_write_file with read-back self-verification" \
            -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
@@ -479,7 +479,7 @@ git commit -m "feat(tools): scoped atomic fs_write_file with read-back self-veri
 
 ### Task 4: Wire into app; scope enforcement over the real filesystem
 
-**Files:** Modify `apps/daemon/src/thoth_daemon/app.py`; Test `apps/daemon/tests/tools/test_fs_integration.py`.
+**Files:** Modify `apps/daemon/src/omnimac_daemon/app.py`; Test `apps/daemon/tests/tools/test_fs_integration.py`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -487,10 +487,10 @@ git commit -m "feat(tools): scoped atomic fs_write_file with read-back self-veri
 # apps/daemon/tests/tools/test_fs_integration.py
 from pathlib import Path
 
-from thoth_daemon.core.scope import ScopeEnforcer, ScopeViolation
-from thoth_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
-from thoth_daemon.tools.fs_tools import FsReadFile, register_fs_tools
-from thoth_daemon.tools.registry import ToolRegistry
+from omnimac_daemon.core.scope import ScopeEnforcer, ScopeViolation
+from omnimac_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
+from omnimac_daemon.tools.fs_tools import FsReadFile, register_fs_tools
+from omnimac_daemon.tools.registry import ToolRegistry
 
 
 def _inv(name: str, args: dict) -> ToolInvocation:
@@ -559,7 +559,7 @@ Change the registry construction in the lifespan so fs tools are registered:
 ```
 and add the import:
 ```python
-from thoth_daemon.tools.fs_tools import register_fs_tools
+from omnimac_daemon.tools.fs_tools import register_fs_tools
 ```
 
 - [ ] **Step 4: Run** → `pytest apps/daemon/tests/tools/test_fs_integration.py -q` PASS; then full API suite (hang-guarded) to confirm the app still boots with the extra tools.
@@ -567,7 +567,7 @@ from thoth_daemon.tools.fs_tools import register_fs_tools
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/daemon/src/thoth_daemon/app.py apps/daemon/tests/tools/test_fs_integration.py
+git add apps/daemon/src/omnimac_daemon/app.py apps/daemon/tests/tools/test_fs_integration.py
 git commit -m "feat(daemon): register real fs tools; scope enforcement over the real filesystem" \
            -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
@@ -584,7 +584,7 @@ git commit -m "feat(daemon): register real fs tools; scope enforcement over the 
 `fs_read_file`, `fs_list_dir`, `fs_write_file`, `fs_stat` are added (not replacing the mocks) as typed `ToolDefinition`s that declare `requested_scope(paths=[path])`, so the slice-1 `ScopeEnforcer` gate + registry backstop enforce them with no new policy code. Writes are atomic (temp file + `os.replace` in the same dir) and self-verified by read-back; `content` is a redaction field so file contents never persist to SQLite/logs/WS. Deletion/move/copy deferred to the destructive-action review in later slices. End-to-end goal→plan→read awaits the claude-agent-sdk planner (slice 8); the capability is proven now via unit + orchestrator + live-OS tests.
 ```
 
-- [ ] **Step 2: STATUS + MILESTONES** — note the first real capability (scoped filesystem) exists and is verified against the real OS; **keep** "THOTH cannot control the computer" (one scoped capability ≠ control). Bump the daemon test count. Add a MILESTONES slice-3 line and check "Filesystem adapter with approved-directory scoping".
+- [ ] **Step 2: STATUS + MILESTONES** — note the first real capability (scoped filesystem) exists and is verified against the real OS; **keep** "OmniMac cannot control the computer" (one scoped capability ≠ control). Bump the daemon test count. Add a MILESTONES slice-3 line and check "Filesystem adapter with approved-directory scoping".
 
 - [ ] **Step 3: Full gate**
 

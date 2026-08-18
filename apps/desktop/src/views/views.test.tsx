@@ -1,5 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
-import type { ApprovalRequest } from "@thoth/shared-schemas";
+import type { ApprovalRequest } from "@omnimac/shared-schemas";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { MOCK_TASK } from "@/lib/mockData";

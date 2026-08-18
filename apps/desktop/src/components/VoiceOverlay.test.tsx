@@ -79,7 +79,7 @@ describe("VoiceOverlayView", () => {
     render(
       <VoiceOverlayView
         state="listening"
-        partial="continue the thoth"
+        partial="continue the omnimac"
         finalText=""
         route="reflex"
         error={null}
@@ -89,7 +89,7 @@ describe("VoiceOverlayView", () => {
       />,
     );
     expect(screen.getByText("Listening")).toBeInTheDocument();
-    expect(screen.getByText("continue the thoth")).toBeInTheDocument();
+    expect(screen.getByText("continue the omnimac")).toBeInTheDocument();
     expect(screen.getByText("Processed locally")).toBeInTheDocument();
     expect(screen.getByTestId("microphone-indicator")).toHaveAttribute(
       "data-active",

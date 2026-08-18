@@ -3,8 +3,8 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
-from thoth_daemon.app import create_app
-from thoth_daemon.config import Settings
+from omnimac_daemon.app import create_app
+from omnimac_daemon.config import Settings
 
 
 async def _default_ws(client: AsyncClient) -> dict:
@@ -90,7 +90,7 @@ async def test_explicit_workspace_config_supersedes_stale_empty_default(
     with TestClient(create_app(Settings(**common, trusted_workspaces=[]))):
         pass
 
-    trusted = tmp_path / "THOTH"
+    trusted = tmp_path / "OmniMac"
     trusted.mkdir()
     app = create_app(Settings(**common, trusted_workspaces=[str(trusted)]))
     with TestClient(app):

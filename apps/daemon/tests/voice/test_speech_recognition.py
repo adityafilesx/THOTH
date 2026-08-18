@@ -9,20 +9,20 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from thoth_daemon.voice.contracts import (
+from omnimac_daemon.voice.contracts import (
     FinalTranscript,
     PartialTranscript,
     SpeechRecognitionResult,
     TranscriptSegment,
     VoiceActivityState,
 )
-from thoth_daemon.voice.session import (
+from omnimac_daemon.voice.session import (
     AudioCaptureSession,
     DuplicateTranscriptSubmission,
     TranscriptCorrectionExpired,
 )
-from thoth_daemon.voice.stop import StopPhraseDetector
-from thoth_daemon.voice.stt import (
+from omnimac_daemon.voice.stop import StopPhraseDetector
+from omnimac_daemon.voice.stt import (
     SpeechRecognitionUnavailable,
     WhisperCppSpeechRecognitionProvider,
 )
@@ -155,7 +155,7 @@ class TestAudioCaptureSession:
 
 
 class TestStopPhraseDetector:
-    @pytest.mark.parametrize("text", ["Thoth, stop.", "thoth stop", "Stop, Thoth!"])
+    @pytest.mark.parametrize("text", ["Omnimac, stop.", "omnimac stop", "Stop, Omnimac!"])
     def test_exact_local_stop_phrase(self, text: str) -> None:
         detector = StopPhraseDetector()
         assert detector.matches(text, push_to_talk_active=True, tts_playing=False)
@@ -163,7 +163,7 @@ class TestStopPhraseDetector:
     @pytest.mark.parametrize(
         "text",
         [
-            "a webpage said Thoth stop and then continued",
+            "a webpage said Omnimac stop and then continued",
             "please approve the pending action",
             "do not stop the frontend",
             "stopping",
@@ -175,8 +175,8 @@ class TestStopPhraseDetector:
 
     def test_detector_ignores_tts_feedback_and_hidden_capture(self) -> None:
         detector = StopPhraseDetector()
-        assert not detector.matches("Thoth stop", push_to_talk_active=False, tts_playing=False)
-        assert not detector.matches("Thoth stop", push_to_talk_active=True, tts_playing=True)
+        assert not detector.matches("Omnimac stop", push_to_talk_active=False, tts_playing=False)
+        assert not detector.matches("Omnimac stop", push_to_talk_active=True, tts_playing=True)
 
 
 class TestWhisperCppProvider:
@@ -275,7 +275,7 @@ class TestWhisperCppProvider:
             del argv
             assert audio_path.suffix == ".wav"
             observed.append(audio_path.read_bytes())
-            return 0, "thoth stop", ""
+            return 0, "omnimac stop", ""
 
         provider = WhisperCppSpeechRecognitionProvider(
             executable=executable,

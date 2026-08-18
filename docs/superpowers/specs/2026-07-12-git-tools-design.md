@@ -29,9 +29,9 @@ and self-verification that raw shell can't.
 
 | File | New? | Responsibility |
 |---|---|---|
-| `apps/daemon/src/thoth_daemon/tools/git_io.py` | new | `run_git(cwd, args, timeout) -> GitResult(code, stdout, stderr)` — subprocess exec, controlled PATH, `stdin=DEVNULL`, output cap. Pure I/O. |
-| `apps/daemon/src/thoth_daemon/tools/git_tools.py` | new | the five tools + `register_git_tools(registry)`. |
-| `apps/daemon/src/thoth_daemon/app.py` | edit | `register_git_tools(registry)`. |
+| `apps/daemon/src/omnimac_daemon/tools/git_io.py` | new | `run_git(cwd, args, timeout) -> GitResult(code, stdout, stderr)` — subprocess exec, controlled PATH, `stdin=DEVNULL`, output cap. Pure I/O. |
+| `apps/daemon/src/omnimac_daemon/tools/git_tools.py` | new | the five tools + `register_git_tools(registry)`. |
+| `apps/daemon/src/omnimac_daemon/app.py` | edit | `register_git_tools(registry)`. |
 | `docs/DECISIONS.md`, `docs/STATUS.md`, `docs/MILESTONES.md` | edit | ADR-015, status. |
 
 Reuses: `security/shell_policy.CONTROLLED_PATH`, `security/paths.expand_and_resolve`, the

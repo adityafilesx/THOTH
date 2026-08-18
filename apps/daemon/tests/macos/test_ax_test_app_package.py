@@ -6,7 +6,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[4]
 APP = REPO / "apps" / "ax-test-app"
-SOURCE = APP / "Sources" / "THOTHAXTestApp" / "THOTHAXTestApp.swift"
+SOURCE = APP / "Sources" / "OmniMacAXTestApp" / "OmniMacAXTestApp.swift"
 
 REQUIRED_IDENTIFIERS = {
     "ax-single-line-input",
@@ -36,8 +36,8 @@ def test_native_fixture_has_unique_authoritative_bundle_identifier() -> None:
     with (APP / "Info.plist").open("rb") as stream:
         info = plistlib.load(stream)
 
-    assert info["CFBundleIdentifier"] == "me.adityalabs.thoth.axtest"
-    assert info["CFBundleExecutable"] == "THOTHAXTestApp"
+    assert info["CFBundleIdentifier"] == "me.adityalabs.omnimac.axtest"
+    assert info["CFBundleExecutable"] == "OmniMacAXTestApp"
     assert info["CFBundlePackageType"] == "APPL"
 
 

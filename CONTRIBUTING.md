@@ -1,4 +1,4 @@
-# Contributing to THOTH
+# Contributing to OmniMac
 
 ## Setup
 
@@ -34,6 +34,6 @@ Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`).
 
 ## Code style
 
-- Python: ruff (format + lint), mypy strict on `thoth_daemon`. Async-first; no blocking I/O in the event loop.
+- Python: ruff (format + lint), mypy strict on `omnimac_daemon`. Async-first; no blocking I/O in the event loop.
 - TypeScript: eslint + prettier defaults, `tsc --noEmit` clean. No `any` unless justified inline.
 - Pydantic models use `extra="forbid"` for all externally-supplied payloads.

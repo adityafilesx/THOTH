@@ -1,13 +1,13 @@
-# THOTH Threat Model
+# OmniMac Threat Model
 
 ## 1. Assets
 
 | Asset | Why it matters |
 |---|---|
-| User's filesystem & applications | THOTH's whole purpose is acting on them; misuse is direct harm |
+| User's filesystem & applications | OmniMac's whole purpose is acting on them; misuse is direct harm |
 | Credentials (Keychain, SSH keys, tokens, cookies) | Exfiltration enables account takeover |
 | External side-effect channels (email, forms, uploads, git remotes, publishing) | Irreversible, outward-facing actions |
-| Audit trail | Integrity of the record of what THOTH did |
+| Audit trail | Integrity of the record of what OmniMac did |
 | Safety engine itself | If disabled or bypassed, all other guarantees fall |
 | User trust & privacy (local data, voice) | Local-first promise |
 
@@ -72,7 +72,7 @@ New attack surfaces and their mitigations; the §4 invariants all still hold and
 | Surface | Threats | Mitigations |
 |---|---|---|
 | Scoped filesystem / restricted shell / git tools | path escape, sensitive-file reads, argv injection | symlink-safe resolution + denylist; ScopeEnforcer gate + registry backstop; allowlisted bare-name argv, `shell=False`, metacharacters rejected; R2 per-command approval |
-| Accessibility (AX) tools | driving un-approved apps; hostile AX values steering the agent; unstable TCC identity | `requested_scope(apps=[app])` enforced; role+label addressing (no coordinates); AX values are untrusted inert data; exact helper `me.adityalabs.thoth.axhelper` over mode-0600 peer-UID-authenticated Unix socket; no Python fallback; every real call freshly TCC-gated |
+| Accessibility (AX) tools | driving un-approved apps; hostile AX values steering the agent; unstable TCC identity | `requested_scope(apps=[app])` enforced; role+label addressing (no coordinates); AX values are untrusted inert data; exact helper `me.adityalabs.omnimac.axhelper` over mode-0600 peer-UID-authenticated Unix socket; no Python fallback; every real call freshly TCC-gated |
 | Interactive browser session | hostile page content (prompt injection), off-allowlist navigation, deceptive form submission | page text always `WEB_UNTRUSTED` + injection-guard scanned (containment tested); per-navigation domain scope; **two-phase submission**: prepare captures the exact payload, submit is R2 + single-use, refuses stale forms AND action hosts differing from the approved `action_url`; `current_url` scope anchors must match the session's actual page |
 | Skill engine | a skill smuggling lowered risks / extra tools / removed verification | planning-only expansion; declared risk copied verbatim (effective = max(default, declared) — downgrade attempt still halts for approval, tested); expanded plans re-enter full validation + policy review; typed input validation |
 | Voice | transcript/replay approval, embedded Stop, TTS feedback, hidden recording, duplicate tasks, audio/secret retention | visible push-to-talk only; voice never consumes approval; whole-utterance model-free Stop excludes TTS; edit/final submit-once; tracks/audio zeroised; local STT typed unavailable; bounded `SpokenResponse` suppresses secrets; no cloud fallback |
