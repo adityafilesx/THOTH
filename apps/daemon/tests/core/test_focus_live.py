@@ -12,8 +12,8 @@ from datetime import UTC, datetime
 
 import pytest
 
-from thoth_daemon.core.focus import FocusManager, FocusPolicy
-from thoth_daemon.macos.app_control import AppKitAppControl
+from omnimac_daemon.core.focus import FocusManager, FocusPolicy
+from omnimac_daemon.macos.app_control import AppKitAppControl
 
 pytestmark = pytest.mark.skipif(
     importlib.util.find_spec("AppKit") is None,

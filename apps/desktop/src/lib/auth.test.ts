@@ -19,13 +19,13 @@ describe("getSessionToken", () => {
     expect(invoke).toHaveBeenCalledWith("session_token", {});
   });
 
-  it("falls back to VITE_THOTH_TOKEN in the dev browser", async () => {
-    vi.stubEnv("VITE_THOTH_TOKEN", "dev-token");
+  it("falls back to VITE_OmniMac_TOKEN in the dev browser", async () => {
+    vi.stubEnv("VITE_OmniMac_TOKEN", "dev-token");
     expect(await getSessionToken()).toBe("dev-token");
   });
 
   it("uses the explicit dev token when native lookup fails", async () => {
-    vi.stubEnv("VITE_THOTH_TOKEN", "dev-token");
+    vi.stubEnv("VITE_OmniMac_TOKEN", "dev-token");
     const invoke = vi.fn().mockRejectedValue(new Error("IPC unavailable"));
     (
       window as unknown as { __TAURI_INTERNALS__?: unknown }
@@ -35,7 +35,7 @@ describe("getSessionToken", () => {
   });
 
   it("uses the explicit dev token when native lookup returns no token", async () => {
-    vi.stubEnv("VITE_THOTH_TOKEN", "dev-token");
+    vi.stubEnv("VITE_OmniMac_TOKEN", "dev-token");
     const invoke = vi.fn().mockResolvedValue(null);
     (
       window as unknown as { __TAURI_INTERNALS__?: unknown }

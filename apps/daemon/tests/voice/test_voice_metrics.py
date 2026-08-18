@@ -1,4 +1,4 @@
-from thoth_daemon.voice.metrics import VoiceLatencyMetrics, VoiceLatencyStage
+from omnimac_daemon.voice.metrics import VoiceLatencyMetrics, VoiceLatencyStage
 
 
 def test_latency_metrics_are_bounded_and_report_p50_p95() -> None:

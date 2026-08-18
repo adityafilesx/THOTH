@@ -1,4 +1,4 @@
-# THOTH Privacy
+# OmniMac Privacy
 
 ## Local-first commitments
 
@@ -8,15 +8,15 @@
 - Local TTS uses macOS speech or optional Piper and receives only bounded persona `SpokenResponse`. Secret/path-like content becomes a deterministic display-only notice. Voice latency retention is numeric-only, capped at 256 samples per stage, and reset on restart.
 - Cloud model calls (the planning-only Anthropic Messages call — ADR-019; NOT a tool-executing agent loop) send only the normalized user goal and the tool catalog (names, risks, descriptions). Tool results, file contents, and Keychain material are never sent. The API key lives in the environment only — never in SQLite, logs, prompts, audit payloads, or frontend state. Planner-evaluation and capstone reports are redacted by construction (tool names + risk levels only; step inputs excluded).
 - Phase 5 defaults remain local: routine persona responses are deterministic; optional summaries/plans use the configured loopback provider. Cloud inference is disabled unless explicitly enabled and is never a fallback.
-- Foreground awareness is snapshot-on-demand. THOTH does not continuously capture screens or Accessibility trees. Window titles and selected paths redact before bounded in-memory retention.
+- Foreground awareness is snapshot-on-demand. OmniMac does not continuously capture screens or Accessibility trees. Window titles and selected paths redact before bounded in-memory retention.
 - Accessibility inspection is operation-local and bounded. Secure/authentication values are omitted before typed snapshots are built; focused-modal filtering prevents background-window data from becoming an unintended action target.
 
 ## Data inventory
 
 | Data | Store | Retention |
 |---|---|---|
-| Tasks, plans, approvals, audit events | SQLite (`THOTH_DB_PATH`) | User-configurable retention (Settings → Retention); default keep |
-| Structured diagnostic logs | JSONL (`THOTH_LOG_DIR`), redacted at write | Rotated daily; user-configurable purge |
+| Tasks, plans, approvals, audit events | SQLite (`OmniMac_DB_PATH`) | User-configurable retention (Settings → Retention); default keep |
+| Structured diagnostic logs | JSONL (`OmniMac_LOG_DIR`), redacted at write | Rotated daily; user-configurable purge |
 | Credentials, API keys | **macOS Keychain only** | Managed by Keychain |
 | Voice audio | In-memory during push-to-talk | Discarded post-transcription |
 | Foreground snapshots | In-memory only | 120 seconds by default |
@@ -34,7 +34,7 @@
 - Planner/inference provider selection is explicit configuration; there is no silent cloud fallback.
 - Operational dialogue expires automatically and is not long-term memory.
 
-## What THOTH never does
+## What OmniMac never does
 
 - Store secrets in SQLite, logs, prompts, or frontend state.
 - Send audio off-device.

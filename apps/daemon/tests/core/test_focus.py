@@ -12,11 +12,11 @@ from datetime import UTC, datetime
 
 import pytest
 
-from thoth_daemon.core.focus import (
+from omnimac_daemon.core.focus import (
     FocusManager,
     FocusPolicy,
 )
-from thoth_daemon.macos.app_control import AppInfo, MockAppControl
+from omnimac_daemon.macos.app_control import AppInfo, MockAppControl
 
 T0 = datetime(2026, 7, 13, 12, 0, 0, tzinfo=UTC)
 FINDER = AppInfo(name="Finder", bundle_id="com.apple.finder", active=True)
@@ -73,9 +73,7 @@ class TestFocusChange:
         ctrl = _ctrl()
         manager = FocusManager(ctrl)
 
-        _, result = manager.change_focus(
-            "TextEdit", FocusPolicy.KEEP_NEW_FOCUS, lambda: None, now=T0
-        )
+        _, result = manager.change_focus("TextEdit", FocusPolicy.KEEP_NEW_FOCUS, lambda: None, now=T0)
 
         assert result.verified is False
         assert result.final_bundle_id == "com.apple.finder"
@@ -87,9 +85,7 @@ class TestFocusChange:
         def action() -> None:
             ctrl.set_frontmost(TEXTEDIT)  # temporarily inspect TextEdit
 
-        _, result = manager.change_focus(
-            "TextEdit", FocusPolicy.RESTORE_PREVIOUS_FOCUS, action, now=T0
-        )
+        _, result = manager.change_focus("TextEdit", FocusPolicy.RESTORE_PREVIOUS_FOCUS, action, now=T0)
         assert result.restored is True
         assert result.verified is True  # independently confirmed via frontmost()
         assert ctrl.frontmost() == FINDER  # back to the prior app
@@ -102,9 +98,7 @@ class TestFocusChange:
             # A well-behaved background op does NOT change focus.
             ctrl.launch("some-server")
 
-        _, result = manager.change_focus(
-            "some-server", FocusPolicy.DO_NOT_STEAL_FOCUS, action, now=T0
-        )
+        _, result = manager.change_focus("some-server", FocusPolicy.DO_NOT_STEAL_FOCUS, action, now=T0)
         assert result.verified is True
         assert ctrl.frontmost() == FINDER
 
@@ -170,12 +164,12 @@ class TestFocusChange:
 
 class TestToolFocusPolicyDeclaration:
     def test_default_tool_policy_does_not_steal_focus(self) -> None:
-        from thoth_daemon.tools.app_tools import AppList
+        from omnimac_daemon.tools.app_tools import AppList
 
         assert AppList(MockAppControl()).focus_policy is FocusPolicy.DO_NOT_STEAL_FOCUS
 
     def test_app_launch_and_focus_keep_new_focus(self) -> None:
-        from thoth_daemon.tools.app_tools import AppFocus, AppFocusIn, AppLaunch, AppLaunchIn
+        from omnimac_daemon.tools.app_tools import AppFocus, AppFocusIn, AppLaunch, AppLaunchIn
 
         ctrl = MockAppControl()
         launch = AppLaunch(ctrl)
@@ -186,22 +180,22 @@ class TestToolFocusPolicyDeclaration:
         assert focus.focus_target(AppFocusIn(app="TextEdit")) == "TextEdit"
 
     def test_shell_and_background_service_policy_do_not_steal_focus(self) -> None:
-        from thoth_daemon.tools.shell_tool import ShellRun
+        from omnimac_daemon.tools.shell_tool import ShellRun
 
         assert ShellRun().focus_policy is FocusPolicy.DO_NOT_STEAL_FOCUS
 
     def test_browser_policies_are_per_operation(self) -> None:
-        from thoth_daemon.browser.browser_adapter import MockBrowser
-        from thoth_daemon.browser.session import MockBrowserSession
-        from thoth_daemon.tools.browser_interaction_tools import BrowserFind, BrowserOpen
-        from thoth_daemon.tools.browser_tools import BrowserRead
+        from omnimac_daemon.browser.browser_adapter import MockBrowser
+        from omnimac_daemon.browser.session import MockBrowserSession
+        from omnimac_daemon.tools.browser_interaction_tools import BrowserFind, BrowserOpen
+        from omnimac_daemon.tools.browser_tools import BrowserRead
 
         assert BrowserRead(MockBrowser()).focus_policy is FocusPolicy.DO_NOT_STEAL_FOCUS
         assert BrowserFind(MockBrowserSession({})).focus_policy is FocusPolicy.DO_NOT_STEAL_FOCUS
-        assert BrowserOpen(MockBrowserSession({})).focus_policy is FocusPolicy.KEEP_NEW_FOCUS
+        assert BrowserOpen(MockBrowserSession({})).focus_policy is FocusPolicy.DO_NOT_STEAL_FOCUS
 
     def test_focus_policy_serializes_across_plan_boundary(self) -> None:
-        from thoth_daemon.schemas import PlanStep, RiskLevel
+        from omnimac_daemon.schemas import PlanStep, RiskLevel
 
         step = PlanStep(
             index=0,
@@ -216,8 +210,8 @@ class TestToolFocusPolicyDeclaration:
     @pytest.mark.parametrize(
         "statement",
         [
-            "import thoth_daemon.core.focus; import thoth_daemon.tools.base",
-            "import thoth_daemon.tools.base; import thoth_daemon.core.focus",
+            "import omnimac_daemon.core.focus; import omnimac_daemon.tools.base",
+            "import omnimac_daemon.tools.base; import omnimac_daemon.core.focus",
         ],
     )
     def test_focus_policy_import_order_has_no_cycle(self, statement: str) -> None:

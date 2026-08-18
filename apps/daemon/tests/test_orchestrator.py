@@ -3,19 +3,19 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.audit.store import AuditStore
-from thoth_daemon.core.approvals import ApprovalEngine
-from thoth_daemon.core.orchestrator import (
+from omnimac_daemon.audit.store import AuditStore
+from omnimac_daemon.core.approvals import ApprovalEngine
+from omnimac_daemon.core.orchestrator import (
     ExecutionStateError,
     Orchestrator,
     guarded_execute,
 )
-from thoth_daemon.core.planner import DeterministicMockPlanner
-from thoth_daemon.core.policy import PolicyEngine
-from thoth_daemon.core.recovery import RecoveryController
-from thoth_daemon.core.state_machine import TaskStateMachine
-from thoth_daemon.core.verification import VerificationEngine
-from thoth_daemon.schemas import (
+from omnimac_daemon.core.planner import DeterministicMockPlanner
+from omnimac_daemon.core.policy import PolicyEngine
+from omnimac_daemon.core.recovery import RecoveryController
+from omnimac_daemon.core.state_machine import TaskStateMachine
+from omnimac_daemon.core.verification import VerificationEngine
+from omnimac_daemon.schemas import (
     ExecutionPlan,
     PlanStep,
     RiskLevel,
@@ -23,8 +23,8 @@ from thoth_daemon.schemas import (
     ToolInvocation,
     WorkspaceProfile,
 )
-from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
-from thoth_daemon.tools.mock_tools import build_registry
+from omnimac_daemon.storage.db import init_schema, make_engine, make_session_factory
+from omnimac_daemon.tools.mock_tools import build_registry
 
 
 async def build_orchestrator(tmp_path: Path, trusted: bool) -> Orchestrator:
@@ -96,9 +96,7 @@ class TestReadOnlyFlow:
         assert settled.plan is not None
         assert all(s.verification_passed for s in settled.plan.steps)
 
-    async def test_r1_completes_only_in_trusted_workspace(
-        self, trusted_orch: Orchestrator, untrusted_orch: Orchestrator
-    ) -> None:
+    async def test_r1_completes_only_in_trusted_workspace(self, trusted_orch: Orchestrator, untrusted_orch: Orchestrator) -> None:
         # Trusted: R1 open-app step auto-runs to completion.
         t = await trusted_orch.submit("open the project")
         assert (await trusted_orch.settle(t.id)).state is TaskState.COMPLETED
@@ -130,10 +128,7 @@ class TestApprovalFlow:
         types = [e.event_type for e in audit]
         assert "task.failed" in types
         # The R2 tool result must never have been produced.
-        assert not any(
-            e.event_type == "tool.result" and e.payload.get("tool") == "mock_send_email"
-            for e in audit
-        )
+        assert not any(e.event_type == "tool.result" and e.payload.get("tool") == "mock_send_email" for e in audit)
 
     async def test_modified_arguments_are_used(self, trusted_orch: Orchestrator) -> None:
         task = await trusted_orch.submit("send the email")
@@ -158,9 +153,7 @@ class TestBlockedFlow:
         assert settled.state is TaskState.FAILED
         audit = await trusted_orch.task_audit(task.id)
         # It must fail during/after RISK_REVIEW and never execute the R3 tool.
-        assert any(
-            e.event_type == "state.transition" and e.payload["to"] == "RISK_REVIEW" for e in audit
-        )
+        assert any(e.event_type == "state.transition" and e.payload["to"] == "RISK_REVIEW" for e in audit)
         assert not any(e.event_type == "tool.result" for e in audit)
 
     async def test_dont_push_is_a_hard_task_constraint(self, trusted_orch: Orchestrator) -> None:
@@ -171,10 +164,7 @@ class TestBlockedFlow:
         assert trusted_orch.pending_approvals() == []
         audit = await trusted_orch.task_audit(task.id)
         assert any(event.event_type == "constraint.denied" for event in audit)
-        assert not any(
-            event.event_type == "tool.result" and event.payload.get("tool") == "mock_git_push"
-            for event in audit
-        )
+        assert not any(event.event_type == "tool.result" and event.payload.get("tool") == "mock_git_push" for event in audit)
 
 
 class TestRecoveryFlow:
@@ -183,13 +173,9 @@ class TestRecoveryFlow:
         settled = await trusted_orch.settle(task.id)
         assert settled.state is TaskState.COMPLETED
         audit = await trusted_orch.task_audit(task.id)
-        assert any(
-            e.event_type == "recovery.decision" and e.payload["action"] == "retry" for e in audit
-        )
+        assert any(e.event_type == "recovery.decision" and e.payload["action"] == "retry" for e in audit)
 
-    async def test_approved_retry_requires_fresh_exact_approval(
-        self, untrusted_orch: Orchestrator
-    ) -> None:
+    async def test_approved_retry_requires_fresh_exact_approval(self, untrusted_orch: Orchestrator) -> None:
         task = await untrusted_orch.submit("run the flaky unstable task")
         assert (await untrusted_orch.settle(task.id)).state is TaskState.WAITING_FOR_APPROVAL
         first = untrusted_orch.pending_approvals()
@@ -213,9 +199,7 @@ class TestRecoveryFlow:
         audit = await untrusted_orch.task_audit(task.id)
         assert sum(event.event_type == "tool.result" for event in audit) == 2
 
-    async def test_denied_retry_approval_does_not_execute_again(
-        self, untrusted_orch: Orchestrator
-    ) -> None:
+    async def test_denied_retry_approval_does_not_execute_again(self, untrusted_orch: Orchestrator) -> None:
         task = await untrusted_orch.submit("run the flaky unstable task")
         await untrusted_orch.settle(task.id)
         first = untrusted_orch.pending_approvals()
@@ -246,9 +230,7 @@ class TestCancellation:
 
 
 class TestSettlement:
-    async def test_timeout_returns_current_snapshot_instead_of_http_500(
-        self, trusted_orch: Orchestrator
-    ) -> None:
+    async def test_timeout_returns_current_snapshot_instead_of_http_500(self, trusted_orch: Orchestrator) -> None:
         plan = ExecutionPlan(
             task_id="pending",
             summary="bounded slow task",

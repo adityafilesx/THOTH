@@ -1,4 +1,4 @@
-import type { AuditEvent } from "@thoth/shared-schemas";
+import type { AuditEvent } from "@omnimac/shared-schemas";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

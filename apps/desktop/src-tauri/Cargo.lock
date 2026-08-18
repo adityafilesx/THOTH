@@ -3278,7 +3278,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "thoth-desktop"
+name = "omnimac-desktop"
 version = "0.1.0"
 dependencies = [
  "libc",

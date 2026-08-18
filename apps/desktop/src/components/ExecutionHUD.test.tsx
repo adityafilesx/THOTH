@@ -9,7 +9,7 @@ function task(overrides: Partial<TaskPayload> = {}): TaskPayload {
   return {
     id: "task-1",
     correlation_id: "corr-1",
-    goal: "Continue THOTH",
+    goal: "Continue OmniMac",
     source: "text",
     state: "EXECUTING",
     plan: {
@@ -45,7 +45,7 @@ function task(overrides: Partial<TaskPayload> = {}): TaskPayload {
 describe("ExecutionHUD", () => {
   it("shows real progress, verification and focus policy", () => {
     render(<ExecutionHUD task={task()} />);
-    expect(screen.getByText("Continue THOTH")).toBeInTheDocument();
+    expect(screen.getByText("Continue OmniMac")).toBeInTheDocument();
     expect(screen.getByText(/1 of 1 · Verify daemon health/)).toBeInTheDocument();
     expect(screen.getByText("Verifying")).toBeInTheDocument();
     expect(screen.getByText("Do not steal focus")).toBeInTheDocument();

@@ -36,9 +36,9 @@ scope-checked by the slice-1 enforcer, closing argument-based escapes like `cat 
 
 | File | New? | Responsibility |
 |---|---|---|
-| `apps/daemon/src/thoth_daemon/security/shell_policy.py` | new | `EXECUTABLE_ALLOWLIST`, `SHELL_METACHARACTERS`, `parse_command(command, cwd) -> ParsedCommand`, `validate_executable(argv)`; `ShellPolicyError`. Pure. |
-| `apps/daemon/src/thoth_daemon/tools/shell_tool.py` | new | `ShellRun` tool + `register_shell_tool(registry)`. |
-| `apps/daemon/src/thoth_daemon/app.py` | edit | `register_shell_tool(registry)`. |
+| `apps/daemon/src/omnimac_daemon/security/shell_policy.py` | new | `EXECUTABLE_ALLOWLIST`, `SHELL_METACHARACTERS`, `parse_command(command, cwd) -> ParsedCommand`, `validate_executable(argv)`; `ShellPolicyError`. Pure. |
+| `apps/daemon/src/omnimac_daemon/tools/shell_tool.py` | new | `ShellRun` tool + `register_shell_tool(registry)`. |
+| `apps/daemon/src/omnimac_daemon/app.py` | edit | `register_shell_tool(registry)`. |
 | `docs/DECISIONS.md`, `docs/STATUS.md`, `docs/MILESTONES.md`, `docs/THREAT_MODEL.md` | edit | ADR-014, T3 mitigation now real, status. |
 
 Reuses: `security/paths.py` (`expand_and_resolve`, `is_within`, `is_denied_path`), the

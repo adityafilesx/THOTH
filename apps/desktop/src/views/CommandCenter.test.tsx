@@ -50,29 +50,33 @@ describe("CommandCenter", () => {
     render(<CommandCenter />);
 
     fireEvent.change(screen.getByLabelText("Goal"), {
-      target: { value: "thoth stop" },
+      target: { value: "omnimac stop" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Send goal" }));
 
-    await waitFor(() => expect(dispatchCommand).toHaveBeenCalledWith("thoth stop", "text"));
+    await waitFor(() => expect(dispatchCommand).toHaveBeenCalledWith("omnimac stop", "text"));
     expect(createTask).not.toHaveBeenCalled();
     expect(routeIntent).not.toHaveBeenCalled();
     expect(globalStop).not.toHaveBeenCalled();
     expect(screen.getByLabelText("Goal")).toHaveValue("");
-    expect(screen.getByLabelText("THOTH control response")).toHaveTextContent(
+    expect(screen.getByLabelText("OmniMac control response")).toHaveTextContent(
       "Stopped. No external action was taken.",
     );
   });
 
-  it("ends push-to-talk when the pointer is released outside the button", () => {
+  it("dispatches click-to-talk when the button is clicked", () => {
+    const dispatchSpy = vi.spyOn(window, "dispatchEvent");
     render(<CommandCenter />);
-    const microphone = screen.getByRole("button", { name: "Push to talk" });
+    const microphone = screen.getByRole("button", { name: "Click to talk" });
 
-    fireEvent.pointerDown(microphone, { pointerId: 7 });
-    fireEvent.pointerUp(window, { pointerId: 7 });
-
-    expect(beginPushToTalk).toHaveBeenCalledOnce();
-    expect(endPushToTalk).toHaveBeenCalledOnce();
+    fireEvent.click(microphone);
+    
+    expect(dispatchSpy).toHaveBeenCalled();
+    const callArg = dispatchSpy.mock.calls[0][0] as CustomEvent;
+    expect(callArg.type).toBe("omnimac:ptt");
+    expect(callArg.detail).toEqual({ state: "Pressed" });
+    
+    dispatchSpy.mockRestore();
   });
 
   it("does not expose internal task errors when a safe presentation exists", () => {

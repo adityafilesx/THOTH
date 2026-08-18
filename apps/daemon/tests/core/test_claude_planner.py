@@ -3,19 +3,19 @@ from typing import Any
 
 import pytest
 
-from thoth_daemon.audit.store import AuditStore
-from thoth_daemon.core.approvals import ApprovalEngine
-from thoth_daemon.core.claude_planner import ClaudePlanner, build_system_prompt
-from thoth_daemon.core.orchestrator import Orchestrator
-from thoth_daemon.core.policy import PolicyEngine
-from thoth_daemon.core.recovery import RecoveryController
-from thoth_daemon.core.scope import ScopeEnforcer
-from thoth_daemon.core.verification import VerificationEngine
-from thoth_daemon.schemas import ResourceScope, TaskState, WorkspaceProfile
-from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
-from thoth_daemon.tools.fs_tools import register_fs_tools
-from thoth_daemon.tools.mock_tools import build_registry
-from thoth_daemon.tools.registry import ToolRegistry
+from omnimac_daemon.audit.store import AuditStore
+from omnimac_daemon.core.approvals import ApprovalEngine
+from omnimac_daemon.core.claude_planner import ClaudePlanner, build_system_prompt
+from omnimac_daemon.core.orchestrator import Orchestrator
+from omnimac_daemon.core.policy import PolicyEngine
+from omnimac_daemon.core.recovery import RecoveryController
+from omnimac_daemon.core.scope import ScopeEnforcer
+from omnimac_daemon.core.verification import VerificationEngine
+from omnimac_daemon.schemas import ResourceScope, TaskState, WorkspaceProfile
+from omnimac_daemon.storage.db import init_schema, make_engine, make_session_factory
+from omnimac_daemon.tools.fs_tools import register_fs_tools
+from omnimac_daemon.tools.mock_tools import build_registry
+from omnimac_daemon.tools.registry import ToolRegistry
 
 
 class FakePlannerClient:
@@ -83,9 +83,7 @@ def test_plan_invalid_risk_raises() -> None:
     client = FakePlannerClient(
         plan={
             "summary": "x",
-            "steps": [
-                {"title": "t", "tool_name": "fs_stat", "arguments": {}, "declared_risk": "R9"}
-            ],
+            "steps": [{"title": "t", "tool_name": "fs_stat", "arguments": {}, "declared_risk": "R9"}],
         }
     )
     with pytest.raises(ValueError):
@@ -138,11 +136,7 @@ async def test_untrusted_plan_unknown_tool_is_rejected(tmp_path: Path) -> None:
     settled = await orch.settle(task.id)
     assert settled.state is TaskState.FAILED
     audit = await orch.task_audit(task.id)
-    assert any(
-        "unknown tool" in (e.payload.get("reason") or "")
-        for e in audit
-        if e.event_type == "plan.rejected"
-    )
+    assert any("unknown tool" in (e.payload.get("reason") or "") for e in audit if e.event_type == "plan.rejected")
 
 
 async def test_valid_in_scope_plan_completes_planner_called_once(tmp_path: Path) -> None:

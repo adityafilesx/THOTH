@@ -11,9 +11,9 @@ available. Credentials were neither requested nor exposed.
 
 | Artifact | Identity/result |
 |---|---|
-| AX helper | `me.adityalabs.thoth.axhelper`; valid ad-hoc hardened-runtime signature; no TeamIdentifier |
-| Desktop app | plist `dev.thoth.desktop` version `0.1.0`; linker/ad-hoc signature |
-| DMG | `THOTH_0.1.0_aarch64.dmg`, SHA-256 `cfdb93eda780377ea269068d1e4e82f48463f0ed73a163baa12ca44464dc4b1b` |
+| AX helper | `me.adityalabs.omnimac.axhelper`; valid ad-hoc hardened-runtime signature; no TeamIdentifier |
+| Desktop app | plist `dev.omnimac.desktop` version `0.1.0`; linker/ad-hoc signature |
+| DMG | `OmniMac_0.1.0_aarch64.dmg`, SHA-256 `cfdb93eda780377ea269068d1e4e82f48463f0ed73a163baa12ca44464dc4b1b` |
 
 The desktop `.app` failed `codesign --verify --deep --strict`, Gatekeeper
 rejected it, and `xcrun stapler validate` reported no ticket. The executable

@@ -1,9 +1,9 @@
-import { TASK_STATES, type TaskState } from "@thoth/shared-schemas";
+import { TASK_STATES, type TaskState } from "@omnimac/shared-schemas";
 
 import { cn } from "@/lib/utils";
 
 /**
- * The state ladder — THOTH's signature element. The full task lifecycle
+ * The state ladder — OmniMac's signature element. The full task lifecycle
  * rendered as a launch-sequence checklist; the current state is lit, past
  * states dimly confirmed, terminal states colored by outcome.
  */

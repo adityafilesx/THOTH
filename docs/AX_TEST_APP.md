@@ -1,13 +1,13 @@
-# THOTH Accessibility Test App
+# OmniMac Accessibility Test App
 
 ## Slice 1 contract
 
 The test fixture is a local, native macOS application used only to collect
 repeatable Accessibility evidence. Its authoritative bundle identifier is
-`me.adityalabs.thoth.axtest`; the older Tkinter fixture is not an authoritative
+`me.adityalabs.omnimac.axtest`; the older Tkinter fixture is not an authoritative
 target because it shares `org.python.python` with unrelated Python processes.
 
-The native fixture must package as `THOTH AX Test App.app`, expose stable
+The native fixture must package as `OmniMac AX Test App.app`, expose stable
 Accessibility identifiers for every relevant control, and reset to the same
 state through both a visible Reset control and the `--reset` launch argument.
 Tests and capstones must still inspect and operate the UI through AX. Reset is
@@ -65,16 +65,16 @@ apps/ax-test-app/scripts/package_app.sh
 The ignored output is:
 
 ```text
-apps/ax-test-app/dist/THOTH AX Test App.app
+apps/ax-test-app/dist/OmniMac AX Test App.app
 ```
 
 Launch in deterministic initial state:
 
 ```bash
-open -na "$PWD/apps/ax-test-app/dist/THOTH AX Test App.app" --args --reset
+open -na "$PWD/apps/ax-test-app/dist/OmniMac AX Test App.app" --args --reset
 ```
 
 The visible Reset button reaches the same state. A 2026-07-14 packaging probe
 verified the plist, ad-hoc signature, Launch Services name, and real running
-bundle identifier `me.adityalabs.thoth.axtest`. That proves package identity;
+bundle identifier `me.adityalabs.omnimac.axtest`. That proves package identity;
 it does not by itself mark any AX capability verified.

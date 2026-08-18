@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Minimal capability set for the THOTH main window. No shell, fs, or process permissions — the daemon owns all computer interaction behind its safety engine.",
+  "description": "Minimal capability set for the OmniMac main window. No shell, fs, or process permissions — the daemon owns all computer interaction behind its safety engine.",
   "windows": ["main", "voice-overlay"],
   "permissions": ["core:default"]
 }

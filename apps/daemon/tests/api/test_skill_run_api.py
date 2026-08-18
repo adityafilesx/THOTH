@@ -31,9 +31,7 @@ class TestSkillRun:
     async def test_disabled_skill_409(self, client: AsyncClient) -> None:
         sid = await _skill_id(client, "organize-workspace")
         await client.patch(f"/api/skills/{sid}", json={"enabled": False})
-        resp = await client.post(
-            f"/api/skills/{sid}/run", json={"inputs": {"workspace_path": "/x"}}
-        )
+        resp = await client.post(f"/api/skills/{sid}/run", json={"inputs": {"workspace_path": "/x"}})
         assert resp.status_code == 409
 
     async def test_bad_inputs_422(self, client: AsyncClient) -> None:
@@ -51,9 +49,7 @@ class TestSkillRun:
         (ws / "a.txt").write_text("x")
 
         sid = await _skill_id(client, "organize-workspace")
-        resp = await client.post(
-            f"/api/skills/{sid}/run", json={"inputs": {"workspace_path": str(ws)}}
-        )
+        resp = await client.post(f"/api/skills/{sid}/run", json={"inputs": {"workspace_path": str(ws)}})
         assert resp.status_code == 200
         task = resp.json()
         assert task["state"] == "COMPLETED"

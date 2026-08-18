@@ -2,12 +2,12 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from thoth_daemon.core.approvals import (
+from omnimac_daemon.core.approvals import (
     ApprovalEngine,
     ApprovalRequiredError,
     UnknownApprovalError,
 )
-from thoth_daemon.schemas import ApprovalStatus, RiskLevel
+from omnimac_daemon.schemas import ApprovalStatus, RiskLevel
 
 NOW = datetime(2026, 7, 11, 12, 0, 0, tzinfo=UTC)
 

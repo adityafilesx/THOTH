@@ -1,0 +1,19 @@
+from fastapi import APIRouter, Request
+from sqlalchemy import text
+
+import omnimac_daemon
+
+router = APIRouter()
+
+
+@router.get("/api/health")
+async def health(request: Request) -> dict[str, str]:
+    db_status = "error"
+    try:
+        session_factory = request.app.state.session_factory
+        async with session_factory() as session:
+            await session.execute(text("SELECT 1 FROM tasks LIMIT 1"))
+        db_status = "ok"
+    except Exception:  # health must never raise
+        db_status = "error"
+    return {"status": "ok", "version": omnimac_daemon.__version__, "db": db_status}

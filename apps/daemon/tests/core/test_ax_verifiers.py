@@ -2,15 +2,15 @@
 
 from datetime import UTC, date, datetime
 
-from thoth_daemon.core.application_profiles import (
+from omnimac_daemon.core.application_profiles import (
     ApplicationProfile,
     ApplicationProfileRegistry,
     AXCapabilityRule,
     InterfaceKind,
     ProfileVerifier,
 )
-from thoth_daemon.core.ax_controller import AXController
-from thoth_daemon.core.ax_verifiers import (
+from omnimac_daemon.core.ax_controller import AXController
+from omnimac_daemon.core.ax_verifiers import (
     AXApplicationFrontmostVerifier,
     AXCompositeVerifier,
     AXElementEnabledVerifier,
@@ -20,11 +20,11 @@ from thoth_daemon.core.ax_verifiers import (
     AXElementValueVerifier,
     AXWindowExistsVerifier,
 )
-from thoth_daemon.core.focus import FocusPolicy
-from thoth_daemon.macos.app_control import AppInfo, MockAppControl
-from thoth_daemon.macos.ax_permission import AXPermissionService
-from thoth_daemon.macos.semantic_ax import MockSemanticAXAdapter
-from thoth_daemon.schemas.ax import (
+from omnimac_daemon.core.focus import FocusPolicy
+from omnimac_daemon.macos.app_control import AppInfo, MockAppControl
+from omnimac_daemon.macos.ax_permission import AXPermissionService
+from omnimac_daemon.macos.semantic_ax import MockSemanticAXAdapter
+from omnimac_daemon.schemas.ax import (
     AXApplicationSnapshot,
     AXElementSnapshot,
     AXValueKind,
@@ -33,10 +33,10 @@ from thoth_daemon.schemas.ax import (
     AXVerificationRequest,
     AXWindowSnapshot,
 )
-from thoth_daemon.schemas.enums import RiskLevel
+from omnimac_daemon.schemas.enums import RiskLevel
 
 NOW = datetime(2026, 7, 14, 16, tzinfo=UTC)
-BUNDLE = "me.adityalabs.thoth.axtest"
+BUNDLE = "me.adityalabs.omnimac.axtest"
 CAPABILITY = "ax_set_value"
 
 
@@ -140,13 +140,7 @@ def test_element_exists_verifier_re_reads_current_snapshot() -> None:
     assert verifier.verify(_request(AXVerificationExpectation.EXISTS), CAPABILITY).passed
 
     empty = _application(_element()).model_copy(
-        update={
-            "windows": (
-                _application(_element())
-                .windows[0]
-                .model_copy(update={"elements": (), "element_count": 0}),
-            )
-        }
+        update={"windows": (_application(_element()).windows[0].model_copy(update={"elements": (), "element_count": 0}),)}
     )
     adapter.replace_application(empty)
     assert not verifier.verify(_request(AXVerificationExpectation.EXISTS), CAPABILITY).passed
@@ -158,13 +152,7 @@ def test_value_verifier_does_not_trust_action_response() -> None:
     wanted = _request(AXVerificationExpectation.VALUE_EQUALS, expected_value="saved")
     assert verifier.verify(wanted, CAPABILITY).passed
 
-    adapter.replace_application(
-        _application(
-            _element(
-                value_metadata=AXValueMetadata(kind=AXValueKind.STRING, value="wrong", length=5)
-            )
-        )
-    )
+    adapter.replace_application(_application(_element(value_metadata=AXValueMetadata(kind=AXValueKind.STRING, value="wrong", length=5))))
     assert not verifier.verify(wanted, CAPABILITY).passed
 
 
@@ -197,9 +185,7 @@ def test_window_and_application_frontmost_verifiers() -> None:
 
 def test_composite_requires_every_fresh_child() -> None:
     controller, _ = _controller()
-    composite = AXCompositeVerifier(
-        [AXElementExistsVerifier(controller), AXElementValueVerifier(controller)]
-    )
+    composite = AXCompositeVerifier([AXElementExistsVerifier(controller), AXElementValueVerifier(controller)])
     requests = [
         _request(AXVerificationExpectation.EXISTS),
         _request(AXVerificationExpectation.VALUE_EQUALS, expected_value="wrong"),

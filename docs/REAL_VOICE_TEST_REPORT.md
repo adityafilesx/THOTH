@@ -1,11 +1,11 @@
-# THOTH real voice test report
+# OmniMac real voice test report
 
 **Date:** 2026-07-14
 **Status:** PARTIALLY WORKING — automated and live API pipeline pass; real microphone release gate pending
 
 ## Result
 
-THOTH's local voice implementation, deterministic command routing, safety boundaries, task lifecycle, desktop integration, and build gates are green in automation. The first real microphone attempt reached local Whisper and produced partial text, but exposed capture-release defects and did not produce a valid final submission. Those defects are fixed and regression-tested; no post-fix user-spoken command has yet been completed, so real voice readiness is not claimed.
+OmniMac's local voice implementation, deterministic command routing, safety boundaries, task lifecycle, desktop integration, and build gates are green in automation. The first real microphone attempt reached local Whisper and produced partial text, but exposed capture-release defects and did not produce a valid final submission. Those defects are fixed and regression-tested; no post-fix user-spoken command has yet been completed, so real voice readiness is not claimed.
 
 ## Verified in this run
 
@@ -13,14 +13,14 @@ THOTH's local voice implementation, deterministic command routing, safety bounda
 - Qwen3 4B planning is configured through the loopback-only local provider with no cloud fallback.
 - whisper.cpp and `ggml-base.en.bin` integrity pins verify before recognition.
 - macOS local TTS playback and interruption work through the real endpoints.
-- Typed `thoth stop` is model-free, creates no task, and returns the restrained persona response.
+- Typed `omnimac stop` is model-free, creates no task, and returns the restrained persona response.
 - Exact voice/text approval language cannot approve or enter the planner.
 - `run the tests` resolves to the installed authoritative skill and stops at exact R2 approval.
 - Failed app focus cannot be reported as completed.
 - Temporary transcript sessions are single-use and removed on success, exception, explicit cancel, or bounded abandonment expiry. Active capture is cleared on daemon shutdown.
 - 996 daemon tests and 95 desktop tests pass (1,091 total), with one locked-screen focus test skipped. Python lint/format/typecheck, ESLint, TypeScript, Vite production build, Rust check/test, and Alembic migration pass. The daemon suite also passes with worker-thread warnings treated as errors.
 - The repaired daemon is currently running on loopback. Live typed Stop is model-free, live route classification distinguishes skill/clarification/reflex/planner, and cancelled voice sessions become inaccessible immediately.
-- All 11 recent persisted task audit chains verified, and the final temporary-directory check found no retained THOTH voice audio.
+- All 11 recent persisted task audit chains verified, and the final temporary-directory check found no retained OmniMac voice audio.
 
 ## Not yet verified
 
@@ -50,7 +50,7 @@ Wake word, proactive behavior, universal application control, and long-term pers
 
 ## Required next evidence
 
-The user must hold push-to-talk, say `Thoth, stop.`, release, and wait for final recognition. A pass requires the final transcript, deterministic Stop route, no task creation, local response, bounded latency, and deletion of temporary audio. Synthetic, prerecorded, typed, or partial recognition is not counted.
+The user must hold push-to-talk, say `Omnimac, stop.`, release, and wait for final recognition. A pass requires the final transcript, deterministic Stop route, no task creation, local response, bounded latency, and deletion of temporary audio. Synthetic, prerecorded, typed, or partial recognition is not counted.
 
 ## Honest capability claim
 

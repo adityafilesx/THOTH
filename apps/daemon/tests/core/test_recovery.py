@@ -7,8 +7,8 @@ budget is exhausted the controller ESCALATES to the user
 approval) still fail immediately and never touch any budget.
 """
 
-from thoth_daemon.core.recovery import RecoveryController
-from thoth_daemon.schemas import ToolResult
+from omnimac_daemon.core.recovery import RecoveryController
+from omnimac_daemon.schemas import ToolResult
 
 
 def transient_fail() -> ToolResult:
@@ -65,17 +65,13 @@ class TestReplanAndEscalation:
         # Depth = consecutive failing recovery episodes (a step's retry run =
         # one episode; each replan opens a new episode). max_depth=2 means the
         # third distinct failing episode escalates even with replans left.
-        ctrl = RecoveryController(
-            max_retries_per_step=0, max_replans_per_task=9, max_recovery_depth=2
-        )
+        ctrl = RecoveryController(max_retries_per_step=0, max_replans_per_task=9, max_recovery_depth=2)
         assert ctrl.on_step_failure("t1", "s1", transient_fail(), False).action == "replan"
         assert ctrl.on_step_failure("t1", "s2", transient_fail(), False).action == "replan"
         assert ctrl.on_step_failure("t1", "s3", transient_fail(), False).action == "escalate"
 
     def test_step_success_resets_depth_chain(self) -> None:
-        ctrl = RecoveryController(
-            max_retries_per_step=0, max_replans_per_task=9, max_recovery_depth=2
-        )
+        ctrl = RecoveryController(max_retries_per_step=0, max_replans_per_task=9, max_recovery_depth=2)
         assert ctrl.on_step_failure("t1", "s1", transient_fail(), False).action == "replan"
         ctrl.on_step_success("t1")  # a verified success breaks the chain
         assert ctrl.on_step_failure("t1", "s2", transient_fail(), False).action == "replan"

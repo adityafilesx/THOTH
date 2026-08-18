@@ -23,7 +23,7 @@ async def test_pending_approval_response_is_deterministic(client: AsyncClient) -
     presentation = task["presentation"]
     assert presentation["response"]["intent"] == "approval_required"
     assert presentation["response"]["used_model"] is False
-    assert "Nothing has been sent" in presentation["display_response"]
+    assert "Shall I proceed" in presentation["display_response"]
     assert presentation["stages"]["approval"] == "pending"
 
 
@@ -120,9 +120,7 @@ async def test_dialogue_state_is_created_and_cannot_approve(client: AsyncClient)
 
 async def test_dialogue_dont_push_is_a_hard_live_constraint(client: AsyncClient) -> None:
     task = (await client.post("/api/tasks", json={"goal": "read notes"})).json()
-    response = await client.post(
-        f"/api/dialogue/{task['id']}/resolve", json={"text": "Don't push."}
-    )
+    response = await client.post(f"/api/dialogue/{task['id']}/resolve", json={"text": "Don't push."})
     assert response.status_code == 200
     assert "no_push" in response.json()["constraints"]
     state = (await client.get(f"/api/dialogue/{task['id']}")).json()

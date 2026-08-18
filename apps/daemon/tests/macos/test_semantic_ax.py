@@ -4,9 +4,9 @@ from datetime import UTC, datetime
 
 import pytest
 
-from thoth_daemon.macos.ax_permission import AXPermissionError, AXPermissionService
-from thoth_daemon.macos.semantic_ax import RealSemanticAXAdapter
-from thoth_daemon.schemas.ax import AXElementSnapshot
+from omnimac_daemon.macos.ax_permission import AXPermissionError, AXPermissionService
+from omnimac_daemon.macos.semantic_ax import RealSemanticAXAdapter
+from omnimac_daemon.schemas.ax import AXElementSnapshot
 
 NOW = datetime(2026, 7, 14, 15, tzinfo=UTC)
 
@@ -14,7 +14,7 @@ NOW = datetime(2026, 7, 14, 15, tzinfo=UTC)
 def _element() -> AXElementSnapshot:
     return AXElementSnapshot(
         reference_id="ref",
-        application_bundle_id="me.adityalabs.thoth.axtest",
+        application_bundle_id="me.adityalabs.omnimac.axtest",
         window_identifier="main",
         role="AXButton",
         identifier="ax-save-button",

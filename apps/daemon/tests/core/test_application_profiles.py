@@ -5,7 +5,7 @@ from datetime import date
 import pytest
 from pydantic import ValidationError
 
-from thoth_daemon.core.application_profiles import (
+from omnimac_daemon.core.application_profiles import (
     ApplicationProfile,
     ApplicationProfileRegistry,
     AXCapabilityRule,
@@ -19,9 +19,9 @@ from thoth_daemon.core.application_profiles import (
     UnknownApplication,
     build_default_application_profiles,
 )
-from thoth_daemon.core.focus import FocusPolicy
-from thoth_daemon.schemas import RiskLevel
-from thoth_daemon.schemas.ax import AXVerificationExpectation
+from omnimac_daemon.core.focus import FocusPolicy
+from omnimac_daemon.schemas import RiskLevel
+from omnimac_daemon.schemas.ax import AXVerificationExpectation
 
 
 def _profile(**updates: object) -> ApplicationProfile:
@@ -85,12 +85,7 @@ class TestRegistryAuthority:
         registry = ApplicationProfileRegistry([_profile()])
         with pytest.raises(CapabilityUnavailable, match="experimental"):
             registry.authorize("com.example.Editor", "read_selection")
-        assert (
-            registry.authorize(
-                "com.example.Editor", "read_selection", allow_experimental=True
-            ).status
-            is CapabilityStatus.EXPERIMENTAL
-        )
+        assert registry.authorize("com.example.Editor", "read_selection", allow_experimental=True).status is CapabilityStatus.EXPERIMENTAL
 
     def test_forbidden_capability_is_rejected(self) -> None:
         registry = ApplicationProfileRegistry([_profile()])
@@ -100,16 +95,12 @@ class TestRegistryAuthority:
     def test_model_cannot_expand_capabilities(self) -> None:
         registry = ApplicationProfileRegistry([_profile()])
         with pytest.raises(CapabilityUnavailable):
-            registry.authorize(
-                "com.example.Editor", "unrestricted_control", model_requested_status="verified"
-            )
+            registry.authorize("com.example.Editor", "unrestricted_control", model_requested_status="verified")
 
     def test_model_cannot_downgrade_forbidden_operation(self) -> None:
         registry = ApplicationProfileRegistry([_profile()])
         with pytest.raises(CapabilityForbidden):
-            registry.authorize(
-                "com.example.Editor", "export_credentials", model_requested_status="verified"
-            )
+            registry.authorize("com.example.Editor", "export_credentials", model_requested_status="verified")
 
     def test_duplicate_profile_rejected(self) -> None:
         with pytest.raises(DuplicateApplicationProfile):
@@ -124,7 +115,7 @@ class TestDefaultProfiles:
             "TextEdit",
             "Visual Studio Code",
             "Terminal",
-            "THOTH Accessibility Test App",
+            "OmniMac Accessibility Test App",
             "Chromium",
         }
 
@@ -134,9 +125,7 @@ class TestDefaultProfiles:
             registry.authorize("com.apple.Terminal", "execute_shell_through_ui")
 
     def test_vscode_workspace_match_is_verified_by_authoritative_association(self) -> None:
-        result = build_default_application_profiles().authorize(
-            "com.microsoft.VSCode", "match_workspace"
-        )
+        result = build_default_application_profiles().authorize("com.microsoft.VSCode", "match_workspace")
         assert result.status is CapabilityStatus.VERIFIED
         assert result.verifier is ProfileVerifier.WORKSPACE_ASSOCIATION
 
@@ -148,13 +137,9 @@ class TestDefaultProfiles:
         assert "bypass_two_phase_submission" in profile.forbidden_operations
 
     def test_native_ax_fixture_uses_unique_bundle_and_no_unverified_promotion(self) -> None:
-        profile = build_default_application_profiles().get("me.adityalabs.thoth.axtest")
-        assert profile.display_name == "THOTH Accessibility Test App"
-        assert not {
-            capability
-            for capability in profile.verified_capabilities
-            if capability.startswith("ax_")
-        }
+        profile = build_default_application_profiles().get("me.adityalabs.omnimac.axtest")
+        assert profile.display_name == "OmniMac Accessibility Test App"
+        assert not {capability for capability in profile.verified_capabilities if capability.startswith("ax_")}
         assert "ax_set_value" in profile.experimental_capabilities
         assert "ax_set_value" in profile.ax_capability_rules
 
@@ -215,7 +200,7 @@ class TestDefaultProfiles:
 
     def test_fixture_action_and_independent_status_target_are_separately_bound(self) -> None:
         registry = build_default_application_profiles()
-        bundle_id = "me.adityalabs.thoth.axtest"
+        bundle_id = "me.adityalabs.omnimac.axtest"
         registry.authorize_ax(
             bundle_id,
             "ax_perform_action",
@@ -259,9 +244,9 @@ class TestDefaultProfiles:
             )
 
     def test_registry_returns_copies_not_mutable_authority(self) -> None:
-        source = build_default_application_profiles().get("me.adityalabs.thoth.axtest")
+        source = build_default_application_profiles().get("me.adityalabs.omnimac.axtest")
         registry = ApplicationProfileRegistry([source])
-        returned = registry.get("me.adityalabs.thoth.axtest")
+        returned = registry.get("me.adityalabs.omnimac.axtest")
         returned.ax_capability_rules["model_invented"] = AXCapabilityRule(
             tool_name="ax.read_value",
             allowed_identifiers=("anything",),

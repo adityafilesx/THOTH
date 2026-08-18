@@ -1,4 +1,4 @@
-# THOTH Decision Records
+# OmniMac Decision Records
 
 Format: lightweight ADRs. Newest last. A decision is binding until superseded by a later ADR.
 
@@ -48,7 +48,7 @@ Audit store is append-only by API (no update/delete surface). Cryptographic hash
 
 ## ADR-012: Per-session bearer token for desktop↔daemon
 **Date:** 2026-07-12 · **Status:** Accepted
-The daemon mints a `secrets.token_urlsafe(32)` session token at startup (or reads `THOTH_SESSION_TOKEN`), stores it on `app.state`, and writes it 0600 for the desktop to read. A pure-ASGI middleware requires `Authorization: Bearer <token>` (constant-time `secrets.compare_digest`) on every route except `/api/health`; the WebSocket requires a first-message `{type:"auth",token}` handshake (browsers can't set WS headers). Auth is **always on** — no disable flag to ship off. Implemented as a pure ASGI middleware rather than Starlette's `BaseHTTPMiddleware`, which does not pass WebSocket scopes through cleanly and hangs them. Rejected: query-param WS token (URL logging); a runtime bypass flag (ship-off risk); OS-keychain handoff (heavier than warranted for an ephemeral per-session token). Deliberate, scoped exception to "no secrets in frontend state": the token is IPC auth material, held in webview memory only, never persisted client-side, and redacted from logs/audit (`token`/`authorization` keys). The desktop reads it via the first custom Tauri command `session_token` (packaged) or `VITE_THOTH_TOKEN` (dev browser).
+The daemon mints a `secrets.token_urlsafe(32)` session token at startup (or reads `OmniMac_SESSION_TOKEN`), stores it on `app.state`, and writes it 0600 for the desktop to read. A pure-ASGI middleware requires `Authorization: Bearer <token>` (constant-time `secrets.compare_digest`) on every route except `/api/health`; the WebSocket requires a first-message `{type:"auth",token}` handshake (browsers can't set WS headers). Auth is **always on** — no disable flag to ship off. Implemented as a pure ASGI middleware rather than Starlette's `BaseHTTPMiddleware`, which does not pass WebSocket scopes through cleanly and hangs them. Rejected: query-param WS token (URL logging); a runtime bypass flag (ship-off risk); OS-keychain handoff (heavier than warranted for an ephemeral per-session token). Deliberate, scoped exception to "no secrets in frontend state": the token is IPC auth material, held in webview memory only, never persisted client-side, and redacted from logs/audit (`token`/`authorization` keys). The desktop reads it via the first custom Tauri command `session_token` (packaged) or `VITE_OmniMac_TOKEN` (dev browser).
 
 ## ADR-013: Real filesystem tools added behind the scope contract
 **Date:** 2026-07-12 · **Status:** Accepted
@@ -108,7 +108,7 @@ The capstone harness (`evals/capstones.py`) runs a natural-language goal through
 
 ## ADR-027: Provider-neutral local inference, cloud disabled by default
 **Date:** 2026-07-13 · **Status:** Accepted (see LOCAL_INFERENCE.md)
-Inference sits behind an `InferenceProvider` protocol (`thoth_daemon/inference/`), consumed only by planning/argument-extraction layers — never by tools, policy, approvals, or verification. Providers: `DeterministicInferenceProvider` (always-available offline floor), `LlamaCppInferenceProvider` (loopback llama.cpp-family server, Ollama-compatible constrained JSON via `format=<schema>` + `think=false`, keep_alive warm/unload; **verified live** against real qwen3:4b), `MLXInferenceProvider` (typed-unavailable until `mlx_lm` installed), and `AnthropicInferenceProvider` (**disabled unless THOTH_ALLOW_CLOUD=1 AND a key exists, and refused under isolation; never in the fallback ladder**). `NetworkIsolationGuard` refuses any non-loopback endpoint in isolation mode at construction and per request. `ModelRegistry` stores model metadata + sha256 integrity hash as DATA (no auto-executed remote code). The default is llama.cpp-family-first because it is the only runtime PRESENT on the target machine (Apple M4, Ollama running); MLX is compared when installed. Rejected: routing planning through a tool-executing agent loop (violates planner-never-executes); making cloud a silent fallback (violates local-first); binding the inference server to a non-loopback interface.
+Inference sits behind an `InferenceProvider` protocol (`omnimac_daemon/inference/`), consumed only by planning/argument-extraction layers — never by tools, policy, approvals, or verification. Providers: `DeterministicInferenceProvider` (always-available offline floor), `LlamaCppInferenceProvider` (loopback llama.cpp-family server, Ollama-compatible constrained JSON via `format=<schema>` + `think=false`, keep_alive warm/unload; **verified live** against real qwen3:4b), `MLXInferenceProvider` (typed-unavailable until `mlx_lm` installed), and `AnthropicInferenceProvider` (**disabled unless OmniMac_ALLOW_CLOUD=1 AND a key exists, and refused under isolation; never in the fallback ladder**). `NetworkIsolationGuard` refuses any non-loopback endpoint in isolation mode at construction and per request. `ModelRegistry` stores model metadata + sha256 integrity hash as DATA (no auto-executed remote code). The default is llama.cpp-family-first because it is the only runtime PRESENT on the target machine (Apple M4, Ollama running); MLX is compared when installed. Rejected: routing planning through a tool-executing agent loop (violates planner-never-executes); making cloud a silent fallback (violates local-first); binding the inference server to a non-loopback interface.
 
 ## ADR-028: Hybrid intent routing + local constrained planner
 **Date:** 2026-07-13 · **Status:** Accepted
@@ -152,7 +152,7 @@ Terminal semantic AX presentation classifies authoritative task state, dotted AX
 
 ## ADR-038: Accessibility permission is fresh execution authority
 **Date:** 2026-07-14 · **Status:** Accepted
-`AXIsProcessTrusted` is observed through a typed five-state service. Cached state is presentation-only; plan validation and every operation force fresh trust, including another probe immediately before mutation. Revocation therefore stops before adapter mutation. System Settings can open once only after a literal explicit user request, and THOTH never clicks TCC controls or equates a settings visit with a grant. Rejected: cached permission as authority, automated permission granting, repeated prompting, and failing unrelated non-AX capabilities when TCC is absent.
+`AXIsProcessTrusted` is observed through a typed five-state service. Cached state is presentation-only; plan validation and every operation force fresh trust, including another probe immediately before mutation. Revocation therefore stops before adapter mutation. System Settings can open once only after a literal explicit user request, and OmniMac never clicks TCC controls or equates a settings visit with a grant. Rejected: cached permission as authority, automated permission granting, repeated prompting, and failing unrelated non-AX capabilities when TCC is absent.
 
 ## ADR-039: AX snapshots are bounded, untrusted, and operation-local
 **Date:** 2026-07-14 · **Status:** Accepted
@@ -164,7 +164,7 @@ Chromium's profile orders `browser_dom` before Accessibility. Playwright owns pa
 
 ## ADR-041: Restricted subprocess remains primary over Terminal AX
 **Date:** 2026-07-14 · **Status:** Accepted
-Terminal's profile contains only bounded AX snapshot rules. Commands execute through the restricted argv-only subprocess tool with scope, risk, timeout, cancellation, redaction, and independent verification; THOTH never opens or foregrounds Terminal merely to run a background command. Rejected: typing commands into Terminal through AX, reading terminal history, and treating visible terminal output as shell execution authority.
+Terminal's profile contains only bounded AX snapshot rules. Commands execute through the restricted argv-only subprocess tool with scope, risk, timeout, cancellation, redaction, and independent verification; OmniMac never opens or foregrounds Terminal merely to run a background command. Rejected: typing commands into Terminal through AX, reading terminal history, and treating visible terminal output as shell execution authority.
 
 ## ADR-042: whisper.cpp is the primary local STT boundary
 **Date:** 2026-07-14 · **Status:** Accepted, live model evidence pending
@@ -200,7 +200,7 @@ Tauri owns the global shortcut, menu-bar item, and non-focus-stealing overlay. N
 
 ## ADR-050: Accessibility runs in a stable local helper identity
 **Date:** 2026-07-14 · **Status:** Accepted, Developer ID release signing pending
-The daemon uses `me.adityalabs.thoth.axhelper` over a current-user mode-0600 Unix socket authenticated by peer UID. The versioned protocol has only bounded semantic AX operations and no network listener, coordinates, shell, plan, approval, or profile mutation. Helper absence/trust failure is typed unavailable with no Python fallback. Rejected: granting TCC to uv Python/Terminal and exposing AX over HTTP.
+The daemon uses `me.adityalabs.omnimac.axhelper` over a current-user mode-0600 Unix socket authenticated by peer UID. The versioned protocol has only bounded semantic AX operations and no network listener, coordinates, shell, plan, approval, or profile mutation. Helper absence/trust failure is typed unavailable with no Python fallback. Rejected: granting TCC to uv Python/Terminal and exposing AX over HTTP.
 
 ## ADR-051: Local speech artifacts require SHA-256 pins
 **Date:** 2026-07-14 · **Status:** Accepted

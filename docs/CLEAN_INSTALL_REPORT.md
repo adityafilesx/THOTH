@@ -1,13 +1,13 @@
-# THOTH clean-install report
+# OmniMac clean-install report
 
 **Date:** 2026-07-14  
 **Outcome:** failed release gate; no installable complete product bundle
 
-Tauri produced a 9.5 MB `THOTH.app` and 2.9 MB DMG. Inspection showed only the
+Tauri produced a 9.5 MB `OmniMac.app` and 2.9 MB DMG. Inspection showed only the
 desktop executable, icon, and plist. The bundle does not contain or install the
 Python daemon, AX helper, whisper.cpp runtime, Whisper model, local-model setup,
 launch agent, onboarding, upgrade logic, or uninstall/data-removal workflow.
-Its bundle identifier/version remain `dev.thoth.desktop` / `0.1.0`, and the
+Its bundle identifier/version remain `dev.omnimac.desktop` / `0.1.0`, and the
 plist has no microphone usage description.
 
 The artifact was therefore not installed into another macOS account and is not

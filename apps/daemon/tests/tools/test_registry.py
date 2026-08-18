@@ -4,16 +4,16 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from thoth_daemon.core.focus import FocusPolicy
-from thoth_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
-from thoth_daemon.tools.base import (
+from omnimac_daemon.core.focus import FocusPolicy
+from omnimac_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
+from omnimac_daemon.tools.base import (
     DuplicateToolError,
     InvalidToolDefinitionError,
     ToolDefinition,
     UnknownToolError,
 )
-from thoth_daemon.tools.mock_tools import build_registry
-from thoth_daemon.tools.registry import ToolRegistry
+from omnimac_daemon.tools.mock_tools import build_registry
+from omnimac_daemon.tools.registry import ToolRegistry
 
 
 @pytest.fixture()
@@ -21,9 +21,7 @@ def registry() -> ToolRegistry:
     return build_registry()
 
 
-def invocation(
-    tool_name: str, arguments: dict[str, object], dry_run: bool = False
-) -> ToolInvocation:
+def invocation(tool_name: str, arguments: dict[str, object], dry_run: bool = False) -> ToolInvocation:
     return ToolInvocation(
         task_id="t1",
         step_id="s1",
@@ -57,9 +55,7 @@ class TestRegistration:
             assert tool.description
             assert isinstance(tool.focus_policy, FocusPolicy)
 
-    def test_missing_or_invalid_focus_policy_fails_registration(
-        self, registry: ToolRegistry
-    ) -> None:
+    def test_missing_or_invalid_focus_policy_fails_registration(self, registry: ToolRegistry) -> None:
         tool = registry.get("mock_read_file")
         tool.focus_policy = None  # type: ignore[assignment]
         fresh = ToolRegistry()
@@ -121,9 +117,7 @@ class TestExecution:
 
 
 class TestRedaction:
-    async def test_declared_redaction_fields_applied_in_result(
-        self, registry: ToolRegistry
-    ) -> None:
+    async def test_declared_redaction_fields_applied_in_result(self, registry: ToolRegistry) -> None:
         result = await registry.execute(
             invocation(
                 "mock_send_email",

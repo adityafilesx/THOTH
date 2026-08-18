@@ -3,7 +3,7 @@
  * Shown only when the daemon has no real tasks, always behind a visible
  * "MOCK DATA" badge. Never mixed with live daemon state.
  */
-import type { AuditEvent, ExecutionPlan, Task } from "@thoth/shared-schemas";
+import type { AuditEvent, ExecutionPlan, Task } from "@omnimac/shared-schemas";
 
 const MOCK_CORR = "mock-corr-0001";
 
@@ -12,7 +12,7 @@ export const MOCK_PLAN: ExecutionPlan = {
   correlation_id: MOCK_CORR,
   task_id: "mock-task-1",
   summary:
-    "Continue the THOTH project: restore workspace and start dev services",
+    "Continue the OmniMac project: restore workspace and start dev services",
   steps: [
     {
       id: "mock-step-1",
@@ -20,14 +20,14 @@ export const MOCK_PLAN: ExecutionPlan = {
       index: 0,
       title: "Inspect repository status",
       tool_name: "mock_read_file",
-      arguments: { path: "~/projects/thoth/README.md" },
+      arguments: { path: "~/projects/omnimac/README.md" },
       declared_risk: "R0",
       focus_policy: "do_not_steal_focus",
       status: "succeeded",
       verification_checks: [
         {
           kind: "file_exists",
-          params: { path: "~/projects/thoth/README.md" },
+          params: { path: "~/projects/omnimac/README.md" },
           description: "",
           require: "all",
           children: [],
@@ -71,7 +71,7 @@ export const MOCK_PLAN: ExecutionPlan = {
       verification_checks: [
         {
           kind: "git_state",
-          params: { repo: "~/projects/thoth", branch: "release/0.1" },
+          params: { repo: "~/projects/omnimac", branch: "release/0.1" },
           description: "",
           require: "all",
           children: [],
@@ -86,7 +86,7 @@ export const MOCK_PLAN: ExecutionPlan = {
 export const MOCK_TASK: Task = {
   id: "mock-task-1",
   correlation_id: MOCK_CORR,
-  goal: "Continue the THOTH project",
+  goal: "Continue the OmniMac project",
   source: "text",
   state: "EXECUTING",
   plan: MOCK_PLAN,
@@ -103,7 +103,7 @@ export const MOCK_AUDIT: AuditEvent[] = [
     task_id: "mock-task-1",
     seq: 1,
     event_type: "task.created",
-    payload: { goal: "Continue the THOTH project" },
+    payload: { goal: "Continue the OmniMac project" },
     created_at: "2026-07-11T09:00:00Z",
     prev_hash: "",
     hash: "mock-hash-1",

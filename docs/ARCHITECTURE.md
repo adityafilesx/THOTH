@@ -1,4 +1,4 @@
-# THOTH Architecture
+# OmniMac Architecture
 
 ## 1. System overview
 
@@ -29,7 +29,7 @@ The **planner never directly executes tools**. Tool execution happens only insid
 
 ## 3. Daemon modules
 
-| Module | Path (`src/thoth_daemon/`) | Responsibility |
+| Module | Path (`src/omnimac_daemon/`) | Responsibility |
 |---|---|---|
 | API gateway | `api/` | REST endpoints; request validation; no business logic |
 | WebSocket event stream | `api/ws.py`, `events/bus.py` | In-process async pub/sub fanned out to WS clients |

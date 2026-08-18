@@ -7,7 +7,7 @@ from threading import Event
 import pytest
 from pydantic import ValidationError
 
-from thoth_daemon.core.application_profiles import (
+from omnimac_daemon.core.application_profiles import (
     ApplicationProfile,
     ApplicationProfileRegistry,
     AXCapabilityRule,
@@ -16,13 +16,13 @@ from thoth_daemon.core.application_profiles import (
     InterfaceKind,
     ProfileVerifier,
 )
-from thoth_daemon.core.ax_controller import AXController
-from thoth_daemon.core.ax_diagnostics import AXDiagnosticsStore
-from thoth_daemon.core.focus import FocusPolicy
-from thoth_daemon.macos.ax_permission import AXPermissionError, AXPermissionService
-from thoth_daemon.macos.semantic_ax import MockSemanticAXAdapter
-from thoth_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
-from thoth_daemon.schemas.ax import (
+from omnimac_daemon.core.ax_controller import AXController
+from omnimac_daemon.core.ax_diagnostics import AXDiagnosticsStore
+from omnimac_daemon.core.focus import FocusPolicy
+from omnimac_daemon.macos.ax_permission import AXPermissionError, AXPermissionService
+from omnimac_daemon.macos.semantic_ax import MockSemanticAXAdapter
+from omnimac_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
+from omnimac_daemon.schemas.ax import (
     AXApplicationSnapshot,
     AXElementSnapshot,
     AXValueKind,
@@ -30,8 +30,8 @@ from thoth_daemon.schemas.ax import (
     AXVerificationExpectation,
     AXWindowSnapshot,
 )
-from thoth_daemon.tools.registry import ToolRegistry
-from thoth_daemon.tools.semantic_ax_tools import (
+from omnimac_daemon.tools.registry import ToolRegistry
+from omnimac_daemon.tools.semantic_ax_tools import (
     MAX_AX_ACTION_SECONDS,
     MAX_AX_RESOLUTION_ATTEMPTS,
     MAX_AX_WAIT_SECONDS,
@@ -39,7 +39,7 @@ from thoth_daemon.tools.semantic_ax_tools import (
 )
 
 NOW = datetime(2026, 7, 14, 15, tzinfo=UTC)
-BUNDLE = "me.adityalabs.thoth.axtest"
+BUNDLE = "me.adityalabs.omnimac.axtest"
 CAPABILITIES = (
     "ax_inspect_application",
     "ax_inspect_window",
@@ -121,16 +121,14 @@ def _profile() -> ApplicationProfileRegistry:
         [
             ApplicationProfile(
                 bundle_id=BUNDLE,
-                display_name="THOTH Accessibility Test App",
+                display_name="OmniMac Accessibility Test App",
                 version="1.0.0",
                 required_permissions=("accessibility",),
                 verified_capabilities=CAPABILITIES,
                 experimental_capabilities=(),
                 forbidden_operations=("credential_dialog", "system_security_settings"),
                 preferred_interface_order=(InterfaceKind.ACCESSIBILITY,),
-                verifier_mapping={
-                    capability: ProfileVerifier.ACCESSIBILITY_VALUE for capability in CAPABILITIES
-                },
+                verifier_mapping={capability: ProfileVerifier.ACCESSIBILITY_VALUE for capability in CAPABILITIES},
                 default_focus_behaviour=FocusPolicy.RESTORE_PREVIOUS_FOCUS,
                 last_real_verification_date=date(2026, 7, 14),
                 ax_capability_rules=_rules(),
@@ -174,7 +172,7 @@ def _adapter(*elements: AXElementSnapshot) -> MockSemanticAXAdapter:
     )
     return MockSemanticAXAdapter.from_windows(
         bundle_id=BUNDLE,
-        display_name="THOTH Accessibility Test App",
+        display_name="OmniMac Accessibility Test App",
         process_identifier=123,
         windows=[window],
         captured_at=NOW,
@@ -242,9 +240,7 @@ class TestContracts:
         assert tool.requested_scope(args) == ResourceScope(apps=[BUNDLE])
         assert tool.focus_target(args) == BUNDLE
         with pytest.raises(ValidationError):
-            tool.input_model.model_validate(
-                {**_base_args("ax_read_value"), "query": _query(), "screen_x": 20}
-            )
+            tool.input_model.model_validate({**_base_args("ax_read_value"), "query": _query(), "screen_x": 20})
 
     def test_tool_cannot_claim_a_different_profile_capability(self) -> None:
         registry, _ = _registry()
@@ -295,7 +291,7 @@ class TestReads:
         )
         adapter = MockSemanticAXAdapter.from_windows(
             bundle_id=BUNDLE,
-            display_name="THOTH Accessibility Test App",
+            display_name="OmniMac Accessibility Test App",
             process_identifier=123,
             windows=[background, modal],
             captured_at=NOW,
@@ -328,9 +324,7 @@ class TestReads:
     async def test_inspect_find_read_and_supported_actions(self) -> None:
         registry, _ = _registry()
         inspect = registry.get("ax.inspect_application")
-        inspected = await inspect.run(
-            inspect.input_model.model_validate(_base_args("ax_inspect_application")), False
-        )
+        inspected = await inspect.run(inspect.input_model.model_validate(_base_args("ax_inspect_application")), False)
         assert inspected.snapshot.bundle_id == BUNDLE
 
         find = registry.get("ax.find_element")
@@ -349,9 +343,7 @@ class TestReads:
 
         actions = registry.get("ax.list_supported_actions")
         listed = await actions.run(
-            actions.input_model.model_validate(
-                {**_base_args("ax_list_supported_actions"), "query": _query()}
-            ),
+            actions.input_model.model_validate({**_base_args("ax_list_supported_actions"), "query": _query()}),
             False,
         )
         assert listed.actions == ("AXConfirm",)
@@ -360,18 +352,14 @@ class TestReads:
         registry, _ = _registry(trusted=False)
         tool = registry.get("ax.inspect_application")
         with pytest.raises(AXPermissionError):
-            await tool.run(
-                tool.input_model.model_validate(_base_args("ax_inspect_application")), False
-            )
+            await tool.run(tool.input_model.model_validate(_base_args("ax_inspect_application")), False)
         assert registry.has("ax.inspect_application")
 
     async def test_window_and_wait_tools_return_current_bounded_state(self) -> None:
         registry, _ = _registry()
         window_tool = registry.get("ax.inspect_window")
         window = await window_tool.run(
-            window_tool.input_model.model_validate(
-                {**_base_args("ax_inspect_window"), "window_identifier": "main"}
-            ),
+            window_tool.input_model.model_validate({**_base_args("ax_inspect_window"), "window_identifier": "main"}),
             False,
         )
         assert window.snapshot is not None and window.snapshot.identifier == "main"

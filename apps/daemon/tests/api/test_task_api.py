@@ -47,21 +47,13 @@ class TestApprovalEndpoints:
         pending = (await client.get("/api/approvals/pending")).json()
         assert len(pending) == 1
 
-        final = (
-            await client.post(
-                f"/api/approvals/{pending[0]['id']}/decision", json={"approved": True}
-            )
-        ).json()
+        final = (await client.post(f"/api/approvals/{pending[0]['id']}/decision", json={"approved": True})).json()
         assert final["state"] == "COMPLETED"
 
     async def test_r2_deny_fails_task(self, client: AsyncClient) -> None:
         await client.post("/api/tasks", json={"goal": "send the email"})
         pending = (await client.get("/api/approvals/pending")).json()
-        final = (
-            await client.post(
-                f"/api/approvals/{pending[0]['id']}/decision", json={"approved": False}
-            )
-        ).json()
+        final = (await client.post(f"/api/approvals/{pending[0]['id']}/decision", json={"approved": False})).json()
         assert final["state"] == "FAILED"
 
     async def test_r3_task_fails(self, client: AsyncClient) -> None:

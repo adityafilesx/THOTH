@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.tools.fs_io import BinaryFileError, atomic_write, read_text_capped
+from omnimac_daemon.tools.fs_io import BinaryFileError, atomic_write, read_text_capped
 
 
 def test_read_small_file_not_truncated(tmp_path: Path) -> None:

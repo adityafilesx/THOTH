@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.tools.shell_tool import ShellRun
+from omnimac_daemon.tools.shell_tool import ShellRun
 
 
 def _tool() -> ShellRun:
@@ -25,9 +25,7 @@ async def test_dry_run_executes_nothing(tmp_path: Path) -> None:
 async def test_nonzero_exit_is_failure(tmp_path: Path) -> None:
     tool = _tool()
     with pytest.raises(RuntimeError):
-        await tool.run(
-            tool.input_model(command="ls no_such_dir_here", cwd=str(tmp_path)), dry_run=False
-        )
+        await tool.run(tool.input_model(command="ls no_such_dir_here", cwd=str(tmp_path)), dry_run=False)
 
 
 async def test_offlist_executable_refused(tmp_path: Path) -> None:
@@ -43,7 +41,7 @@ async def test_metacharacter_command_refused(tmp_path: Path) -> None:
 
 
 def test_requested_scope_includes_cwd_and_path_args(tmp_path: Path) -> None:
-    from thoth_daemon.security.paths import expand_and_resolve
+    from omnimac_daemon.security.paths import expand_and_resolve
 
     tool = _tool()
     scope = tool.requested_scope(tool.input_model(command="cat /etc/hosts", cwd=str(tmp_path)))
@@ -63,9 +61,7 @@ def test_tool_contract_flags() -> None:
 
 
 async def test_terminate_kills_running_process() -> None:
-    proc = await asyncio.create_subprocess_exec(
-        "sleep", "30", stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL
-    )
+    proc = await asyncio.create_subprocess_exec("sleep", "30", stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
     assert proc.returncode is None
     await ShellRun._terminate(proc)
     assert proc.returncode is not None
@@ -73,9 +69,7 @@ async def test_terminate_kills_running_process() -> None:
 
 async def test_run_cancellation_terminates(tmp_path: Path) -> None:
     tool = _tool()
-    task = asyncio.ensure_future(
-        tool.run(tool.input_model(command="find /", cwd=str(tmp_path)), dry_run=False)
-    )
+    task = asyncio.ensure_future(tool.run(tool.input_model(command="find /", cwd=str(tmp_path)), dry_run=False))
     await asyncio.sleep(0.15)
     task.cancel()
     with pytest.raises(asyncio.CancelledError):

@@ -10,28 +10,28 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.browser.session import (
+from omnimac_daemon.browser.session import (
     MockBrowserSession,
     MockElement,
     MockPage,
     SubmissionError,
 )
-from thoth_daemon.core.injection_guard import scan_untrusted
-from thoth_daemon.schemas import (
+from omnimac_daemon.core.injection_guard import scan_untrusted
+from omnimac_daemon.schemas import (
     Provenance,
     ResourceScope,
     RiskLevel,
     TaggedContent,
     ToolInvocation,
 )
-from thoth_daemon.tools.browser_interaction_tools import (
+from omnimac_daemon.tools.browser_interaction_tools import (
     BrowserFill,
     BrowserOpen,
     BrowserPrepareSubmission,
     BrowserSubmit,
     register_browser_interaction_tools,
 )
-from thoth_daemon.tools.registry import ToolRegistry
+from omnimac_daemon.tools.registry import ToolRegistry
 
 FORM_URL = "https://forms.example/contact"
 THANKS_URL = "https://forms.example/thanks"
@@ -46,9 +46,7 @@ def _session() -> MockBrowserSession:
                 text=f"Contact us. {INJECTION}",
                 elements={
                     "#name": MockElement(tag="input", form="#contact", name="name", value=""),
-                    "#password": MockElement(
-                        tag="input", form="#contact", name="password", value=""
-                    ),
+                    "#password": MockElement(tag="input", form="#contact", name="password", value=""),
                     "#go": MockElement(tag="button", text="Send"),
                 },
                 forms={"#contact": THANKS_URL},
@@ -67,9 +65,7 @@ async def _prepared(session: MockBrowserSession) -> str:
     await open_tool.run(open_tool.input_model.model_validate({"url": FORM_URL}), False)
     fill = BrowserFill(session)
     await fill.run(
-        fill.input_model.model_validate(
-            {"selector": "#name", "value": "Ada", "current_url": FORM_URL}
-        ),
+        fill.input_model.model_validate({"selector": "#name", "value": "Ada", "current_url": FORM_URL}),
         False,
     )
     prepare = BrowserPrepareSubmission(session)
@@ -87,16 +83,12 @@ class TestTwoPhaseSubmission:
         await open_tool.run(open_tool.input_model.model_validate({"url": FORM_URL}), False)
         fill = BrowserFill(session)
         await fill.run(
-            fill.input_model.model_validate(
-                {"selector": "#name", "value": "Ada", "current_url": FORM_URL}
-            ),
+            fill.input_model.model_validate({"selector": "#name", "value": "Ada", "current_url": FORM_URL}),
             False,
         )
         prepare = BrowserPrepareSubmission(session)
         out = await prepare.run(
-            prepare.input_model.model_validate(
-                {"form_selector": "#contact", "current_url": FORM_URL}
-            ),
+            prepare.input_model.model_validate({"form_selector": "#contact", "current_url": FORM_URL}),
             False,
         )
         assert out.action_url == THANKS_URL
@@ -125,9 +117,7 @@ class TestTwoPhaseSubmission:
         submit = BrowserSubmit(session)
         with pytest.raises(SubmissionError):
             await submit.run(
-                submit.input_model.model_validate(
-                    {"submission_id": "not-a-real-id", "action_url": THANKS_URL}
-                ),
+                submit.input_model.model_validate({"submission_id": "not-a-real-id", "action_url": THANKS_URL}),
                 False,
             )
 
@@ -137,9 +127,7 @@ class TestTwoPhaseSubmission:
         # Mutate the form AFTER preparation.
         fill = BrowserFill(session)
         await fill.run(
-            fill.input_model.model_validate(
-                {"selector": "#name", "value": "EVIL", "current_url": FORM_URL}
-            ),
+            fill.input_model.model_validate({"selector": "#name", "value": "EVIL", "current_url": FORM_URL}),
             False,
         )
         submit = BrowserSubmit(session)
@@ -216,9 +204,7 @@ class TestHardening:
         submit = BrowserSubmit(session)
         with pytest.raises(SubmissionError, match="action"):
             await submit.run(
-                submit.input_model.model_validate(
-                    {"submission_id": sid, "action_url": "https://evil.example/steal"}
-                ),
+                submit.input_model.model_validate({"submission_id": sid, "action_url": "https://evil.example/steal"}),
                 False,
             )
         assert session.submitted == []
@@ -263,13 +249,13 @@ playwright = pytest.importorskip("playwright.async_api", reason="playwright not 
 
 
 async def test_real_playwright_session_against_local_fixture(tmp_path: Path) -> None:
-    from thoth_daemon.browser.session import PlaywrightSession
+    from omnimac_daemon.browser.session import PlaywrightSession
 
     fixture = Path(__file__).parent.parent / "fixtures" / "form_page.html"
     session = PlaywrightSession()
     try:
         state = await session.open(fixture.as_uri(), timeout_s=15)
-        assert "THOTH fixture form" in state.title or "thoth" in state.text.lower()
+        assert "OmniMac fixture form" in state.title or "omnimac" in state.text.lower()
         await session.fill("#name", "Ada")
         prepared = await session.prepare_submission("#contact")
         assert prepared.fields.get("name") == "Ada"

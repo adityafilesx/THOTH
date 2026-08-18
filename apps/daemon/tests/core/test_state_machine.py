@@ -1,18 +1,16 @@
 import pytest
 
-from thoth_daemon.core.state_machine import (
+from omnimac_daemon.core.state_machine import (
     TRANSITIONS,
     InvalidTransitionError,
     TaskStateMachine,
 )
-from thoth_daemon.schemas import TERMINAL_STATES, TaskState
+from omnimac_daemon.schemas import TERMINAL_STATES, TaskState
 
 ALL_STATES = list(TaskState)
 
 ALLOWED_PAIRS = [(src, dst) for src, dsts in TRANSITIONS.items() for dst in dsts]
-INVALID_PAIRS = [
-    (src, dst) for src in ALL_STATES for dst in ALL_STATES if dst not in TRANSITIONS[src]
-]
+INVALID_PAIRS = [(src, dst) for src in ALL_STATES for dst in ALL_STATES if dst not in TRANSITIONS[src]]
 
 
 class Recorder:

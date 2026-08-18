@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build and stage THOTH's local-only macOS runtime assets for Tauri."""
+"""Build and stage OmniMac's local-only macOS runtime assets for Tauri."""
 
 from __future__ import annotations
 
@@ -67,7 +67,7 @@ def main() -> None:
         "--noconfirm",
         "--onefile",
         "--name",
-        "thoth-daemon",
+        "omnimac-daemon",
         "--paths",
         str(DAEMON / "src"),
         "--hidden-import",
@@ -78,7 +78,7 @@ def main() -> None:
         str(pyinstaller_work),
         "--specpath",
         str(pyinstaller_spec),
-        str(DAEMON / "src" / "thoth_daemon" / "main.py"),
+        str(DAEMON / "src" / "omnimac_daemon" / "main.py"),
     )
     run(str(HELPER / "scripts" / "package.sh"))
 
@@ -87,13 +87,13 @@ def main() -> None:
     (resources / "runtime").mkdir(parents=True)
     (resources / "models").mkdir(parents=True)
 
-    daemon_target = resources / "runtime" / "thoth-daemon"
-    helper_app = resources / "THOTH Accessibility Helper.app"
-    helper_executable = helper_app / "Contents" / "MacOS" / "THOTHAXHelper"
+    daemon_target = resources / "runtime" / "omnimac-daemon"
+    helper_app = resources / "OmniMac Accessibility Helper.app"
+    helper_executable = helper_app / "Contents" / "MacOS" / "OmniMacAXHelper"
     whisper_target = resources / "runtime" / "whisper-cli"
     model_target = resources / "models" / "ggml-base.en.bin"
-    shutil.copy2(pyinstaller_dist / "thoth-daemon", daemon_target)
-    shutil.copytree(HELPER / "dist" / "THOTH Accessibility Helper.app", helper_app)
+    shutil.copy2(pyinstaller_dist / "omnimac-daemon", daemon_target)
+    shutil.copytree(HELPER / "dist" / "OmniMac Accessibility Helper.app", helper_app)
     shutil.copy2(WHISPER, whisper_target)
     shutil.copy2(MODEL, model_target)
     for executable in (daemon_target, helper_executable, whisper_target):
@@ -101,10 +101,10 @@ def main() -> None:
 
     manifest = {
         "schema_version": 1,
-        "daemon": asset(daemon_target, "runtime/thoth-daemon"),
+        "daemon": asset(daemon_target, "runtime/omnimac-daemon"),
         "helper": asset(
             helper_executable,
-            "THOTH Accessibility Helper.app/Contents/MacOS/THOTHAXHelper",
+            "OmniMac Accessibility Helper.app/Contents/MacOS/OmniMacAXHelper",
         ),
         "whisper_executable": asset(whisper_target, "runtime/whisper-cli"),
         "whisper_model": asset(model_target, "models/ggml-base.en.bin"),
@@ -113,7 +113,7 @@ def main() -> None:
     temporary_manifest = manifest_path.with_suffix(".tmp")
     temporary_manifest.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     os.replace(temporary_manifest, manifest_path)
-    print(f"Prepared THOTH runtime: {manifest_path}")
+    print(f"Prepared OmniMac runtime: {manifest_path}")
 
 
 if __name__ == "__main__":

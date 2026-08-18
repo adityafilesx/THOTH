@@ -1,14 +1,12 @@
 from pathlib import Path
 
-from thoth_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
-from thoth_daemon.tools.registry import ToolRegistry
-from thoth_daemon.tools.shell_tool import register_shell_tool
+from omnimac_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
+from omnimac_daemon.tools.registry import ToolRegistry
+from omnimac_daemon.tools.shell_tool import register_shell_tool
 
 
 def _inv(args: dict) -> ToolInvocation:
-    return ToolInvocation(
-        task_id="t", step_id="s", tool_name="shell_run", arguments=args, effective_risk=RiskLevel.R2
-    )
+    return ToolInvocation(task_id="t", step_id="s", tool_name="shell_run", arguments=args, effective_risk=RiskLevel.R2)
 
 
 async def test_backstop_refuses_out_of_scope_arg(tmp_path: Path) -> None:
@@ -33,7 +31,5 @@ async def test_backstop_refuses_denylisted_arg() -> None:
     reg = ToolRegistry()
     register_shell_tool(reg)
     allowed = ResourceScope(paths=[str(Path.home())])
-    result = await reg.execute(
-        _inv({"command": "cat .ssh/id_rsa", "cwd": str(Path.home())}), allowed
-    )
+    result = await reg.execute(_inv({"command": "cat .ssh/id_rsa", "cwd": str(Path.home())}), allowed)
     assert not result.ok and "scope violation" in (result.error or "")

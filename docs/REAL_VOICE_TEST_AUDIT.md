@@ -1,4 +1,4 @@
-# THOTH real voice test recovery audit
+# OmniMac real voice test recovery audit
 
 Date: 2026-07-14  
 Branch: `phase-5/persona`  
@@ -25,12 +25,12 @@ This run is limited to real microphone and voice-path validation. It does not in
 
 | Component | How it is started or selected | Starting observation |
 |---|---|---|
-| FastAPI daemon | `uv run --project apps/daemon python -m thoth_daemon.main` | Running on `127.0.0.1:7710`; `/api/health` returned daemon `ok`, database `ok`. |
+| FastAPI daemon | `uv run --project apps/daemon python -m omnimac_daemon.main` | Running on `127.0.0.1:7710`; `/api/health` returned daemon `ok`, database `ok`. |
 | Desktop frontend | Vite through the Tauri dev command | Running on `http://localhost:5188` because 5173/5174 are occupied by unrelated local processes. |
-| Native desktop | `VITE_THOTH_TOKEN=... pnpm -C apps/desktop tauri dev --config ...` | Native `target/debug/thoth-desktop` started and the THOTH window was observed using Codex computer interaction. |
+| Native desktop | `VITE_OmniMac_TOKEN=... pnpm -C apps/desktop tauri dev --config ...` | Native `target/debug/omnimac-desktop` started and the OmniMac window was observed using Codex computer interaction. |
 | Local planner | Ollama on loopback, configured model `qwen3:4b` | Ollama is running locally. Runtime snapshot reported the planner unloaded until needed. No cloud fallback is configured. |
-| Whisper runtime | `THOTH_WHISPER_EXECUTABLE` | Local official whisper.cpp v1.8.6 binary exists at `data/runtime/whisper.cpp-v1.8.6/build/bin/whisper-cli`; the configured binary integrity pin was previously verified. |
-| Whisper model | `THOTH_WHISPER_MODEL_PATH` and `THOTH_WHISPER_MODEL_SHA256` | `ggml-base.en.bin` is selected. `/api/runtime` reported `idle_cached` and integrity verified. |
+| Whisper runtime | `OmniMac_WHISPER_EXECUTABLE` | Local official whisper.cpp v1.8.6 binary exists at `data/runtime/whisper.cpp-v1.8.6/build/bin/whisper-cli`; the configured binary integrity pin was previously verified. |
+| Whisper model | `OmniMac_WHISPER_MODEL_PATH` and `OmniMac_WHISPER_MODEL_SHA256` | `ggml-base.en.bin` is selected. `/api/runtime` reported `idle_cached` and integrity verified. |
 | Local TTS | macOS local speech provider | Implemented and registered. Runtime snapshot reported unloaded until needed; readiness must be exercised in the real flow. |
 | AX helper | Existing native helper, when running | Not required to establish microphone capture. Accessibility permission was previously denied and must not block voice-only testing. |
 
@@ -88,24 +88,24 @@ Live recovery evidence on 2026-07-14:
 - `/api/health` returned daemon `ok` and database `ok`.
 - The local runtime snapshot reported the Whisper binary/model integrity pin verified and no cloud fallback.
 - The Chrome development UI showed `CONNECTED`.
-- A typed `thoth stop` traversed `/api/commands`, returned HTTP 200, created no task, and visibly displayed `Stopped. No external action was taken.` without model use.
+- A typed `omnimac stop` traversed `/api/commands`, returned HTTP 200, created no task, and visibly displayed `Stopped. No external action was taken.` without model use.
 - The first real microphone attempt delivered PCM to the daemon and local Whisper returned partial recognition. Because the release/cancellation defect interrupted finalisation, it is recorded as an unsuccessful diagnostic attempt, not a passed command.
-- A live typed `Thoth, run the tests.` command now stops at `WAITING_FOR_APPROVAL` with an exact R2 `shell_run make test` invocation and an exit-code verifier. No approval was bypassed.
-- Live `thoth stop`, `check the daemon`, and `start the backend` commands all returned deterministic no-task controls. Live `approve it` returned clarification and created no task.
+- A live typed `Omnimac, run the tests.` command now stops at `WAITING_FOR_APPROVAL` with an exact R2 `shell_run make test` invocation and an exit-code verifier. No approval was bypassed.
+- Live `omnimac stop`, `check the daemon`, and `start the backend` commands all returned deterministic no-task controls. Live `approve it` returned clarification and created no task.
 - Finder, TextEdit, and Visual Studio Code application grants were created through the authenticated permissions API from the user's explicit authorization. They are persistent, scoped records; no profile expanded itself from model output.
-- A real TextEdit launch attempt demonstrated that this Codex-hosted test process can delay macOS foreground transitions while terminal automation is active. THOTH therefore ended `FAILED_REQUIRES_USER`; it did not claim completion. A separate native AppKit probe could focus TextEdit once the controlling call yielded. This is recorded as an environment-limited focus capstone, not a pass.
+- A real TextEdit launch attempt demonstrated that this Codex-hosted test process can delay macOS foreground transitions while terminal automation is active. OmniMac therefore ended `FAILED_REQUIRES_USER`; it did not claim completion. A separate native AppKit probe could focus TextEdit once the controlling call yielded. This is recorded as an environment-limited focus capstone, not a pass.
 - Live `show me the modified files` completed the authoritative three-step read-only skill (`git_status`, `git_log`, `fs_list_dir`) with no model call. A deliberately novel repository-status request produced `planning failed: bad_arguments` plus the safe persona response; neither task nor display payload contained Pydantic internals.
 - The final combined automated gate passed: 996 daemon tests and 95 desktop tests (1,091 total), with one locked-screen focus test skipped. Ruff, Ruff formatting, strict mypy, ESLint, TypeScript, Vite build, Rust check/test, and Alembic upgrade also passed. A strict daemon rerun promoted unhandled worker-thread warnings to errors and remained green.
 - Local macOS TTS playback and interruption were exercised successfully through authenticated voice endpoints. The runtime remained local-only.
 - After restarting the real daemon on the repaired build, `/api/health` was healthy, runtime status was offline/local with the Whisper model integrity verified, typed Stop was model-free with no task creation, and a live voice session returned one cancellation snapshot followed by 404. The route API classified Stop, installed-skill execution, approval clarification, and app-open reflexes without model use.
-- The final live integrity check verified all 11 recent persisted task audit chains and found no `thoth-voice-*` temporary audio file in the system temporary directory.
+- The final live integrity check verified all 11 recent persisted task audit chains and found no `omnimac-voice-*` temporary audio file in the system temporary directory.
 - The packaged exact Accessibility helper was running, but a fresh authenticated probe still reported `not_determined`. The host later locked and the foreground probe reported `com.apple.loginwindow`; these are recorded as blocked environment evidence, not product passes.
 - A current visible desktop re-check could not run because macOS was locked and automatic unlock is intentionally prohibited. The previous unlocked browser UI evidence remains valid for the contained-failure and Accessibility displays, but no new post-restart UI pass is claimed.
 - A clean post-fix real microphone command remains pending. It will not be inferred from automated PCM tests, partial recognition, or typed commands.
 
 ## Exact continuation plan
 
-1. Ask the user to hold push-to-talk and personally speak `Thoth, stop.`; collect the real partial/final transcript, route, control result, latency, and temporary-file evidence.
+1. Ask the user to hold push-to-talk and personally speak `Omnimac, stop.`; collect the real partial/final transcript, route, control result, latency, and temporary-file evidence.
 2. With `base.en`, ask the user to speak the remaining four required smoke commands one at a time. For each command collect partial/final text, correction, route, task/result verification, persona display/spoken result, stage latency, and temporary-audio deletion evidence.
 3. If all five commands enter the real task pipeline, compare tiny.en, base.en, and small.en with the same ten user-spoken commands per model.
 4. Run the remaining real-user command matrix to at least 30 total microphone commands, including safety/ambiguity and operational follow-ups.
@@ -130,4 +130,4 @@ At the current checkpoint, local voice transport into Whisper, authoritative rou
 
 ## Current manual retry
 
-With the daemon and desktop running, hold the microphone button for two to three seconds, say `Thoth, stop.`, release, and wait up to five seconds. The pass requires a visible final transcript, a `reflex / stop` route, `Stopped. No external action was taken.`, no task creation, and no retained temporary audio. A partial transcript alone is not a pass.
+With the daemon and desktop running, hold the microphone button for two to three seconds, say `Omnimac, stop.`, release, and wait up to five seconds. The pass requires a visible final transcript, a `reflex / stop` route, `Stopped. No external action was taken.`, no task creation, and no retained temporary audio. A partial transcript alone is not a pass.

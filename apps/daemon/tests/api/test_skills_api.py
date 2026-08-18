@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from httpx import AsyncClient
 
-from thoth_daemon.schemas import SkillDefinition
-from thoth_daemon.storage.skills import SkillStore
+from omnimac_daemon.schemas import SkillDefinition
+from omnimac_daemon.storage.skills import SkillStore
 
 
 async def test_skills_seeded_with_builtins(client: AsyncClient) -> None:
@@ -27,9 +27,7 @@ async def test_skills_requires_auth(client: AsyncClient) -> None:
 
 async def test_patch_toggles_and_persists(client: AsyncClient, app: FastAPI) -> None:
     store: SkillStore = app.state.skills
-    sk = SkillDefinition(
-        name="demo", description="d", workflow=["fs_stat"], inputs=[], enabled=True
-    )
+    sk = SkillDefinition(name="demo", description="d", workflow=["fs_stat"], inputs=[], enabled=True)
     await store.add_skill(sk)
 
     listed = (await client.get("/api/skills")).json()

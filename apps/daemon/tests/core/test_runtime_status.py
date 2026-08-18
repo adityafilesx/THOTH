@@ -6,12 +6,12 @@ LocalAIRuntimeManager. Persona reports degraded operation honestly.
 
 import pytest
 
-from thoth_daemon.core.persona import ResponseIntent
-from thoth_daemon.core.runtime_status import (
+from omnimac_daemon.core.persona import ResponseIntent
+from omnimac_daemon.core.runtime_status import (
     LocalRuntimeMonitor,
     LocalRuntimeStatus,
 )
-from thoth_daemon.inference.base import ProviderHealth
+from omnimac_daemon.inference.base import ProviderHealth
 
 
 class _Provider:

@@ -8,7 +8,7 @@ class TestCommandEndpoints:
     ) -> None:
         response = await client.post(
             "/api/commands",
-            json={"text": "thoth stop", "source": "text"},
+            json={"text": "omnimac stop", "source": "text"},
         )
 
         assert response.status_code == 200
@@ -16,7 +16,7 @@ class TestCommandEndpoints:
         assert body["route"]["tier"] == "reflex"
         assert body["route"]["reflex_kind"] == "stop"
         assert body["control"] == "stopped"
-        assert body["response"]["display"]["text"] == ("Stopped. No external action was taken.")
+        assert body["response"]["display"]["text"] == ("Stopped as requested, sir. No action was taken.")
         assert body["task"] is None
         assert (await client.get("/api/tasks")).json() == []
 

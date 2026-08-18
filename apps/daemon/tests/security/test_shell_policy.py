@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.security.paths import expand_and_resolve
-from thoth_daemon.security.shell_policy import (
+from omnimac_daemon.security.paths import expand_and_resolve
+from omnimac_daemon.security.shell_policy import (
     ShellPolicyError,
     parse_command,
     validate_executable,
@@ -57,9 +57,7 @@ def test_validate_executable_allows_allowlisted() -> None:
     validate_executable(["git", "status"])
 
 
-@pytest.mark.parametrize(
-    "argv", [["sudo", "ls"], ["rm", "-rf", "x"], ["/tmp/git", "status"], ["curl", "x"]]
-)
+@pytest.mark.parametrize("argv", [["sudo", "ls"], ["rm", "-rf", "x"], ["/tmp/git", "status"], ["curl", "x"]])
 def test_validate_executable_rejects(argv: list[str]) -> None:
     with pytest.raises(ShellPolicyError):
         validate_executable(argv)

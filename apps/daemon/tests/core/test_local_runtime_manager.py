@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from thoth_daemon.core.local_runtime import (
+from omnimac_daemon.core.local_runtime import (
     LocalAIRuntimeManager,
     RuntimeComponent,
     RuntimeDriverHealth,
@@ -61,13 +61,9 @@ class TestLifecycle:
         manager = LocalAIRuntimeManager(memory_limit_bytes=16_000, clock=lambda: now[0])
         manager.register(registration(RuntimeComponent.PLANNER, driver))
 
-        assert (
-            manager.snapshot().components[RuntimeComponent.PLANNER].state is RuntimeState.UNLOADED
-        )
+        assert manager.snapshot().components[RuntimeComponent.PLANNER].state is RuntimeState.UNLOADED
         async with manager.use(RuntimeComponent.PLANNER):
-            assert (
-                manager.snapshot().components[RuntimeComponent.PLANNER].state is RuntimeState.BUSY
-            )
+            assert manager.snapshot().components[RuntimeComponent.PLANNER].state is RuntimeState.BUSY
         status = manager.snapshot().components[RuntimeComponent.PLANNER]
         assert status.state is RuntimeState.IDLE_CACHED
         assert driver.loads == 1
@@ -85,10 +81,7 @@ class TestLifecycle:
         with pytest.raises(RuntimeUnavailable, match="integrity"):
             await manager.ensure_ready(RuntimeComponent.SPEECH_RECOGNITION)
         assert driver.loads == 0
-        assert (
-            manager.snapshot().components[RuntimeComponent.SPEECH_RECOGNITION].state
-            is RuntimeState.FAILED
-        )
+        assert manager.snapshot().components[RuntimeComponent.SPEECH_RECOGNITION].state is RuntimeState.FAILED
 
     async def test_missing_local_runtime_degrades_without_fallback(self) -> None:
         manager = LocalAIRuntimeManager(memory_limit_bytes=16_000)
@@ -107,10 +100,7 @@ class TestLifecycle:
             await manager.ensure_ready(RuntimeComponent.TEXT_TO_SPEECH)
         driver.available = True
         await manager.restart(RuntimeComponent.TEXT_TO_SPEECH)
-        assert (
-            manager.snapshot().components[RuntimeComponent.TEXT_TO_SPEECH].state
-            is RuntimeState.READY
-        )
+        assert manager.snapshot().components[RuntimeComponent.TEXT_TO_SPEECH].state is RuntimeState.READY
         assert driver.unloads == 1
 
     async def test_crash_recovery_attempt_is_bounded(self) -> None:
@@ -164,9 +154,7 @@ class TestResources:
             pass
         await manager.set_battery_saver(True)
         assert manager.snapshot().battery_saver is True
-        assert (
-            manager.snapshot().components[RuntimeComponent.PLANNER].state is RuntimeState.UNLOADED
-        )
+        assert manager.snapshot().components[RuntimeComponent.PLANNER].state is RuntimeState.UNLOADED
 
     async def test_idle_timeout_evicts_warm_cache(self) -> None:
         now = [10.0]
@@ -196,9 +184,7 @@ class TestResources:
         with pytest.raises(asyncio.CancelledError):
             await task
         async with manager.use(RuntimeComponent.PLANNER):
-            assert (
-                manager.snapshot().components[RuntimeComponent.PLANNER].state is RuntimeState.BUSY
-            )
+            assert manager.snapshot().components[RuntimeComponent.PLANNER].state is RuntimeState.BUSY
 
 
 def test_offline_status_is_explicit_and_does_not_disable_reflex_floor() -> None:

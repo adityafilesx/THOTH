@@ -12,7 +12,7 @@ import urllib.request
 
 import pytest
 
-from thoth_daemon.inference import InferenceRequest, LlamaCppInferenceProvider
+from omnimac_daemon.inference import InferenceRequest, LlamaCppInferenceProvider
 
 ENDPOINT = "http://127.0.0.1:11434"
 MODEL = "qwen3:4b"
@@ -40,9 +40,7 @@ PLAN_SCHEMA = {
 
 def _model_available() -> bool:
     try:
-        req = urllib.request.Request(
-            f"{ENDPOINT}/api/tags", headers={"Content-Type": "application/json"}
-        )
+        req = urllib.request.Request(f"{ENDPOINT}/api/tags", headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=3) as resp:
             tags = json.loads(resp.read().decode())
         return any(m.get("name", "").startswith(MODEL) for m in tags.get("models", []))
@@ -50,9 +48,7 @@ def _model_available() -> bool:
         return False
 
 
-pytestmark = pytest.mark.skipif(
-    not _model_available(), reason=f"{MODEL} not pulled / Ollama not running"
-)
+pytestmark = pytest.mark.skipif(not _model_available(), reason=f"{MODEL} not pulled / Ollama not running")
 
 
 async def test_live_constrained_json_plan() -> None:
@@ -61,7 +57,7 @@ async def test_live_constrained_json_plan() -> None:
     result = await provider.generate(
         InferenceRequest(
             system=(
-                "You are THOTH's planner. Output ONLY a JSON plan matching the schema. "
+                "You are OmniMac's planner. Output ONLY a JSON plan matching the schema. "
                 "Use tool_name 'fs_read_file' for reading a file, declared_risk 'R0'."
             ),
             prompt="Read the file at ~/notes.txt",

@@ -1,4 +1,5 @@
-import { ShieldCheck, Square } from "lucide-react";
+import { ShieldCheck, Square, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { api, type TaskPayload } from "@/lib/api";
 
@@ -11,7 +12,17 @@ function label(value: string): string {
 }
 
 export function ExecutionHUD({ task }: { task: TaskPayload | null }) {
+  const [dismissedFor, setDismissedFor] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (task && (task.state === "FAILED" || task.state === "FAILED_REQUIRES_USER")) {
+      const timer = setTimeout(() => setDismissedFor(task.id), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [task?.id, task?.state]);
+
   if (!task || ["COMPLETED", "CANCELLED"].includes(task.state)) return null;
+  if (dismissedFor === task.id) return null;
   const steps = task.plan?.steps ?? [];
   const current = steps.find((step) => ACTIVE_STEP_STATES.has(step.status));
   const index = current ? steps.indexOf(current) + 1 : 0;
@@ -30,6 +41,8 @@ export function ExecutionHUD({ task }: { task: TaskPayload | null }) {
         ? "Approval required"
         : label(task.state);
 
+  const isFailed = task.state === "FAILED" || task.state === "FAILED_REQUIRES_USER";
+
   return (
     <aside
       aria-label="Execution status"
@@ -42,11 +55,17 @@ export function ExecutionHUD({ task }: { task: TaskPayload | null }) {
         </div>
         <button
           type="button"
-          aria-label="Stop active task"
+          aria-label={isFailed ? "Dismiss task" : "Stop active task"}
           className="rounded border border-danger/50 p-1.5 text-danger"
-          onClick={() => void api.globalStop("global_button")}
+          onClick={() => {
+            if (isFailed) {
+              setDismissedFor(task.id);
+            } else {
+              void api.globalStop("global_button");
+            }
+          }}
         >
-          <Square size={12} fill="currentColor" />
+          {isFailed ? <X size={12} /> : <Square size={12} fill="currentColor" />}
         </button>
       </div>
 

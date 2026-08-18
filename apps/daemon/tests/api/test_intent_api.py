@@ -9,7 +9,7 @@ from httpx import AsyncClient
 
 class TestIntentRoute:
     async def test_reflex_stop(self, client: AsyncClient) -> None:
-        r = await client.post("/api/intent/route", json={"text": "Thoth, stop."})
+        r = await client.post("/api/intent/route", json={"text": "Omnimac, stop."})
         assert r.status_code == 200
         body = r.json()
         assert body["tier"] == "reflex"
@@ -24,7 +24,7 @@ class TestIntentRoute:
         assert body["target"] == "organize-workspace"
 
     async def test_natural_test_command_routes_to_seeded_skill(self, client: AsyncClient) -> None:
-        r = await client.post("/api/intent/route", json={"text": "Thoth, run the tests."})
+        r = await client.post("/api/intent/route", json={"text": "Omnimac, run the tests."})
         body = r.json()
         assert body["tier"] == "reflex"
         assert body["reflex_kind"] == "run_skill"

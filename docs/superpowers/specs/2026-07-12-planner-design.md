@@ -7,7 +7,7 @@
 
 The goal says "claude-agent-sdk planner." The `claude-agent-sdk` product is Claude Code as a
 library — a **tool-executing** agent loop. Using it would violate **invariant 1: the planner NEVER
-executes tools.** So THOTH's planner does **not** run an agent loop. It makes a single **planning-only**
+executes tools.** So OmniMac's planner does **not** run an agent loop. It makes a single **planning-only**
 call to Claude (Anthropic Messages API, structured JSON output) that returns a typed `ExecutionPlan`
 over the real tool catalog. The plan is **model output — untrusted** — and is validated against the
 `ExecutionPlan` schema + the tool registry + the policy engine exactly as the mock planner's output
@@ -84,7 +84,7 @@ execution.
 
 The planner is implemented behind the frozen adapter and its logic + untrusted-output containment are
 verified. The live Anthropic call is **not** verified here (no key). Even with the real planner enabled,
-THOTH only *plans* over tools that are still individually scope-/approval-gated — this is the capstone
+OmniMac only *plans* over tools that are still individually scope-/approval-gated — this is the capstone
 that makes goal→plan autonomous, but every action remains gated by the safety core, and slices 6–8's
 adapters that couldn't be OS-verified stay labeled as such.
 

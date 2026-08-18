@@ -12,24 +12,24 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.audit.store import AuditStore
-from thoth_daemon.core.approvals import ApprovalEngine
-from thoth_daemon.core.orchestrator import Orchestrator
-from thoth_daemon.core.planner import DeterministicMockPlanner
-from thoth_daemon.core.policy import PolicyEngine
-from thoth_daemon.core.recovery import RecoveryController
-from thoth_daemon.core.skill_engine import SkillEngine, SkillInputError, seed_builtin_skills
-from thoth_daemon.core.verification import VerificationEngine
-from thoth_daemon.schemas import (
+from omnimac_daemon.audit.store import AuditStore
+from omnimac_daemon.core.approvals import ApprovalEngine
+from omnimac_daemon.core.orchestrator import Orchestrator
+from omnimac_daemon.core.planner import DeterministicMockPlanner
+from omnimac_daemon.core.policy import PolicyEngine
+from omnimac_daemon.core.recovery import RecoveryController
+from omnimac_daemon.core.skill_engine import SkillEngine, SkillInputError, seed_builtin_skills
+from omnimac_daemon.core.verification import VerificationEngine
+from omnimac_daemon.schemas import (
     RiskLevel,
     SkillDefinition,
     SkillStep,
     TaskState,
     WorkspaceProfile,
 )
-from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
-from thoth_daemon.storage.skills import SkillStore
-from thoth_daemon.tools.mock_tools import build_registry
+from omnimac_daemon.storage.db import init_schema, make_engine, make_session_factory
+from omnimac_daemon.storage.skills import SkillStore
+from omnimac_daemon.tools.mock_tools import build_registry
 
 
 def _skill(**overrides) -> SkillDefinition:
@@ -170,7 +170,7 @@ class TestSeeds:
         await init_schema(db)
         store = SkillStore(make_session_factory(db))
         created = await seed_builtin_skills(store)
-        assert len(created) == 6
+        assert len(created) == 7
         again = await seed_builtin_skills(store)
         assert again == []  # idempotent
         names = {s.name for s in await store.list_skills()}
@@ -181,6 +181,7 @@ class TestSeeds:
             "prepare-git-commit",
             "organize-workspace",
             "run-project-tests",
+            "deep-research",
         }
 
     async def test_seeded_skills_expand_cleanly(self, tmp_path: Path) -> None:
@@ -195,6 +196,7 @@ class TestSeeds:
             "prepare-git-commit": {"repo_path": "/p"},
             "organize-workspace": {"workspace_path": "/p"},
             "run-project-tests": {"project_path": "/p"},
+            "deep-research": {"url": "https://example.com", "topic": "test topic", "dest_path": "/p/summary.md"},
         }
         for skill in await store.list_skills():
             plan = engine.expand(skill, inputs[skill.name], task_id="t")

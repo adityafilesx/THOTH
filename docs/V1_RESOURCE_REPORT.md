@@ -1,4 +1,4 @@
-# THOTH v1 resource report
+# OmniMac v1 resource report
 
 **Host:** Apple M4, 16 GiB unified memory, macOS 26.3 (25D125)  
 **Date:** 2026-07-14  

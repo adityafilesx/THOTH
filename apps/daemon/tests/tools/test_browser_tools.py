@@ -1,9 +1,9 @@
 import pytest
 
-from thoth_daemon.browser.browser_adapter import MockBrowser, PlaywrightBrowser
-from thoth_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
-from thoth_daemon.tools.browser_tools import BrowserRead, register_browser_tools
-from thoth_daemon.tools.registry import ToolRegistry
+from omnimac_daemon.browser.browser_adapter import MockBrowser, PlaywrightBrowser
+from omnimac_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
+from omnimac_daemon.tools.browser_tools import BrowserRead, register_browser_tools
+from omnimac_daemon.tools.registry import ToolRegistry
 
 PAGES = {"https://docs.python.org/3/": ("Python docs", "Welcome to Python")}
 
@@ -28,9 +28,7 @@ async def test_browser_read_rejects_non_http_scheme() -> None:
 
 def test_requested_scope_is_the_host() -> None:
     tool = BrowserRead(MockBrowser())
-    assert tool.requested_scope(tool.input_model(url="https://docs.python.org/3/")).domains == [
-        "docs.python.org"
-    ]
+    assert tool.requested_scope(tool.input_model(url="https://docs.python.org/3/")).domains == ["docs.python.org"]
 
 
 def _inv(url: str) -> ToolInvocation:
@@ -46,18 +44,14 @@ def _inv(url: str) -> ToolInvocation:
 async def test_backstop_refuses_ungranted_domain() -> None:
     reg = ToolRegistry()
     register_browser_tools(reg, adapter=MockBrowser(PAGES))
-    result = await reg.execute(
-        _inv("https://evil.example/"), ResourceScope(domains=["docs.python.org"])
-    )
+    result = await reg.execute(_inv("https://evil.example/"), ResourceScope(domains=["docs.python.org"]))
     assert not result.ok and "scope violation" in (result.error or "")
 
 
 async def test_backstop_allows_granted_domain_text_masked() -> None:
     reg = ToolRegistry()
     register_browser_tools(reg, adapter=MockBrowser(PAGES))
-    result = await reg.execute(
-        _inv("https://docs.python.org/3/"), ResourceScope(domains=["docs.python.org"])
-    )
+    result = await reg.execute(_inv("https://docs.python.org/3/"), ResourceScope(domains=["docs.python.org"]))
     assert result.ok
     assert result.output is not None and result.output["text"] == "[REDACTED]"  # web text masked
 
@@ -72,7 +66,5 @@ async def test_real_playwright_reads_data_url() -> None:
     except Exception as exc:
         pytest.skip(f"chromium not launchable: {exc}")
 
-    pc = await PlaywrightBrowser().fetch(
-        "data:text/html,<title>T</title><body><h1>hello thoth</h1></body>", 15.0
-    )
-    assert "hello thoth" in pc.text
+    pc = await PlaywrightBrowser().fetch("data:text/html,<title>T</title><body><h1>hello omnimac</h1></body>", 15.0)
+    assert "hello omnimac" in pc.text

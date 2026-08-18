@@ -1,7 +1,7 @@
 # Accessibility architecture
 
 Phase 5.4 adds narrow semantic macOS Accessibility (AX) control without
-changing THOTH's execution state machine. The planner still produces data;
+changing OmniMac's execution state machine. The planner still produces data;
 only the registered tool router may cross the AX boundary, and only while the
 task is in `EXECUTING`.
 

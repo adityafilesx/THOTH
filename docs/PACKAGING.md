@@ -1,13 +1,13 @@
-# THOTH macOS packaging
+# OmniMac macOS packaging
 
 ## Current artifact
 
-`make bundle` creates an arm64 `THOTH.app` and DMG. The app is runnable without
+`make bundle` creates an arm64 `OmniMac.app` and DMG. The app is runnable without
 a repository daemon, Python interpreter, `uv`, Node, or Vite. It contains:
 
 - the Tauri/React desktop;
 - a PyInstaller-frozen FastAPI daemon;
-- the exact `me.adityalabs.thoth.axhelper` helper app;
+- the exact `me.adityalabs.omnimac.axhelper` helper app;
 - whisper.cpp v1.8.6 `whisper-cli`;
 - the base.en GGML model; and
 - a schema-versioned runtime manifest with authoritative relative paths, byte
@@ -25,7 +25,7 @@ instance cannot replace the first instance's helper socket.
 The merged app `Info.plist` declares microphone use narrowly: recording occurs
 only during push-to-talk and transcription is local. macOS grants microphone
 access per app identity, so Chrome's development permission does not grant it
-to `THOTH.app`; the user must accept the native app's first-use prompt.
+to `OmniMac.app`; the user must accept the native app's first-use prompt.
 
 The desktop Permissions page is the user-controlled scope boundary. Select a
 workspace, choose Application / Workspace path / Browser domain, enter the
@@ -51,8 +51,8 @@ make bundle
 Artifacts:
 
 ```text
-apps/desktop/src-tauri/target/release/bundle/macos/THOTH.app
-apps/desktop/src-tauri/target/release/bundle/dmg/THOTH_0.1.0_aarch64.dmg
+apps/desktop/src-tauri/target/release/bundle/macos/OmniMac.app
+apps/desktop/src-tauri/target/release/bundle/dmg/OmniMac_0.1.0_aarch64.dmg
 ```
 
 The build runs the frontend production build, freezes the daemon, packages the
@@ -63,7 +63,7 @@ resources, and PyInstaller work products are ignored by Git.
 ## Verification
 
 ```bash
-APP=apps/desktop/src-tauri/target/release/bundle/macos/THOTH.app
+APP=apps/desktop/src-tauri/target/release/bundle/macos/OmniMac.app
 codesign --verify --deep --strict --verbose=2 "$APP"
 jq . "$APP/Contents/Resources/runtime-manifest.json"
 open -n "$APP"

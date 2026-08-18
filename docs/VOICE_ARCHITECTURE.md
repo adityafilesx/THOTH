@@ -32,6 +32,6 @@ cloud TTS.
 
 Voice cannot approve. A transcript is user-adjacent input and may only become a
 new `TaskSource.VOICE` task. R2 remains pending in the visible invocation-bound
-approval interface. Global Stop and exact whole-utterance “Thoth, stop” bypass
+approval interface. Global Stop and exact whole-utterance “Omnimac, stop” bypass
 the model/router/planner, interrupt speech, cancel voice sessions and tasks,
 and invalidate unconsumed approvals.

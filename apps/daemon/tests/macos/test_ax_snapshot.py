@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-from thoth_daemon.macos.ax_snapshot import (
+from omnimac_daemon.macos.ax_snapshot import (
     AXObservedNode,
     AXSnapshotLimits,
     bounded_text,
@@ -10,7 +10,7 @@ from thoth_daemon.macos.ax_snapshot import (
 )
 
 NOW = datetime(2026, 7, 14, 13, tzinfo=UTC)
-BUNDLE = "me.adityalabs.thoth.axtest"
+BUNDLE = "me.adityalabs.omnimac.axtest"
 
 
 def test_text_is_bounded_by_utf8_bytes() -> None:
@@ -44,14 +44,8 @@ def test_secure_and_authentication_values_are_never_captured() -> None:
     )
 
     assert all(element.value_metadata is not None for element in window.elements)
-    assert all(
-        element.value_metadata.redacted for element in window.elements if element.value_metadata
-    )
-    assert all(
-        element.value_metadata.value is None
-        for element in window.elements
-        if element.value_metadata
-    )
+    assert all(element.value_metadata.redacted for element in window.elements if element.value_metadata)
+    assert all(element.value_metadata.value is None for element in window.elements if element.value_metadata)
 
 
 def test_window_title_and_element_strings_are_redacted_and_bounded() -> None:

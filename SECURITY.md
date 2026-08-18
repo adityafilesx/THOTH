@@ -1,6 +1,6 @@
 # Security Policy
 
-THOTH executes computer actions on behalf of the user. Its security posture is defined by the safety core described in `docs/THREAT_MODEL.md`. This file states the operational policy.
+OmniMac executes computer actions on behalf of the user. Its security posture is defined by the safety core described in `docs/THREAT_MODEL.md`. This file states the operational policy.
 
 ## Core guarantees
 

@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-12 · **Phase:** 3 · **Status:** approved design, pre-plan
 **Depends on:** slices 1 (scope enforcement) + 2 (auth), both merged.
-**Delivers:** THOTH's **first real capability** — scoped read/list/write/stat of the real filesystem.
+**Delivers:** OmniMac's **first real capability** — scoped read/list/write/stat of the real filesystem.
 
 ## 1. Context & problem
 
@@ -38,9 +38,9 @@ literal.
 
 | File | New? | Responsibility |
 |---|---|---|
-| `apps/daemon/src/thoth_daemon/tools/fs_tools.py` | new | The four fs `ToolDefinition`s + `register_fs_tools(registry)`. |
-| `apps/daemon/src/thoth_daemon/tools/fs_io.py` | new | Small pure helpers: capped UTF-8 read, atomic write. (Keeps `fs_tools.py` about contracts, `fs_io.py` about bytes.) |
-| `apps/daemon/src/thoth_daemon/app.py` | edit | `register_fs_tools(registry)` after `build_registry()`. |
+| `apps/daemon/src/omnimac_daemon/tools/fs_tools.py` | new | The four fs `ToolDefinition`s + `register_fs_tools(registry)`. |
+| `apps/daemon/src/omnimac_daemon/tools/fs_io.py` | new | Small pure helpers: capped UTF-8 read, atomic write. (Keeps `fs_tools.py` about contracts, `fs_io.py` about bytes.) |
+| `apps/daemon/src/omnimac_daemon/app.py` | edit | `register_fs_tools(registry)` after `build_registry()`. |
 | `docs/DECISIONS.md`, `docs/STATUS.md`, `docs/MILESTONES.md` | edit | ADR, truthful status. |
 
 Reuses unchanged: `security/paths.py` (`expand_and_resolve`, denylist), the `ScopeEnforcer`

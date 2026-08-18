@@ -1,7 +1,7 @@
 import pytest
 
-from thoth_daemon.core.policy import PolicyEngine
-from thoth_daemon.schemas import RiskLevel
+from omnimac_daemon.core.policy import PolicyEngine
+from omnimac_daemon.schemas import RiskLevel
 
 engine = PolicyEngine()
 
@@ -99,7 +99,5 @@ class TestTypedInputsOnly:
         (RiskLevel.R1, RiskLevel.R2, RiskLevel.R2),
     ],
 )
-def test_effective_risk_is_max(
-    declared: RiskLevel, default: RiskLevel, expected: RiskLevel
-) -> None:
+def test_effective_risk_is_max(declared: RiskLevel, default: RiskLevel, expected: RiskLevel) -> None:
     assert evaluate(declared, default).effective_risk is expected

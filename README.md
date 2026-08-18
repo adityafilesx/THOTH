@@ -1,18 +1,18 @@
-# THOTH
+# OmniMac
 
-**A local-first macOS computer operator.** THOTH converts user intentions into safe, inspectable, and verified computer actions.
+**A local-first macOS computer operator.** OmniMac converts user intentions into safe, inspectable, and verified computer actions.
 
-THOTH is not a chatbot, a note-taking app, a generic second brain, or a voice-command launcher. It is an autonomous operator with a deterministic safety core:
+OmniMac is not a chatbot, a note-taking app, a generic second brain, or a voice-command launcher. It is an autonomous operator with a deterministic safety core:
 
 > User request → intent normalization → structured plan → policy review → approval if needed → tool router → execution → verification → result or bounded recovery.
 
 ## Status
 
-**THOTH is a v1.0 release candidate, not a validated release.** The deterministic safety core is enforced end to end: no tool execution outside `EXECUTING`, no risk downgrade, invocation-bound single-use approvals, scoped tools, independent verification, bounded recovery, and tamper-evident audit. The macOS app now owns an integrity-checked frozen daemon, Accessibility helper, whisper.cpp v1.8.6 executable, and base.en model. Real microphone accuracy, acoustic Stop/barge-in, TCC-backed AX mutations, Developer-ID/notarized distribution, and clean installation remain unvalidated.
+**OmniMac is a v1.0 release candidate, not a validated release.** The deterministic safety core is enforced end to end: no tool execution outside `EXECUTING`, no risk downgrade, invocation-bound single-use approvals, scoped tools, independent verification, bounded recovery, and tamper-evident audit. The macOS app now owns an integrity-checked frozen daemon, Accessibility helper, whisper.cpp v1.8.6 executable, and base.en model. Real microphone accuracy, acoustic Stop/barge-in, TCC-backed AX mutations, Developer-ID/notarized distribution, and clean installation remain unvalidated.
 
 Five capstone workflows ran against the real OS and were **independently verified** — real file and git state, a real `https://example.com` fetch, a real single-use approval, a real TextEdit launch ([docs/CAPSTONE_REPORT.md](docs/CAPSTONE_REPORT.md)). Those runs used scripted reference plans; the same goals through the **live Claude planner are pending live verification** (requires `ANTHROPIC_API_KEY`).
 
-Current bounded claim: **THOTH provides a consistent local persona, understands short-lived operational context, detects the active macOS workspace, manages supported application focus, and has a fully local voice/presence implementation pending real speech-model evaluation.** It does not claim verified broad speech accuracy, proactivity, universal app control, continuous visual awareness, or long-term memory. See [docs/STATUS.md](docs/STATUS.md) and [Phase 5.5 capstones](docs/PHASE_5_5_CAPSTONE.md).
+Current bounded claim: **OmniMac provides a consistent local persona, understands short-lived operational context, detects the active macOS workspace, manages supported application focus, and has a fully local voice/presence implementation pending real speech-model evaluation.** It does not claim verified broad speech accuracy, proactivity, universal app control, continuous visual awareness, or long-term memory. See [docs/STATUS.md](docs/STATUS.md) and [Phase 5.5 capstones](docs/PHASE_5_5_CAPSTONE.md).
 
 See [the v1 release report](docs/V1_RELEASE_REPORT.md) for exact runtime hashes,
 test results, packaging evidence, and mandatory release blockers.
@@ -70,7 +70,7 @@ make desktop    # Vite dev server (browser) — or: cd apps/desktop && pnpm taur
 make test       # daemon (pytest) + desktop (vitest)
 make lint       # ruff + eslint
 make typecheck  # mypy + tsc
-make bundle     # build integrity-checked THOTH.app + arm64 DMG
+make bundle     # build integrity-checked OmniMac.app + arm64 DMG
 ```
 
 The release bundle requires the locally pinned whisper.cpp/base.en inputs at the paths documented in [docs/PACKAGING.md](docs/PACKAGING.md). Novel local-model planning currently expects loopback Ollama with `qwen3:4b`; browser automation expects a local Playwright Chromium payload. Missing optional runtimes degrade explicitly and never trigger cloud fallback.

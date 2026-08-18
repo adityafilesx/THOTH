@@ -6,18 +6,18 @@ from datetime import UTC, datetime, timedelta
 from fastapi import FastAPI
 from httpx import AsyncClient
 
-from thoth_daemon.core.command_dispatch import CommandDispatcher
-from thoth_daemon.voice.contracts import (
+from omnimac_daemon.core.command_dispatch import CommandDispatcher
+from omnimac_daemon.voice.contracts import (
     FinalTranscript,
     SpeechPlaybackState,
     SpeechRequest,
     SpeechSynthesisHealth,
     TranscriptSegment,
 )
-from thoth_daemon.voice.service import VoiceCommandService, VoiceSessionRegistry
-from thoth_daemon.voice.stop import GlobalStopAuthority
-from thoth_daemon.voice.stt import MockSpeechRecognitionProvider
-from thoth_daemon.voice.tts import SpeechSynthesisService
+from omnimac_daemon.voice.service import VoiceCommandService, VoiceSessionRegistry
+from omnimac_daemon.voice.stop import GlobalStopAuthority
+from omnimac_daemon.voice.stt import MockSpeechRecognitionProvider
+from omnimac_daemon.voice.tts import SpeechSynthesisService
 
 NOW = datetime(2026, 7, 14, 9, 0, tzinfo=UTC)
 
@@ -260,7 +260,7 @@ class TestVoiceStopBypass:
         assert pending_task["state"] == "WAITING_FOR_APPROVAL"
         assert len((await client.get("/api/approvals/pending")).json()) == 1
 
-        _prime(app, "Thoth, stop.")
+        _prime(app, "Omnimac, stop.")
         session_id = await _start(client)
         await client.put(
             f"/api/voice/sessions/{session_id}/audio",
@@ -276,9 +276,7 @@ class TestVoiceStopBypass:
         assert body["task"] is None
         assert body["stop"]["approvals_invalidated"] == 1
         assert (await client.get("/api/approvals/pending")).json() == []
-        assert app.state.spoken_requests[0].segments[0].text == (
-            "Stopped. No external action was taken."
-        )
+        assert app.state.spoken_requests[0].segments[0].text == ("Stopped as requested, sir. No action was taken.")
 
     async def test_visible_global_stop_endpoint_is_model_free(
         self,

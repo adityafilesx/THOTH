@@ -17,9 +17,9 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from thoth_daemon.audit.chain import compute_event_hash
-from thoth_daemon.audit.store import AuditStore
-from thoth_daemon.storage.db import init_schema, make_engine, make_session_factory
+from omnimac_daemon.audit.chain import compute_event_hash
+from omnimac_daemon.audit.store import AuditStore
+from omnimac_daemon.storage.db import init_schema, make_engine, make_session_factory
 
 
 @pytest.fixture()
@@ -85,12 +85,7 @@ async def test_payload_tamper_is_detected(
     await _seed(store)
     # Tamper AROUND the store: direct SQL edit of a payload.
     async with session_factory() as session:
-        await session.execute(
-            text(
-                "UPDATE audit_events SET payload_json = '{\"i\": 999}' "
-                "WHERE task_id = 't1' AND seq = 2"
-            )
-        )
+        await session.execute(text("UPDATE audit_events SET payload_json = '{\"i\": 999}' WHERE task_id = 't1' AND seq = 2"))
         await session.commit()
     manifest = await store.verify_chain("t1")
     assert not manifest.valid
@@ -118,9 +113,7 @@ async def test_chains_are_independent_per_task(
     await _seed(store, task_id="b", n=3)
     # Tampering task a must not invalidate task b.
     async with session_factory() as session:
-        await session.execute(
-            text("UPDATE audit_events SET event_type = 'forged' WHERE task_id = 'a' AND seq = 0")
-        )
+        await session.execute(text("UPDATE audit_events SET event_type = 'forged' WHERE task_id = 'a' AND seq = 0"))
         await session.commit()
     assert not (await store.verify_chain("a")).valid
     assert (await store.verify_chain("b")).valid

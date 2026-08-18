@@ -28,15 +28,15 @@ The daemon binds `127.0.0.1` but requires **no authentication** (threat **T6**, 
 
 | File | New? | Responsibility |
 |---|---|---|
-| `apps/daemon/src/thoth_daemon/security/auth.py` | new | `mint_token()`, `write_token_file(path, token)` (0600), `token_matches(a, b)` (constant-time). |
-| `apps/daemon/src/thoth_daemon/api/middleware.py` | new | `require_bearer` HTTP middleware: 401 unless `Authorization: Bearer <token>`; exempts `/api/health`. |
-| `apps/daemon/src/thoth_daemon/api/ws.py` | edit | First-message auth handshake before streaming; close 1008 on failure. |
-| `apps/daemon/src/thoth_daemon/config.py` | edit | `session_token: str \| None = None`, `session_token_path: Path = data/session.token`. |
-| `apps/daemon/src/thoth_daemon/app.py` | edit | Resolve token (env or mint), store on `app.state.session_token`, write file, register middleware. |
+| `apps/daemon/src/omnimac_daemon/security/auth.py` | new | `mint_token()`, `write_token_file(path, token)` (0600), `token_matches(a, b)` (constant-time). |
+| `apps/daemon/src/omnimac_daemon/api/middleware.py` | new | `require_bearer` HTTP middleware: 401 unless `Authorization: Bearer <token>`; exempts `/api/health`. |
+| `apps/daemon/src/omnimac_daemon/api/ws.py` | edit | First-message auth handshake before streaming; close 1008 on failure. |
+| `apps/daemon/src/omnimac_daemon/config.py` | edit | `session_token: str \| None = None`, `session_token_path: Path = data/session.token`. |
+| `apps/daemon/src/omnimac_daemon/app.py` | edit | Resolve token (env or mint), store on `app.state.session_token`, write file, register middleware. |
 | `apps/daemon/tests/conftest.py` | edit | Test settings set a fixed token; `client`/`ws_client` authenticate. |
 | `apps/desktop/src-tauri/src/lib.rs` | edit | `session_token()` command reads the token file; register via `invoke_handler`. |
 | `apps/desktop/src-tauri/tauri.conf.json` | edit (if needed) | Allow the command / fs read of the token path. |
-| `apps/desktop/src/lib/auth.ts` | new | `getSessionToken()` — Tauri `invoke` else `VITE_THOTH_TOKEN`; in-memory cache. |
+| `apps/desktop/src/lib/auth.ts` | new | `getSessionToken()` — Tauri `invoke` else `VITE_OmniMac_TOKEN`; in-memory cache. |
 | `apps/desktop/src/lib/api.ts` | edit | Attach `Authorization: Bearer` to every request. |
 | `apps/desktop/src/lib/ws.ts` | edit | Send `{type:"auth", token}` on open; then proceed. |
 | `apps/desktop/src/main.tsx` (bootstrap) | edit | Fetch token before first connect. |
@@ -44,7 +44,7 @@ The daemon binds `127.0.0.1` but requires **no authentication** (threat **T6**, 
 
 ## 4. Token lifecycle
 
-1. **Mint / source.** At startup `app.py` sets `token = cfg.session_token or mint_token()`. `mint_token()` = `secrets.token_urlsafe(32)`. Env `THOTH_SESSION_TOKEN` (via `cfg.session_token`) lets dev/tests pin a value.
+1. **Mint / source.** At startup `app.py` sets `token = cfg.session_token or mint_token()`. `mint_token()` = `secrets.token_urlsafe(32)`. Env `OmniMac_SESSION_TOKEN` (via `cfg.session_token`) lets dev/tests pin a value.
 2. **Store.** `app.state.session_token = token`. Never written to SQLite; redaction masks `token`/`authorization` keys in logs/audit already.
 3. **Handoff.** `write_token_file(cfg.session_token_path, token)` writes the raw token with mode **0600** (create parent dir if needed). This is the desktop's read channel.
 4. **Present.** Desktop reads the file (Tauri) or env (dev) and sends it on every HTTP/WS call.
@@ -68,10 +68,10 @@ Browser `WebSocket` can't send headers, so:
 
 ## 7. Desktop client
 
-- **`auth.ts`:** `getSessionToken(): Promise<string \| null>` — when running under Tauri (feature-detect the Tauri global injected into `window`; exact key confirmed against the installed `@tauri-apps/api` in the plan), `invoke<string>("session_token")`; else `import.meta.env.VITE_THOTH_TOKEN ?? null`. Cache the resolved value in a module variable (memory only — never `localStorage`).
+- **`auth.ts`:** `getSessionToken(): Promise<string \| null>` — when running under Tauri (feature-detect the Tauri global injected into `window`; exact key confirmed against the installed `@tauri-apps/api` in the plan), `invoke<string>("session_token")`; else `import.meta.env.VITE_OmniMac_TOKEN ?? null`. Cache the resolved value in a module variable (memory only — never `localStorage`).
 - **`api.ts`:** `request()` awaits `getSessionToken()` and adds `Authorization: Bearer <token>` when present (alongside `Content-Type`).
 - **`ws.ts`:** in `open()`, on `onopen` send `JSON.stringify({ type: "auth", token })` before marking connected; the server replies `connection.established`.
-- **Rust `session_token()`:** reads `THOTH_SESSION_TOKEN` env if set, else the token file (path from `THOTH_SESSION_TOKEN_PATH` or the default under the app data dir); returns `Option<String>`. Registered via `.invoke_handler(tauri::generate_handler![session_token])`. Updates the "no custom commands" comment — this is the reviewed capability.
+- **Rust `session_token()`:** reads `OmniMac_SESSION_TOKEN` env if set, else the token file (path from `OmniMac_SESSION_TOKEN_PATH` or the default under the app data dir); returns `Option<String>`. Registered via `.invoke_handler(tauri::generate_handler![session_token])`. Updates the "no custom commands" comment — this is the reviewed capability.
 
 ## 8. Error handling
 
@@ -90,7 +90,7 @@ Browser `WebSocket` can't send headers, so:
 - **HTTP guard:** every protected route returns 401 without a token and with a wrong token; 200 with the right token; `/api/health` 200 without a token. Driven through the real ASGI app.
 - **WS guard:** connect + send correct auth frame → receives `connection.established` + events; connect + wrong token → closed, no events; connect + no frame → closed after timeout.
 - **conftest:** `settings` fixture sets `session_token="test-token"` **and `session_token_path=tmp_path/"session.token"`** (so tests never write into the repo `./data`); `client` fixture attaches `Authorization: Bearer test-token`; WS tests send the auth frame first. This keeps all 290 existing tests green while proving auth is enforced.
-- **Desktop (vitest):** `request()` includes the header when `getSessionToken` resolves a token; `WsClient` sends the auth frame on open (mock `WebSocket`); `getSessionToken` falls back to `VITE_THOTH_TOKEN` when Tauri is absent.
+- **Desktop (vitest):** `request()` includes the header when `getSessionToken` resolves a token; `WsClient` sends the auth frame on open (mock `WebSocket`); `getSessionToken` falls back to `VITE_OmniMac_TOKEN` when Tauri is absent.
 - **Manual (Rust):** the `session_token()` command is verified by a live `make dev` smoke test (documented) — Rust command unit-testing is out of proportion for a 10-line file reader; its behavior is exercised end-to-end.
 
 ## 10. Preserved invariants

@@ -8,14 +8,14 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from thoth_daemon.core.persona import SpokenResponse
-from thoth_daemon.voice.contracts import (
+from omnimac_daemon.core.persona import SpokenResponse
+from omnimac_daemon.voice.contracts import (
     SpeechPlaybackState,
     SpeechRequest,
     SpeechSegment,
     SpeechVoice,
 )
-from thoth_daemon.voice.tts import (
+from omnimac_daemon.voice.tts import (
     MacOSSpeechSynthesisProvider,
     PiperSpeechSynthesisProvider,
     SpeechSynthesisService,

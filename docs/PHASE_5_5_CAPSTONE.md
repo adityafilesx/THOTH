@@ -26,10 +26,10 @@
 | Capstone | Result | Reason/evidence ceiling |
 |---|---|---|
 | Open TextEdit by spoken command | Not verified | runtime exists; no real microphone session |
-| Continue THOTH | Not verified end-to-end | local components exist; no real spoken input |
+| Continue OmniMac | Not verified end-to-end | local components exist; no real spoken input |
 | What am I working on | Not verified end-to-end | foreground/dialogue independently tested |
 | Run tests without focus theft | Not verified by voice | background/focus contracts tested |
-| Say “Thoth, stop” during task | Automated only | no real acoustic trial |
+| Say “Omnimac, stop” during task | Automated only | no real acoustic trial |
 | R2 by voice cannot approve | Pass automated | pending approval remains; no external effect |
 | Offline voice-to-action | Not verified | external browser denial passes; no real microphone workflow |
 | Ambiguous “Open it” | Pass automated | 409 clarification, zero new task |

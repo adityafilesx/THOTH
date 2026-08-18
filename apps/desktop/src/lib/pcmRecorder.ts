@@ -52,14 +52,22 @@ export class LocalPcmRecorder extends EventTarget {
 
   private readonly context: AudioContext;
   private readonly source: MediaStreamAudioSourceNode;
+  private readonly analyser: AnalyserNode;
   private readonly processor: ScriptProcessorNode;
   private readonly silentOutput: GainNode;
   private readonly chunks: PcmChunkBuffer;
+
+  private silenceTimer: number | null = null;
+  private hasSpoken = false;
+  private readonly silenceThreshold = 0.01;
+  private readonly silenceDurationMs = 1500;
 
   constructor(stream: MediaStream) {
     super();
     this.context = new AudioContext();
     this.source = this.context.createMediaStreamSource(stream);
+    this.analyser = this.context.createAnalyser();
+    this.analyser.fftSize = 512;
     this.processor = this.context.createScriptProcessor(4096, 1, 1);
     this.silentOutput = this.context.createGain();
     // About 500 ms of mono s16le PCM per upload.
@@ -70,13 +78,40 @@ export class LocalPcmRecorder extends EventTarget {
       const pcm = encodePcm16(event.inputBuffer.getChannelData(0));
       const batch = this.chunks.push(pcm);
       if (batch) this.emit(batch);
+
+      // Voice Activity Detection
+      const dataArray = new Float32Array(this.analyser.fftSize);
+      this.analyser.getFloatTimeDomainData(dataArray);
+      let rms = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        rms += dataArray[i] * dataArray[i];
+      }
+      rms = Math.sqrt(rms / dataArray.length);
+
+      if (rms > this.silenceThreshold) {
+        this.hasSpoken = true;
+        if (this.silenceTimer !== null) {
+          window.clearTimeout(this.silenceTimer);
+          this.silenceTimer = null;
+        }
+      } else if (this.hasSpoken && this.silenceTimer === null) {
+        this.silenceTimer = window.setTimeout(() => {
+          this.dispatchEvent(new Event("silence"));
+        }, this.silenceDurationMs);
+      }
     };
   }
 
   start(): void {
     if (this.state !== "inactive") throw new DOMException("Recorder is already active");
     this.state = "recording";
-    this.source.connect(this.processor);
+    this.hasSpoken = false;
+    if (this.silenceTimer !== null) {
+      window.clearTimeout(this.silenceTimer);
+      this.silenceTimer = null;
+    }
+    this.source.connect(this.analyser);
+    this.analyser.connect(this.processor);
     this.processor.connect(this.silentOutput);
     this.silentOutput.connect(this.context.destination);
     void this.context.resume();
@@ -90,11 +125,16 @@ export class LocalPcmRecorder extends EventTarget {
   stop(): void {
     if (this.state !== "recording") return;
     this.state = "inactive";
+    if (this.silenceTimer !== null) {
+      window.clearTimeout(this.silenceTimer);
+      this.silenceTimer = null;
+    }
     this.processor.onaudioprocess = null;
-    this.source.disconnect();
-    this.processor.disconnect();
-    this.silentOutput.disconnect();
-    void this.context.close();
+    try { this.source.disconnect(); } catch(e) {}
+    try { this.analyser.disconnect(); } catch(e) {}
+    try { this.processor.disconnect(); } catch(e) {}
+    try { this.silentOutput.disconnect(); } catch(e) {}
+    try { void this.context.close(); } catch(e) { console.error("Close failed", e); }
     this.dispatchEvent(new Event("stop"));
   }
 

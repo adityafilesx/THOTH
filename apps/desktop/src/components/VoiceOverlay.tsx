@@ -1,10 +1,12 @@
-import { Mic, SendHorizontal, Square, Waves } from "lucide-react";
+import { Ear, SendHorizontal, Square, Waves } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { api, type RoutedIntentResponse } from "@/lib/api";
 import { LocalPcmRecorder } from "@/lib/pcmRecorder";
+import { WakeWordClient } from "@/lib/wakeWordClient";
 
 export type VoiceOverlayState =
   | "idle"
@@ -99,7 +101,7 @@ export function VoiceOverlayView({
               microphoneActive ? "animate-pulse bg-danger/20 text-danger" : "bg-surface text-muted"
             }`}
           >
-            {microphoneActive ? <Mic size={15} /> : <Waves size={15} />}
+            {microphoneActive ? <Ear size={15} /> : <Waves size={15} />}
           </span>
           <div>
             <p className="text-sm font-medium text-ink">{stateLabel(state)}</p>
@@ -167,6 +169,8 @@ export function VoiceOverlay({
   const [finalText, setFinalText] = useState("");
   const [route, setRoute] = useState<VoiceRoute | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [handsFree, setHandsFree] = useState(false);
+  const [wakeWordActive, setWakeWordActive] = useState(false);
   const sessionId = useRef<string | null>(null);
   const recorder = useRef<LocalPcmRecorder | null>(null);
   const stream = useRef<MediaStream | null>(null);
@@ -181,6 +185,7 @@ export function VoiceOverlay({
   const capturedAudioBytes = useRef(0);
   const lastPartialRequestedAt = useRef<number | null>(null);
   const lastEscape = useRef(0);
+  const wakeWordClient = useRef<WakeWordClient | null>(null);
 
   const syncNativeState = useCallback((next: VoiceOverlayState) => {
     void import("@tauri-apps/api/core")
@@ -207,6 +212,11 @@ export function VoiceOverlay({
     stream.current = null;
     recorder.current = null;
     recordingStartedAt.current = null;
+    if (wakeWordClient.current) {
+      wakeWordClient.current.stop();
+      wakeWordClient.current = null;
+      setWakeWordActive(false);
+    }
   }, []);
 
   const clearStopTimer = useCallback(() => {
@@ -325,6 +335,10 @@ export function VoiceOverlay({
       stream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
       const pcmRecorder = new LocalPcmRecorder(stream.current);
       recorder.current = pcmRecorder;
+      pcmRecorder.addEventListener("silence", () => {
+        releaseRequested.current = true;
+        stopAfterMinimumCapture();
+      });
       pcmRecorder.addEventListener("dataavailable", (event) => {
         const data = (event as BlobEvent).data;
         if (!data.size || !sessionId.current) return;
@@ -389,11 +403,11 @@ export function VoiceOverlay({
     let unlistenStop: (() => void) | undefined;
     void import("@tauri-apps/api/event")
       .then(async ({ listen }) => {
-        unlistenPTT = await listen<PTTEvent>("thoth://ptt", ({ payload }) => {
+        unlistenPTT = await listen<PTTEvent>("omnimac://ptt", ({ payload }) => {
           if (payload.state === "Pressed") void start();
           else release();
         });
-        unlistenStop = await listen("thoth://stop", () => void api.globalStop("menu_bar"));
+        unlistenStop = await listen("omnimac://stop", () => void api.globalStop("menu_bar"));
       })
       .catch(() => {});
     const browserPTT = (event: Event) => {
@@ -401,15 +415,20 @@ export function VoiceOverlay({
       if (detail.state === "Pressed") void start();
       else release();
     };
-    window.addEventListener("thoth:ptt", browserPTT);
+    window.addEventListener("omnimac:ptt", browserPTT);
     return () => {
       unlistenPTT?.();
       unlistenStop?.();
-      window.removeEventListener("thoth:ptt", browserPTT);
+      window.removeEventListener("omnimac:ptt", browserPTT);
+    };
+  }, [listenForNativeEvents, release, start]);
+
+  useEffect(() => {
+    return () => {
       clearStopTimer();
       stopTracks();
     };
-  }, [clearStopTimer, listenForNativeEvents, release, start, stopTracks]);
+  }, [clearStopTimer, stopTracks]);
 
   useEffect(() => {
     const escape = (event: KeyboardEvent) => {
@@ -428,17 +447,54 @@ export function VoiceOverlay({
     return () => window.removeEventListener("keydown", escape);
   }, [cancel, state]);
 
+  const toggleHandsFree = useCallback((enabled: boolean) => {
+    setHandsFree(enabled);
+    if (enabled && state === "idle") {
+      wakeWordClient.current?.stop();
+      wakeWordClient.current = new WakeWordClient({
+        onStatusChange: (status) => setWakeWordActive(status === "listening" || status === "connecting"),
+        onDetection: () => {
+          // Play a ding sound for feedback
+          new Audio("/ding.mp3").play().catch(() => {});
+          void start();
+        },
+      });
+      wakeWordClient.current.start();
+    } else {
+      wakeWordClient.current?.stop();
+      wakeWordClient.current = null;
+      setWakeWordActive(false);
+    }
+  }, [state, start]);
+
+  // Ensure wakeword resumes if we go back to idle while handsFree is enabled
+  useEffect(() => {
+    if (handsFree && state === "idle" && !wakeWordActive) {
+      toggleHandsFree(true);
+    }
+  }, [handsFree, state, wakeWordActive, toggleHandsFree]);
+
   return hideWhenIdle && state === "idle" ? null : (
-    <VoiceOverlayView
-      state={state}
-      partial={partial}
-      finalText={finalText}
-      route={route}
-      error={error}
-      onEdit={setFinalText}
-      onCancel={() => void cancel()}
-      onSubmit={() => void submit()}
-      onFinish={release}
-    />
+    <div className="flex flex-col gap-2">
+      <VoiceOverlayView
+        state={state}
+        partial={partial}
+        finalText={finalText}
+        route={route}
+        error={error}
+        onEdit={setFinalText}
+        onCancel={() => void cancel()}
+        onSubmit={() => void submit()}
+        onFinish={release}
+      />
+      {state === "idle" && (
+        <div className="flex items-center space-x-2 px-2 pb-1 justify-end">
+          <Switch id="hands-free-mode" checked={handsFree} onCheckedChange={toggleHandsFree} />
+          <label htmlFor="hands-free-mode" className="text-xs text-muted-foreground cursor-pointer">
+            {wakeWordActive ? "Listening for 'Hey Jarvis'..." : "Always-on Wake Word"}
+          </label>
+        </div>
+      )}
+    </div>
   );
 }

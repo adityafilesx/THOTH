@@ -1,4 +1,4 @@
-// THOTH desktop shell: authenticated daemon token, native menu-bar presence,
+// OmniMac desktop shell: authenticated daemon token, native menu-bar presence,
 // a non-focus-stealing voice overlay, and global push-to-talk. Computer
 // interaction remains exclusively behind the daemon safety state machine.
 
@@ -74,12 +74,12 @@ fn session_token(auth: State<'_, RuntimeAuth>) -> Option<String> {
 }
 
 fn configured_session_token() -> Option<String> {
-    if let Ok(token) = std::env::var("THOTH_SESSION_TOKEN") {
+    if let Ok(token) = std::env::var("OmniMac_SESSION_TOKEN") {
         if !token.is_empty() {
             return Some(token);
         }
     }
-    let path = std::env::var("THOTH_SESSION_TOKEN_PATH")
+    let path = std::env::var("OmniMac_SESSION_TOKEN_PATH")
         .unwrap_or_else(|_| "data/session.token".to_string());
     std::fs::read_to_string(path)
         .ok()
@@ -107,7 +107,7 @@ fn update_voice_state(state: String, items: State<'_, TrayItems>) -> Result<(), 
 fn emit_push_to_talk(app: &tauri::AppHandle, state: &'static str) -> tauri::Result<()> {
     if let Some(overlay) = app.get_webview_window("voice-overlay") {
         overlay.show()?;
-        overlay.emit("thoth://ptt", PushToTalkEvent { state })?;
+        overlay.emit("omnimac://ptt", PushToTalkEvent { state })?;
     }
     Ok(())
 }
@@ -155,7 +155,7 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
         None::<&str>,
     )?;
     let privacy = MenuItem::with_id(app, "privacy", labels.privacy, false, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "Quit THOTH", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit OmniMac", true, None::<&str>)?;
     let separator_a = PredefinedMenuItem::separator(app)?;
     let separator_b = PredefinedMenuItem::separator(app)?;
     let separator_c = PredefinedMenuItem::separator(app)?;
@@ -194,10 +194,10 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
         privacy,
     });
 
-    let mut tray = TrayIconBuilder::with_id("thoth")
+    let mut tray = TrayIconBuilder::with_id("omnimac")
         .menu(&menu)
         .show_menu_on_left_click(true)
-        .tooltip("THOTH — local computer operator")
+        .tooltip("OmniMac — local computer operator")
         .on_menu_event(|app, event| match event.id().as_ref() {
             "listen" => {
                 let _ = emit_push_to_talk(app, "Pressed");
@@ -209,7 +209,7 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
                 }
             }
             "stop" => {
-                let _ = app.emit_to("main", "thoth://stop", ());
+                let _ = app.emit_to("main", "omnimac://stop", ());
             }
             "quit" => app.exit(0),
             _ => {}
@@ -246,7 +246,7 @@ pub fn run() {
     let app = builder
         .setup(|app| {
             let manage_runtime = !cfg!(debug_assertions)
-                || std::env::var("THOTH_MANAGED_RUNTIME").as_deref() == Ok("1");
+                || std::env::var("OmniMac_MANAGED_RUNTIME").as_deref() == Ok("1");
             if manage_runtime {
                 let executable = std::env::current_exe()?;
                 let data_dir = app.path().app_data_dir()?;
@@ -277,7 +277,7 @@ pub fn run() {
             set_voice_overlay_visible
         ])
         .build(tauri::generate_context!())
-        .expect("error while building THOTH desktop");
+        .expect("error while building OmniMac desktop");
     app.run(|handle, event| {
         if matches!(
             event,

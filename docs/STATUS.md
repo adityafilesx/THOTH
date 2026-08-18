@@ -1,8 +1,8 @@
-# THOTH status
+# OmniMac status
 
 **As of:** 2026-07-14
 
-Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation is present. THOTH is a **v1.0 release candidate**, not a validated release. The 0.1.0 app now owns an integrity-checked frozen daemon, Accessibility helper, whisper.cpp runtime, and base.en model instead of depending on repository-run services. Phase 5.4 remains pending TCC-backed UI capstones: the current exact-helper live probe still reports `not_determined`. Phase 5.5 still lacks a successful post-fix real microphone command, the 30-command matrix, acoustic Stop/barge-in, and offline voice-to-action evidence. Developer ID signing, notarization, and clean-account installation are also blocked.
+Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation is present. OmniMac is a **v1.0 release candidate**, not a validated release. The 0.1.0 app now owns an integrity-checked frozen daemon, Accessibility helper, whisper.cpp runtime, and base.en model instead of depending on repository-run services. Phase 5.4 remains pending TCC-backed UI capstones: the current exact-helper live probe still reports `not_determined`. Phase 5.5 still lacks a successful post-fix real microphone command, the 30-command matrix, acoustic Stop/barge-in, and offline voice-to-action evidence. Developer ID signing, notarization, and clean-account installation are also blocked.
 
 ## Current verified capability
 
@@ -10,7 +10,7 @@ Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation 
 - The deterministic safety pipeline remains unchanged: planner output is untrusted; policy, scope, approval, execution, independent verification, recovery, and immutable audit remain separate gates. Tools execute only in `EXECUTING`.
 - Every registered tool has an authoritative `FocusPolicy`. The orchestrator observes focus around execution, prevents ambiguous focus actions, verifies preservation/new focus/restoration independently, records `focus.result`, and retains failures.
 - Foreground context is captured only on demand. It contains no screenshot, image, or Accessibility-tree field; titles and sensitive paths are redacted before bounded in-memory retention.
-- Six versioned application profiles exist. Unknown/forbidden/undeclared capabilities fail closed. VS Code workspace association is verified through the real running bundle plus authoritative THOTH path evidence; editor read/edit remain experimental.
+- Six versioned application profiles exist. Unknown/forbidden/undeclared capabilities fail closed. VS Code workspace association is verified through the real running bundle plus authoritative OmniMac path evidence; editor read/edit remain experimental.
 - Operational dialogue is in-memory, task-isolated, and expiring. It resolves only authoritative recent objects, cannot approve or expand scope, and enforces `no_push` before approval or execution.
 - The live Permissions page now supports explicit workspace-bound app/path/domain grants as well as immediate revocation. A grant is a direct user action, is audited by the daemon, and never approves or executes a task.
 - Push-to-talk uses visible hold/toggle capture, local whisper.cpp contracts, partial/final/editable transcripts, default audio/transcript deletion, and the same orchestrator as text. v1.8.6 and tiny.en/base.en/small.en are locally SHA-256 pinned; mismatches fail closed. There is no cloud/mock fallback.
@@ -21,7 +21,7 @@ Phases 0–4 and 5.0–5.3 are complete. Phase 5.4 and Phase 5.5 implementation 
 - Native Tauri presence includes Option+Space press/release, a content-free menu state, non-focus-stealing voice overlay, and authoritative execution HUD. Local macOS TTS speaks only bounded `SpokenResponse`.
 - A single local runtime manager serializes heavy Qwen/Whisper use on 16 GB, exposes health/eviction/offline state, and retains numeric-only bounded voice latency samples.
 - The desktop renders authoritative persona, foreground, workspace, focus, runtime, dialogue-expiry, and proposed/approved/executed/verified status without hidden reasoning.
-- Production exposes ten dotted semantic AX tools through the stable local helper `me.adityalabs.thoth.axhelper`. The helper has no Python fallback, network listener, coordinate, shell, planning, approval, or profile surface. All real AX capabilities remain experimental because helper trust is false.
+- Production exposes ten dotted semantic AX tools through the stable local helper `me.adityalabs.omnimac.axhelper`. The helper has no Python fallback, network listener, coordinate, shell, planning, approval, or profile surface. All real AX capabilities remain experimental because helper trust is false.
 - The packaged desktop validates SHA-256 and byte size for its frozen daemon, helper, whisper.cpp executable, and base.en model before launch; mints a private per-launch token; proves authenticated readiness; and owns normal-exit and parent-loss cleanup. Repository Python/Node processes are not required to run the packaged core.
 
 ## Verification
@@ -55,7 +55,7 @@ product evidence for a locked desktop.
   foreground/focus live tests.
 - TextEdit launched and was detected as running, but could not become frontmost while locked.
 - A real background Python HTTP service ran without changing the frontmost bundle.
-- The real running Code bundle matched THOTH using authoritative approved-path and task-workspace evidence; bundle/title data remained hints.
+- The real running Code bundle matched OmniMac using authoritative approved-path and task-workspace evidence; bundle/title data remained hints.
 - Live Qwen3 4B inference, constrained planning, and persona-summary tests passed in the host-context full gate.
 - A real Code → temporary TextEdit action → Code sequence independently
   verified final frontmost bundle `com.microsoft.VSCode`. Direct
@@ -73,10 +73,10 @@ The latest repaired-build live probe also verified loopback health, offline runt
 The packaged-app continuation independently verified a 217 MB `.app` and 196 MB DMG. The app launched its own frozen daemon and helper with no checkout daemon running, required the private token, reported the bundled base.en pin as verified, executed model-free Stop, and removed a cancelled voice session. Normal Quit and forced desktop termination both released the daemon/helper after parent-loss monitoring was added. The mounted DMG contained every manifest asset and `codesign --verify --deep --strict` passed. `spctl` still rejects the ad-hoc app because no Developer ID/notarization evidence exists.
 
 The final native microphone audit found and repaired a packaging defect: the
-Chrome-hosted dev UI had permission, but `THOTH.app` lacked its own microphone
+Chrome-hosted dev UI had permission, but `OmniMac.app` lacked its own microphone
 usage declaration. The signed app and DMG now contain a bounded
 `NSMicrophoneUsageDescription` stating push-to-talk and local transcription.
-The next real capture will still require the user to accept macOS's THOTH-specific
+The next real capture will still require the user to accept macOS's OmniMac-specific
 microphone prompt; no human speech result is inferred from the declaration.
 
 A real packaged `Open TextEdit` command then failed closed before execution
@@ -97,7 +97,7 @@ scope was silently added during validation.
 
 ## Honest capability statement
 
-**THOTH provides a consistent local persona, understands short-lived operational context, detects the active macOS workspace, and has a local safety-gated focus and voice implementation. Real microphone reliability and exact-helper Accessibility control remain unverified release gates.**
+**OmniMac provides a consistent local persona, understands short-lived operational context, detects the active macOS workspace, and has a local safety-gated focus and voice implementation. Real microphone reliability and exact-helper Accessibility control remain unverified release gates.**
 
 ## Recommended next phase
 

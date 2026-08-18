@@ -16,10 +16,10 @@
 ## File Structure
 | File | C/M | Responsibility |
 |---|---|---|
-| `apps/daemon/src/thoth_daemon/storage/skills.py` | C | `SkillStore`. |
-| `apps/daemon/src/thoth_daemon/api/skills.py` | C | skills router. |
-| `apps/daemon/src/thoth_daemon/api/settings.py` | C | settings router. |
-| `apps/daemon/src/thoth_daemon/app.py` | M | build store, register routers. |
+| `apps/daemon/src/omnimac_daemon/storage/skills.py` | C | `SkillStore`. |
+| `apps/daemon/src/omnimac_daemon/api/skills.py` | C | skills router. |
+| `apps/daemon/src/omnimac_daemon/api/settings.py` | C | settings router. |
+| `apps/daemon/src/omnimac_daemon/app.py` | M | build store, register routers. |
 | `apps/desktop/src/lib/api.ts` | M | new client methods + types. |
 | `apps/desktop/src/views/{Permissions,Skills,Settings}.tsx` | M | real data. |
 | `apps/desktop/src/views/views.test.tsx` | M | updated tests. |
@@ -41,8 +41,8 @@ Tests: `tests/api/test_skills_api.py`, `test_settings_api.py`.
 # apps/daemon/tests/api/test_skills_api.py
 from httpx import AsyncClient
 
-from thoth_daemon.schemas import SkillDefinition
-from thoth_daemon.storage.skills import SkillStore
+from omnimac_daemon.schemas import SkillDefinition
+from omnimac_daemon.storage.skills import SkillStore
 
 
 async def test_skills_empty_by_default(client: AsyncClient) -> None:
@@ -86,7 +86,7 @@ async def test_patch_extra_field_422(client: AsyncClient, app) -> None:
 - [ ] **Step 3: Implement `storage/skills.py`**
 
 ```python
-# apps/daemon/src/thoth_daemon/storage/skills.py
+# apps/daemon/src/omnimac_daemon/storage/skills.py
 """Skill store over the `skills` table. Lists installed SkillDefinitions and
 toggles their enabled flag. No seed data — an empty store is the honest state
 until the skill engine ships."""
@@ -96,8 +96,8 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from thoth_daemon.schemas import SkillDefinition
-from thoth_daemon.storage.models import SkillRow
+from omnimac_daemon.schemas import SkillDefinition
+from omnimac_daemon.storage.models import SkillRow
 
 
 class SkillStore:
@@ -142,14 +142,14 @@ class SkillStore:
 - [ ] **Step 4: Implement `api/skills.py`**
 
 ```python
-# apps/daemon/src/thoth_daemon/api/skills.py
+# apps/daemon/src/omnimac_daemon/api/skills.py
 from typing import Any, cast
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict
 
-from thoth_daemon.audit.store import AuditStore
-from thoth_daemon.storage.skills import SkillStore
+from omnimac_daemon.audit.store import AuditStore
+from omnimac_daemon.storage.skills import SkillStore
 
 router = APIRouter()
 SYSTEM_TASK_ID = "system"
@@ -181,7 +181,7 @@ async def patch_skill(skill_id: str, body: SkillPatch, request: Request) -> dict
 
 - [ ] **Step 5: Wire `app.py`** — after permissions store:
 ```python
-        from thoth_daemon.storage.skills import SkillStore  # or top import
+        from omnimac_daemon.storage.skills import SkillStore  # or top import
         app.state.skills = SkillStore(session_factory)
 ```
 and `app.include_router(skills.router)` + import `skills`.
@@ -222,13 +222,13 @@ async def test_settings_requires_auth(client: AsyncClient) -> None:
 - [ ] **Step 3: Implement `api/settings.py`**
 
 ```python
-# apps/daemon/src/thoth_daemon/api/settings.py
+# apps/daemon/src/omnimac_daemon/api/settings.py
 from typing import Any, cast
 
 from fastapi import APIRouter, Request
 
-import thoth_daemon
-from thoth_daemon.config import Settings
+import omnimac_daemon
+from omnimac_daemon.config import Settings
 
 router = APIRouter()
 
@@ -237,7 +237,7 @@ router = APIRouter()
 async def get_settings(request: Request) -> dict[str, Any]:
     cfg = cast(Settings, request.app.state.settings)
     return {
-        "version": thoth_daemon.__version__,
+        "version": omnimac_daemon.__version__,
         "planner": cfg.planner,
         "approval_ttl_seconds": cfg.approval_ttl_seconds,
         "max_retries_per_step": cfg.max_retries_per_step,
@@ -295,12 +295,12 @@ add to `api`:
 
 - [ ] **Step 3: Rewrite `Settings.tsx`** — `useQuery(["settings"], api.settings)`; show planner, approval TTL, retry budgets, trusted workspaces, daemon version in the existing read-only card layout. Remove the retention card (not real) + voice card stays as a disabled Phase-3 placeholder (clearly future, not "mock data"). Remove badge.
 
-- [ ] **Step 4: Update `views.test.tsx`** — wrap renders in a `QueryClientProvider`; stub `fetch` (and `VITE_THOTH_TOKEN`) to return each endpoint's JSON; assert real values render; Permissions revoke fires DELETE; Skills toggle fires PATCH; Skills empty state shows when `[]`. Concrete pattern:
+- [ ] **Step 4: Update `views.test.tsx`** — wrap renders in a `QueryClientProvider`; stub `fetch` (and `VITE_OmniMac_TOKEN`) to return each endpoint's JSON; assert real values render; Permissions revoke fires DELETE; Skills toggle fires PATCH; Skills empty state shows when `[]`. Concrete pattern:
 
 ```tsx
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 // helper: renderWithQuery(ui) wraps in a fresh QueryClient (retry:false)
-// beforeEach: vi.stubEnv("VITE_THOTH_TOKEN","t"); vi.stubGlobal("fetch", routeMock)
+// beforeEach: vi.stubEnv("VITE_OmniMac_TOKEN","t"); vi.stubGlobal("fetch", routeMock)
 // routeMock returns permissions/skills/settings JSON by URL; asserts via findByText
 ```
 
@@ -314,7 +314,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 - [ ] **Step 2: STATUS + MILESTONES** — Permissions/Skills/Settings now live (mock badges gone); note skills list is empty until the engine ships; settings read-only; check the two MILESTONES lines (Permissions view wired; Skills view — partial: listing/toggle, engine later). Bump daemon test count. Keep no-autonomous-control statement.
 - [ ] **Step 3: Daemon gate** — pytest (hang-guard), ruff, format, mypy.
 - [ ] **Step 4: Desktop gate** — test, lint, typecheck, build.
-- [ ] **Step 5: Live verify** — daemon up (`THOTH_SESSION_TOKEN=x`): curl `/api/skills` (`[]`), `/api/settings` (real) with token → 200, without → 401.
+- [ ] **Step 5: Live verify** — daemon up (`OmniMac_SESSION_TOKEN=x`): curl `/api/skills` (`[]`), `/api/settings` (real) with token → 200, without → 401.
 - [ ] **Step 6: Commit** `docs: ADR-016 + status for views wiring (slice 9)`
 
 ---

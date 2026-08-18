@@ -1,5 +1,5 @@
-from thoth_daemon.voice.contracts import VoiceActivityState
-from thoth_daemon.voice.vad import PCMVoiceActivityDetector
+from omnimac_daemon.voice.contracts import VoiceActivityState
+from omnimac_daemon.voice.vad import PCMVoiceActivityDetector
 
 
 def test_pcm_vad_distinguishes_speech_from_silence() -> None:

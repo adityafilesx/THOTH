@@ -10,20 +10,20 @@ safe; it NEVER switches to a cloud model.
 
 import pytest
 
-from thoth_daemon.browser.browser_adapter import MockBrowser
-from thoth_daemon.core.focus import FocusPolicy
-from thoth_daemon.core.local_planner import (
+from omnimac_daemon.browser.browser_adapter import MockBrowser
+from omnimac_daemon.core.focus import FocusPolicy
+from omnimac_daemon.core.local_planner import (
     LocalPlanner,
     PlanRejected,
     PlanRejection,
     PlanValidator,
     plan_with_fallback,
 )
-from thoth_daemon.schemas import RiskLevel
-from thoth_daemon.tools.app_tools import register_app_tools
-from thoth_daemon.tools.browser_tools import BrowserRead
-from thoth_daemon.tools.fs_tools import register_fs_tools
-from thoth_daemon.tools.registry import ToolRegistry
+from omnimac_daemon.schemas import RiskLevel
+from omnimac_daemon.tools.app_tools import register_app_tools
+from omnimac_daemon.tools.browser_tools import BrowserRead
+from omnimac_daemon.tools.fs_tools import register_fs_tools
+from omnimac_daemon.tools.registry import ToolRegistry
 
 
 def _registry() -> ToolRegistry:
@@ -45,9 +45,7 @@ VALIDATOR = PlanValidator(_registry(), known_apps={"TextEdit"})
 
 class TestPlanValidator:
     def test_valid_plan_passes(self) -> None:
-        raw = _plan(
-            {"tool_name": "fs_read_file", "arguments": {"path": "/x"}, "declared_risk": "R0"}
-        )
+        raw = _plan({"tool_name": "fs_read_file", "arguments": {"path": "/x"}, "declared_risk": "R0"})
         plan = VALIDATOR.validate(raw, task_id="t1")
         assert plan.task_id == "t1"
         assert plan.steps[0].tool_name == "fs_read_file"
@@ -115,26 +113,19 @@ class TestPlanValidator:
     def test_effectful_step_without_verifier_rejected(self) -> None:
         # fs_read_file is NONE_READONLY; declared R1 with no checks => an
         # effectful step with no way to verify it. Rejected.
-        raw = _plan(
-            {"tool_name": "fs_read_file", "arguments": {"path": "/x"}, "declared_risk": "R1"}
-        )
+        raw = _plan({"tool_name": "fs_read_file", "arguments": {"path": "/x"}, "declared_risk": "R1"})
         with pytest.raises(PlanRejected) as exc:
             VALIDATOR.validate(raw, task_id="t1")
         assert exc.value.kind is PlanRejection.MISSING_VERIFIER
 
     def test_oversized_plan_rejected(self) -> None:
-        steps = [
-            {"tool_name": "fs_read_file", "arguments": {"path": f"/x{i}"}, "declared_risk": "R0"}
-            for i in range(26)
-        ]
+        steps = [{"tool_name": "fs_read_file", "arguments": {"path": f"/x{i}"}, "declared_risk": "R0"} for i in range(26)]
         with pytest.raises(PlanRejected) as exc:
             VALIDATOR.validate(_plan(*steps), task_id="t1")
         assert exc.value.kind is PlanRejection.TOO_MANY_STEPS
 
     def test_unsupported_app_rejected(self) -> None:
-        raw = _plan(
-            {"tool_name": "app_launch", "arguments": {"app": "Photoshop"}, "declared_risk": "R1"}
-        )
+        raw = _plan({"tool_name": "app_launch", "arguments": {"app": "Photoshop"}, "declared_risk": "R1"})
         with pytest.raises(PlanRejected) as exc:
             VALIDATOR.validate(raw, task_id="t1")
         assert exc.value.kind is PlanRejection.UNSUPPORTED_APP
@@ -198,9 +189,7 @@ class _FailingClient:
 
 class TestLocalPlanner:
     def test_produces_validated_plan(self) -> None:
-        good = _plan(
-            {"tool_name": "fs_read_file", "arguments": {"path": "/notes"}, "declared_risk": "R0"}
-        )
+        good = _plan({"tool_name": "fs_read_file", "arguments": {"path": "/notes"}, "declared_risk": "R0"})
         planner = LocalPlanner(_registry(), _FakeClient(good), known_apps={"TextEdit"})
         plan = planner.plan("t1", "read my notes")
         assert plan.steps[0].tool_name == "fs_read_file"
@@ -220,9 +209,7 @@ class TestLocalPlanner:
 
 class TestFallbackLadder:
     def test_success_uses_planner_tier(self) -> None:
-        good = _plan(
-            {"tool_name": "fs_read_file", "arguments": {"path": "/n"}, "declared_risk": "R0"}
-        )
+        good = _plan({"tool_name": "fs_read_file", "arguments": {"path": "/n"}, "declared_risk": "R0"})
         planner = LocalPlanner(_registry(), _FakeClient(good))
         result = plan_with_fallback("read notes", planner, skill_for_goal=lambda g: None)
         assert result.tier == "planner"
@@ -230,9 +217,7 @@ class TestFallbackLadder:
 
     def test_failure_falls_back_to_matching_skill(self) -> None:
         planner = LocalPlanner(_registry(), _FailingClient())
-        result = plan_with_fallback(
-            "run the health check", planner, skill_for_goal=lambda g: "project-health-check"
-        )
+        result = plan_with_fallback("run the health check", planner, skill_for_goal=lambda g: "project-health-check")
         assert result.tier == "skill"
         assert result.skill == "project-health-check"
 

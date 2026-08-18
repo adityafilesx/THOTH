@@ -7,8 +7,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-from thoth_daemon.api.ws import event_stream
-from thoth_daemon.events.bus import EventBus
+from omnimac_daemon.api.ws import event_stream
+from omnimac_daemon.events.bus import EventBus
 
 
 def test_ws_receives_published_events(ws_client: TestClient, app: FastAPI) -> None:
@@ -18,9 +18,7 @@ def test_ws_receives_published_events(ws_client: TestClient, app: FastAPI) -> No
         hello = ws.receive_json()
         assert hello["type"] == "connection.established"
 
-        ws_client.portal.call(
-            bus.publish, "task.state_changed", {"task_id": "t1", "to": "PLANNING"}
-        )
+        ws_client.portal.call(bus.publish, "task.state_changed", {"task_id": "t1", "to": "PLANNING"})
         msg = ws.receive_json()
         assert msg["type"] == "task.state_changed"
         assert msg["payload"] == {"task_id": "t1", "to": "PLANNING"}
@@ -32,9 +30,7 @@ def test_ws_events_are_redacted(ws_client: TestClient, app: FastAPI) -> None:
     with ws_client.websocket_connect("/ws") as ws:
         ws.send_json({"type": "auth", "token": "test-token"})
         ws.receive_json()  # hello
-        ws_client.portal.call(
-            bus.publish, "audit.appended", {"api_key": "sk-super-secret", "detail": "fine"}
-        )
+        ws_client.portal.call(bus.publish, "audit.appended", {"api_key": "sk-super-secret", "detail": "fine"})
         msg = ws.receive_json()
         assert msg["payload"]["api_key"] == "[REDACTED]"
         assert msg["payload"]["detail"] == "fine"

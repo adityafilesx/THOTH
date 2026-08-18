@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.core.scope import ScopeEnforcer, ScopeViolation
-from thoth_daemon.schemas import ResourceScope
+from omnimac_daemon.core.scope import ScopeEnforcer, ScopeViolation
+from omnimac_daemon.schemas import ResourceScope
 
 
 @pytest.fixture()
@@ -16,12 +16,12 @@ def _allowed(root: str) -> ResourceScope:
 
 
 def test_in_scope_path_allowed(enforcer: ScopeEnforcer) -> None:
-    root = str(Path.home() / "projects" / "thoth")
+    root = str(Path.home() / "projects" / "omnimac")
     enforcer.check(ResourceScope(paths=[root + "/README.md"]), _allowed(root))
 
 
 def test_out_of_scope_path_denied(enforcer: ScopeEnforcer) -> None:
-    root = str(Path.home() / "projects" / "thoth")
+    root = str(Path.home() / "projects" / "omnimac")
     with pytest.raises(ScopeViolation) as exc:
         enforcer.check(ResourceScope(paths=[str(Path.home() / "other" / "x.txt")]), _allowed(root))
     assert exc.value.kind == "path"

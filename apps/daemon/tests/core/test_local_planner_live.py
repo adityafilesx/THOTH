@@ -11,15 +11,15 @@ import urllib.request
 
 import pytest
 
-from thoth_daemon.core.local_plan_client import OllamaPlanClient
-from thoth_daemon.core.local_planner import LocalPlanner
-from thoth_daemon.schemas import ExecutionPlan
-from thoth_daemon.tools.app_tools import register_app_tools
-from thoth_daemon.tools.browser_tools import register_browser_tools
-from thoth_daemon.tools.fs_tools import register_fs_tools
-from thoth_daemon.tools.git_tools import register_git_tools
-from thoth_daemon.tools.registry import ToolRegistry
-from thoth_daemon.tools.shell_tool import register_shell_tool
+from omnimac_daemon.core.local_plan_client import OllamaPlanClient
+from omnimac_daemon.core.local_planner import LocalPlanner
+from omnimac_daemon.schemas import ExecutionPlan
+from omnimac_daemon.tools.app_tools import register_app_tools
+from omnimac_daemon.tools.browser_tools import register_browser_tools
+from omnimac_daemon.tools.fs_tools import register_fs_tools
+from omnimac_daemon.tools.git_tools import register_git_tools
+from omnimac_daemon.tools.registry import ToolRegistry
+from omnimac_daemon.tools.shell_tool import register_shell_tool
 
 ENDPOINT = "http://127.0.0.1:11434"
 MODEL = "qwen3:4b"

@@ -84,7 +84,7 @@ describe("OperationalSummary", () => {
             focused_ax_identifier: null,
             browser_domain: null,
             selected_file_paths: [],
-            workspace_id: "thoth",
+            workspace_id: "omnimac",
             previous_bundle_id: null,
             task_id: "t1",
           },
@@ -99,10 +99,10 @@ describe("OperationalSummary", () => {
   it("shows authoritative workspace match", () => {
     render(
       <OperationalSummary
-        presentation={presentation({ matched_workspace_id: "thoth" })}
+        presentation={presentation({ matched_workspace_id: "omnimac" })}
       />,
     );
-    expect(screen.getByTestId("matched-workspace")).toHaveTextContent("thoth");
+    expect(screen.getByTestId("matched-workspace")).toHaveTextContent("omnimac");
   });
 
   it("shows focus restoration failure", () => {

@@ -96,7 +96,7 @@ invariants.
 ## Exact continuation plan
 
 1. Package a minimal native macOS Accessibility test application with bundle
-   id `me.adityalabs.thoth.axtest`, deterministic reset, and stable identifiers.
+   id `me.adityalabs.omnimac.axtest`, deterministic reset, and stable identifiers.
 2. Add a typed permission boundary and fail-closed revocation handling.
 3. Introduce bounded, redacted AX contracts and deterministic semantic
    resolution while retaining compatibility only where it is safe.

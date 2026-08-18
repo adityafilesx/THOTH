@@ -26,7 +26,7 @@ Shell and background-service tools remain `DO_NOT_STEAL_FOCUS`; they do not fore
 
 Each supported app declares, as data (Pydantic model, versioned): verified capabilities, experimental capabilities, forbidden actions, preferred integration order (e.g. native AX → URL scheme → shell CLI), required permissions, and verification methods. The router/planner may only propose an app action that the profile marks verified (experimental behind an explicit opt-in). Forbidden actions are refused before policy review.
 
-Initial profiles: Finder, TextEdit, Visual Studio Code, Terminal, THOTH Accessibility Test App, a supported Chromium browser. No universal-control claim — an app without a profile has no THOTH-driven capabilities beyond launch/focus.
+Initial profiles: Finder, TextEdit, Visual Studio Code, Terminal, OmniMac Accessibility Test App, a supported Chromium browser. No universal-control claim — an app without a profile has no OmniMac-driven capabilities beyond launch/focus.
 
 ## Boundary
 

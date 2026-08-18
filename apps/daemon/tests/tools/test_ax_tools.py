@@ -8,9 +8,9 @@ does not stick reports verified=False).
 
 import pytest
 
-from thoth_daemon.macos.ax import AXElementInfo, AXPermissionError, MockAXAdapter
-from thoth_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
-from thoth_daemon.tools.ax_tools import (
+from omnimac_daemon.macos.ax import AXElementInfo, AXPermissionError, MockAXAdapter
+from omnimac_daemon.schemas import ResourceScope, RiskLevel, ToolInvocation
+from omnimac_daemon.tools.ax_tools import (
     AXFindElement,
     AXInspectApplication,
     AXPerformAction,
@@ -19,15 +19,15 @@ from thoth_daemon.tools.ax_tools import (
     AXWaitForElement,
     register_ax_tools,
 )
-from thoth_daemon.tools.registry import ToolRegistry
+from omnimac_daemon.tools.registry import ToolRegistry
 
 
 def _mock() -> MockAXAdapter:
     return MockAXAdapter(
         {
             "TestApp": [
-                AXElementInfo(role="AXTextField", label="thoth-input", value="", enabled=True),
-                AXElementInfo(role="AXButton", label="thoth-submit", value=None, enabled=True),
+                AXElementInfo(role="AXTextField", label="omnimac-input", value="", enabled=True),
+                AXElementInfo(role="AXButton", label="omnimac-submit", value=None, enabled=True),
             ]
         }
     )
@@ -53,9 +53,7 @@ class TestRiskAndScope:
     def test_requested_scope_names_the_app(self) -> None:
         ax = _mock()
         tool = AXSetValue(ax)
-        args = tool.input_model.model_validate(
-            {"app": "TestApp", "role": "AXTextField", "label": "thoth-input", "value": "x"}
-        )
+        args = tool.input_model.model_validate({"app": "TestApp", "role": "AXTextField", "label": "omnimac-input", "value": "x"})
         assert tool.requested_scope(args) == ResourceScope(apps=["TestApp"])
 
 
@@ -64,14 +62,12 @@ class TestReadPaths:
         tool = AXInspectApplication(_mock())
         out = await tool.run(tool.input_model.model_validate({"app": "TestApp"}), False)
         assert len(out.elements) == 2
-        assert out.elements[0].label == "thoth-input"
+        assert out.elements[0].label == "omnimac-input"
 
     async def test_find_element(self) -> None:
         tool = AXFindElement(_mock())
         out = await tool.run(
-            tool.input_model.model_validate(
-                {"app": "TestApp", "role": "AXButton", "label": "thoth-submit"}
-            ),
+            tool.input_model.model_validate({"app": "TestApp", "role": "AXButton", "label": "omnimac-submit"}),
             False,
         )
         assert out.found and out.element is not None
@@ -79,9 +75,7 @@ class TestReadPaths:
     async def test_read_value(self) -> None:
         tool = AXReadValue(_mock())
         out = await tool.run(
-            tool.input_model.model_validate(
-                {"app": "TestApp", "role": "AXTextField", "label": "thoth-input"}
-            ),
+            tool.input_model.model_validate({"app": "TestApp", "role": "AXTextField", "label": "omnimac-input"}),
             False,
         )
         assert out.value == ""
@@ -92,33 +86,27 @@ class TestMutationPaths:
         ax = _mock()
         tool = AXSetValue(ax)
         out = await tool.run(
-            tool.input_model.model_validate(
-                {"app": "TestApp", "role": "AXTextField", "label": "thoth-input", "value": "hi"}
-            ),
+            tool.input_model.model_validate({"app": "TestApp", "role": "AXTextField", "label": "omnimac-input", "value": "hi"}),
             False,
         )
         assert out.verified  # re-read after set matched
-        assert ax.read_value("TestApp", "AXTextField", "thoth-input") == "hi"
+        assert ax.read_value("TestApp", "AXTextField", "omnimac-input") == "hi"
 
     async def test_set_value_dry_run_mutates_nothing(self) -> None:
         ax = _mock()
         tool = AXSetValue(ax)
         out = await tool.run(
-            tool.input_model.model_validate(
-                {"app": "TestApp", "role": "AXTextField", "label": "thoth-input", "value": "hi"}
-            ),
+            tool.input_model.model_validate({"app": "TestApp", "role": "AXTextField", "label": "omnimac-input", "value": "hi"}),
             True,
         )
         assert not out.verified
-        assert ax.read_value("TestApp", "AXTextField", "thoth-input") == ""
+        assert ax.read_value("TestApp", "AXTextField", "omnimac-input") == ""
 
     async def test_perform_action_dry_run_is_inert(self) -> None:
         ax = _mock()
         tool = AXPerformAction(ax)
         await tool.run(
-            tool.input_model.model_validate(
-                {"app": "TestApp", "role": "AXButton", "label": "thoth-submit", "action": "AXPress"}
-            ),
+            tool.input_model.model_validate({"app": "TestApp", "role": "AXButton", "label": "omnimac-submit", "action": "AXPress"}),
             True,
         )
         assert ax.actions_performed == []
@@ -154,7 +142,7 @@ class TestRegistration:
             arguments={
                 "app": "TestApp",
                 "role": "AXTextField",
-                "label": "thoth-input",
+                "label": "omnimac-input",
                 "value": "x",
             },
             effective_risk=RiskLevel.R1,

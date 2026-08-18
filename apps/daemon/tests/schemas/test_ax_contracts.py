@@ -5,8 +5,8 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from pydantic import ValidationError
 
-from thoth_daemon.schemas import FocusPolicy, Provenance
-from thoth_daemon.schemas.ax import (
+from omnimac_daemon.schemas import FocusPolicy, Provenance
+from omnimac_daemon.schemas.ax import (
     AXActionKind,
     AXActionRequest,
     AXApplicationSnapshot,
@@ -28,7 +28,7 @@ NOW = datetime(2026, 7, 14, 13, tzinfo=UTC)
 
 def _query(**updates: object) -> AXElementQuery:
     values: dict[str, object] = {
-        "application_bundle_id": "me.adityalabs.thoth.axtest",
+        "application_bundle_id": "me.adityalabs.omnimac.axtest",
         "identifier": "ax-save-button",
     }
     values.update(updates)
@@ -38,9 +38,9 @@ def _query(**updates: object) -> AXElementQuery:
 def _element(**updates: object) -> AXElementSnapshot:
     values: dict[str, object] = {
         "reference_id": "capture-1:element-1",
-        "application_bundle_id": "me.adityalabs.thoth.axtest",
+        "application_bundle_id": "me.adityalabs.omnimac.axtest",
         "window_identifier": "main",
-        "window_title": "THOTH AX Test App",
+        "window_title": "OmniMac AX Test App",
         "role": "AXButton",
         "identifier": "ax-save-button",
         "label": "Save",
@@ -63,7 +63,7 @@ def test_snapshots_are_strict_untrusted_observations() -> None:
     window = AXWindowSnapshot(
         application_bundle_id=element.application_bundle_id,
         identifier="main",
-        title="THOTH AX Test App",
+        title="OmniMac AX Test App",
         focused=True,
         element_count=1,
         elements=[element],
@@ -71,7 +71,7 @@ def test_snapshots_are_strict_untrusted_observations() -> None:
     )
     app = AXApplicationSnapshot(
         bundle_id=element.application_bundle_id,
-        display_name="THOTH AX Test App",
+        display_name="OmniMac AX Test App",
         process_identifier=123,
         windows=[window],
         captured_at=NOW,
@@ -79,9 +79,7 @@ def test_snapshots_are_strict_untrusted_observations() -> None:
 
     assert app.provenance is Provenance.TOOL_RESULT_UNTRUSTED
     with pytest.raises(ValidationError):
-        AXApplicationSnapshot.model_validate(
-            {**app.model_dump(), "provenance": Provenance.SYSTEM_TRUSTED}
-        )
+        AXApplicationSnapshot.model_validate({**app.model_dump(), "provenance": Provenance.SYSTEM_TRUSTED})
     with pytest.raises(ValidationError):
         AXElementSnapshot.model_validate({**element.model_dump(), "screen_x": 10})
 
@@ -115,14 +113,14 @@ def test_reference_must_have_positive_freshness_window() -> None:
 
 def test_action_request_binds_target_verifier_bundle_and_focus() -> None:
     verification = AXVerificationRequest(
-        application_bundle_id="me.adityalabs.thoth.axtest",
+        application_bundle_id="me.adityalabs.omnimac.axtest",
         target=_query(),
         expectation=AXVerificationExpectation.VALUE_EQUALS,
         expected_value="saved",
         timeout_s=2,
     )
     request = AXActionRequest(
-        application_bundle_id="me.adityalabs.thoth.axtest",
+        application_bundle_id="me.adityalabs.omnimac.axtest",
         capability="ax_set_value",
         target=_query(),
         action=AXActionKind.SET_VALUE,

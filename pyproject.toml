@@ -1,7 +1,7 @@
 [project]
-name = "thoth-workspace"
+name = "omnimac-workspace"
 version = "0.1.0"
-description = "THOTH monorepo root — tooling configuration only (daemon lives in apps/daemon)"
+description = "OmniMac monorepo root — tooling configuration only (daemon lives in apps/daemon)"
 requires-python = ">=3.12"
 
 [tool.uv]
@@ -11,7 +11,7 @@ package = false
 members = ["apps/daemon"]
 
 [tool.ruff]
-line-length = 100
+line-length = 150
 target-version = "py312"
 src = ["apps/daemon/src"]
 
@@ -26,21 +26,21 @@ ignore = [
 "apps/daemon/tests/**" = ["S", "ASYNC"]
 # Verification probes intentionally shell out to `ps`/`git` with fixed argv
 # (shell=False, no untrusted input) for read-only state probes.
-"apps/daemon/src/thoth_daemon/core/verifiers/context.py" = ["S603", "S607"]
+"apps/daemon/src/omnimac_daemon/core/verifiers/context.py" = ["S603", "S607"]
 # Capstone CLI sets up its own git fixture workspace with fixed argv.
-"apps/daemon/src/thoth_daemon/evals/run_capstones.py" = ["S603", "S607"]
+"apps/daemon/src/omnimac_daemon/evals/run_capstones.py" = ["S603", "S607"]
 # The inference HTTP caller's `timeout` param mirrors the real client API.
-"apps/daemon/src/thoth_daemon/inference/llamacpp.py" = ["ASYNC109"]
+"apps/daemon/src/omnimac_daemon/inference/llamacpp.py" = ["ASYNC109"]
 # Hardware detection reads sysctl with fixed argv.
-"apps/daemon/src/thoth_daemon/inference/benchmark.py" = ["S603", "S607"]
+"apps/daemon/src/omnimac_daemon/inference/benchmark.py" = ["S603", "S607"]
 # Loopback Ollama tags check with a fixed host.
-"apps/daemon/src/thoth_daemon/evals/run_local_bench.py" = ["S310"]
+"apps/daemon/src/omnimac_daemon/evals/run_local_bench.py" = ["S310"]
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
 mypy_path = "apps/daemon/src"
-packages = ["thoth_daemon"]
+packages = ["omnimac_daemon"]
 plugins = ["pydantic.mypy"]
 
 [tool.pytest.ini_options]

@@ -1,10 +1,10 @@
-# THOTH — Product Requirements Document
+# OmniMac — Product Requirements Document
 
 ## 1. Product definition
 
-THOTH is a local-first, voice-enabled macOS computer operator. It converts a spoken or typed goal into a structured, risk-classified execution plan, obtains approval for sensitive steps, executes through the safest available tool, verifies each result, recovers from bounded failures, and records a complete audit trail. It stops instantly when interrupted.
+OmniMac is a local-first, voice-enabled macOS computer operator. It converts a spoken or typed goal into a structured, risk-classified execution plan, obtains approval for sensitive steps, executes through the safest available tool, verifies each result, recovers from bounded failures, and records a complete audit trail. It stops instantly when interrupted.
 
-THOTH is **not** a chatbot, note-taking application, generic second brain, or simple voice-command launcher.
+OmniMac is **not** a chatbot, note-taking application, generic second brain, or simple voice-command launcher.
 
 ## 2. Goals
 
@@ -88,4 +88,4 @@ Seven desktop views. Refined dark interface inspired by scientific command syste
 - **Phase 0** — engineering docs, repo configuration, Claude Code agents/rules/hooks.
 - **Phase 1** — desktop shell, daemon, health, WS events, SQLite + migrations, structured logging, command-center + plan + timeline UI on mock data.
 - **Phase 2** — contracts, state machine, risk engine, approvals, tool registry + mock tools, verification, recovery, audit store, task API/WS.
-- **Phase 3+** — real macOS adapters (PyObjC/AX), browser automation (Playwright MCP), restricted shell, voice pipeline, skill engine. **Until Phase 3 integration and verification are complete, THOTH cannot control the computer.**
+- **Phase 3+** — real macOS adapters (PyObjC/AX), browser automation (Playwright MCP), restricted shell, voice pipeline, skill engine. **Until Phase 3 integration and verification are complete, OmniMac cannot control the computer.**

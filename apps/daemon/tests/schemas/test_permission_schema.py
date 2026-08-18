@@ -1,12 +1,12 @@
 import pytest
 from pydantic import ValidationError
 
-from thoth_daemon.schemas import PermissionGrant
-from thoth_daemon.storage.models import Base
+from omnimac_daemon.schemas import PermissionGrant
+from omnimac_daemon.storage.models import Base
 
 
 def test_permission_grant_defaults() -> None:
-    g = PermissionGrant(workspace_id="w1", kind="path", value="~/projects/thoth")
+    g = PermissionGrant(workspace_id="w1", kind="path", value="~/projects/omnimac")
     assert g.revoked is False and g.id
 
 

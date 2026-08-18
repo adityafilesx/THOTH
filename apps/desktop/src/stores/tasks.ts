@@ -8,7 +8,7 @@ import type {
   AuditEvent,
   Task,
   WsEnvelope,
-} from "@thoth/shared-schemas";
+} from "@omnimac/shared-schemas";
 import { create } from "zustand";
 
 import type { TaskPayload, TaskPresentation } from "@/lib/api";

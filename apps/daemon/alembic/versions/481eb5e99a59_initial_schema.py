@@ -31,9 +31,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        op.f("ix_approvals_invocation_id"), "approvals", ["invocation_id"], unique=False
-    )
+    op.create_index(op.f("ix_approvals_invocation_id"), "approvals", ["invocation_id"], unique=False)
     op.create_index(op.f("ix_approvals_task_id"), "approvals", ["task_id"], unique=False)
     op.create_table(
         "audit_events",

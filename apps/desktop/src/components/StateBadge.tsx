@@ -1,4 +1,4 @@
-import type { TaskState } from "@thoth/shared-schemas";
+import type { TaskState } from "@omnimac/shared-schemas";
 
 import { cn } from "@/lib/utils";
 

@@ -22,7 +22,7 @@ async def test_runtime_status_exposes_local_components(
 
 
 async def test_runtime_exposes_bounded_live_voice_latency(client: AsyncClient) -> None:
-    routed = await client.post("/api/intent/route", json={"text": "Thoth, stop."})
+    routed = await client.post("/api/intent/route", json={"text": "Omnimac, stop."})
     assert routed.status_code == 200
 
     body = (await client.get("/api/runtime")).json()

@@ -40,7 +40,7 @@ The exact process currently calling `AXIsProcessTrusted()` is:
 | Property | Observed value |
 |---|---|
 | Process | uv-managed CPython 3.12.13 (`python3`) |
-| Virtual-environment path | `/Users/aditya1981/Downloads/THOTH/.venv/bin/python3` |
+| Virtual-environment path | `/Users/aditya1981/Downloads/OmniMac/.venv/bin/python3` |
 | Resolved executable | `/Users/aditya1981/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/bin/python3.12` |
 | Bundle identifier | None |
 | Signing | ad-hoc, linker-signed; no team identifier or bound Info.plist |
@@ -57,7 +57,7 @@ evidence, but is not evidence for the current Python TCC host.
 
 A production-stable helper identity is required before asking the user for TCC
 trust. It must be a narrow local helper with bundle identifier
-`me.adityalabs.thoth.axhelper`, authenticated restrictive local IPC, the
+`me.adityalabs.omnimac.axhelper`, authenticated restrictive local IPC, the
 existing typed AX operations only, and no planning, approval, shell, coordinate,
 profile expansion, or instruction interpretation surface. Manual TCC approval
 and an unlocked desktop remain user-controlled gates; this run must not modify
@@ -158,7 +158,7 @@ deterministic global Stop and approval invalidation, local macOS/Piper TTS,
 bounded runtime manager, native shortcut/menu/overlay/HUD, authoritative
 persona playback, safe recent dialogue resolution, numeric latency metrics,
 and tool-level offline browser refusal. The unstable Python AX host was
-replaced by `me.adityalabs.thoth.axhelper`; a live mode-0600 socket/trust probe
+replaced by `me.adityalabs.omnimac.axhelper`; a live mode-0600 socket/trust probe
 passed structurally and returned false as expected.
 
 Real Whisper, microphone, 30-command, offline voice-to-action, unlocked global

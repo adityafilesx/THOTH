@@ -1,7 +1,7 @@
-# THOTH Phase 4 — Gap Report & Execution Plan
+# OmniMac Phase 4 — Gap Report & Execution Plan
 
 **Date:** 2026-07-12 · **Base:** `main` @ `dba63cb` (Phases 0–3 complete, 451 tests green)
-**Author:** THOTH engineering (paired) · **Status:** pre-implementation audit (no code changed yet)
+**Author:** OmniMac engineering (paired) · **Status:** pre-implementation audit (no code changed yet)
 
 This document audits the Phase-3 implementation against the Phase-4 specification, records the gap per
 slice with acceptance criteria and verifiability, and defines the execution plan. **Nothing is
@@ -21,7 +21,7 @@ Phase 3**, and the objective cannot be *proven* without them:
 | `ANTHROPIC_API_KEY` | Slice 1 (live planner eval, ~100 real calls), Slice 10 (all 5 capstones use the live planner) | **Not present** | Planner logic stays fully unit-tested with an injected fake; *live* planning, eval percentages, and capstones **cannot run** |
 | macOS **Accessibility TCC** grant | Slice 3 (`ax.set_value`/`perform_action`), Slice 10 capstone 4 | **Not granted** (launch/focus/list need no TCC and are verified) | AX adapter built + unit-tested vs a mock AX tree; live AX **unverifiable** |
 | **Microphone** + local STT model (whisper.cpp / faster-whisper) | Slice 6 (voice) | mic **not granted**; STT model not installed (macOS `say` TTS is available) | Voice pipeline built behind adapters + unit-tested; live capture/transcription **unverifiable** |
-| Approved **editor** running (VS Code) | Slice 10 capstone "Continue THOTH" | present (`app_launch` verified in Phase 3) | ok |
+| Approved **editor** running (VS Code) | Slice 10 capstone "Continue OmniMac" | present (`app_launch` verified in Phase 3) | ok |
 | **Cost / rate limits** on the live planner | Slices 1, 10 | n/a | ~100 planner calls + capstone re-plans have real token cost |
 
 **This is the make-or-break decision for the phase.** Everything that is *code* (adapters, engines,
@@ -32,7 +32,7 @@ deliverable — require at least the API key (and TCC/mic for the AX and voice c
 **Recommended posture (matches the Phase-3 pattern you approved):** build + unit-test **every** slice
 to completion; run each live verification the moment its environment is available; label anything not
 live-verified as *"implemented, pending live verification"* in STATUS/CAPSTONE_REPORT; never overclaim.
-The final claim ("THOTH can safely execute and verify selected multi-step workflows…") is only made
+The final claim ("OmniMac can safely execute and verify selected multi-step workflows…") is only made
 after the five live capstones actually pass.
 
 ---
@@ -42,7 +42,7 @@ after the five live capstones actually pass.
 Legend — **Verifiability:** 🟢 fully here · 🟡 partial (unit-test now, live pending env) · 🔴 live-only (needs key/TCC/mic).
 
 ### Slice 1 — Live planner evaluation 🟡
-- **Have:** `ClaudePlanner` behind `PlannerAdapter`; `AnthropicPlannerClient` (lazy, structured output, `claude-opus-4-8`); injected `PlannerClient` protocol; unit tests for mapping/validation/untrusted-rejection/raise-safety; `THOTH_PLANNER=claude` switch.
+- **Have:** `ClaudePlanner` behind `PlannerAdapter`; `AnthropicPlannerClient` (lazy, structured output, `claude-opus-4-8`); injected `PlannerClient` protocol; unit tests for mapping/validation/untrusted-rejection/raise-safety; `OmniMac_PLANNER=claude` switch.
 - **Gap:** no evaluation framework; no ≥100 categorized requests; no metrics (valid-plan %, unknown-tool %, invalid-arg %, correct-risk %, correct-scope %, unnecessary-step %, injection-failure %); no `docs/evaluations`; secret-in-prompt/log/audit assertions not codified.
 - **Acceptance:** eval harness runs ≥100 requests across all 13 categories; emits redacted report to `docs/evaluations`; API key never in logs/SQLite/frontend/prompt/audit (asserted).
 - **Deps:** 🔴 live key for real percentages. Harness + categorized corpus + a **fake-planner dry-run mode** (deterministic scoring against expected tool/risk) are 🟢 — build now, run live when keyed.
@@ -55,7 +55,7 @@ Legend — **Verifiability:** 🟢 fully here · 🟡 partial (unit-test now, li
 
 ### Slice 3 — Accessibility control 🟡
 - **Have:** `app_control.py` (launch/focus/list via NSWorkspace, no TCC). **No AX element interaction.**
-- **Gap:** a **THOTH Accessibility Test App** (text input, buttons, checkbox, dropdown, table, modal, save, dynamic status, moving elements, disabled elements); typed tools `ax.inspect_application`/`find_element`/`read_value`/`set_value`/`perform_action`/`wait_for_element` using AX roles/labels/identifiers (**never coordinates**); a permission setup-state view; workflow "Enter Aditya … and save" verified by reading status **through AX**.
+- **Gap:** a **OmniMac Accessibility Test App** (text input, buttons, checkbox, dropdown, table, modal, save, dynamic status, moving elements, disabled elements); typed tools `ax.inspect_application`/`find_element`/`read_value`/`set_value`/`perform_action`/`wait_for_element` using AX roles/labels/identifiers (**never coordinates**); a permission setup-state view; workflow "Enter Aditya … and save" verified by reading status **through AX**.
 - **Acceptance:** AX tools drive the test app by role/label/AXIdentifier; verifier reads resulting status via AX; graceful setup-state when TCC absent.
 - **Deps:** 🔴 TCC for live drive. The AX adapter behind a protocol + a **MockAXTree** for unit tests is 🟢. Test app is a small native/SwiftUI (or Tauri) app — buildable; running it under AX needs TCC. PyObjC `ApplicationServices`/`AXUIElement`.
 
@@ -96,7 +96,7 @@ Legend — **Verifiability:** 🟢 fully here · 🟡 partial (unit-test now, li
 - **Deps:** 🟢. Migration 0003 (add `prev_hash`/`hash` columns) + canonical serialization. Depends on slice 2 (correlation id in the hash).
 
 ### Slice 10 — Capstone workflows 🔴 (build 🟢)
-- **Gap:** 5 live workflows (Continue THOTH; Research-and-save; Prepare-commit; AX operation; Browser form) — each **natural language → live planner → … → verified state**, with a recorded redacted manifest each.
+- **Gap:** 5 live workflows (Continue OmniMac; Research-and-save; Prepare-commit; AX operation; Browser form) — each **natural language → live planner → … → verified state**, with a recorded redacted manifest each.
 - **Acceptance:** each begins in NL, uses the live planner, ends verified; manifests stored.
 - **Deps:** 🔴 live key (all), TCC (AX one), browser (ok), editor (ok), git (ok). Harness + fixtures + manifest recorder 🟢; the *runs* need the key/TCC.
 

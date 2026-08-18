@@ -1,7 +1,7 @@
 # Slice 1 — Scope enforcement + permission store (design/spec)
 
 **Date:** 2026-07-11 · **Phase:** 3 · **Status:** approved design, pre-plan
-**Author:** THOTH engineering (paired) · **Depends on:** Phase 2 safety core (complete)
+**Author:** OmniMac engineering (paired) · **Depends on:** Phase 2 safety core (complete)
 **Blocks:** every real adapter (filesystem, shell, git, app, browser), Permissions-view wiring (slice 9)
 
 ## 1. Context & problem
@@ -16,7 +16,7 @@ slice the mandatory first step of Phase 3:
    touches disk, an unenforced scope is a direct path to threat **T3 (tool misuse & scope
    creep)** and **T5 (secret leakage)**.
 2. **Grants are static.** The single `WorkspaceProfile` is built once in `app.py` from
-   `cfg.trusted_workspaces`. There is no persistent, user-driven store of what THOTH may
+   `cfg.trusted_workspaces`. There is no persistent, user-driven store of what OmniMac may
    touch, and no API for the Permissions view to read or mutate.
 
 This slice builds the enforcement layer and its backing store. **It adds no real file, shell,

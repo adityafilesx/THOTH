@@ -1,7 +1,7 @@
 import stat
 from pathlib import Path
 
-from thoth_daemon.security.auth import mint_token, token_matches, write_token_file
+from omnimac_daemon.security.auth import mint_token, token_matches, write_token_file
 
 
 def test_mint_token_is_long_and_unique() -> None:

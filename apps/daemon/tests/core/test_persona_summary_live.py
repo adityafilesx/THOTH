@@ -13,9 +13,9 @@ import urllib.request
 
 import pytest
 
-from thoth_daemon.core.persona import ResponseFact, ResponseIntent, ResponseMode
-from thoth_daemon.core.persona_summary import FactualConsistencyValidator, PersonaSummaryComposer
-from thoth_daemon.inference import LlamaCppInferenceProvider
+from omnimac_daemon.core.persona import ResponseFact, ResponseIntent, ResponseMode
+from omnimac_daemon.core.persona_summary import FactualConsistencyValidator, PersonaSummaryComposer
+from omnimac_daemon.inference import LlamaCppInferenceProvider
 
 ENDPOINT = "http://127.0.0.1:11434"
 MODEL = "qwen3:4b"

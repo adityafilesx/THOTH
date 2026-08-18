@@ -2,10 +2,10 @@
 
 from datetime import UTC, datetime
 
-from thoth_daemon.core.ax_diagnostics import AXDiagnosticsStore
-from thoth_daemon.core.ax_resolver import AXResolutionResult
-from thoth_daemon.core.focus import FocusPolicy
-from thoth_daemon.schemas.ax import AXElementQuery
+from omnimac_daemon.core.ax_diagnostics import AXDiagnosticsStore
+from omnimac_daemon.core.ax_resolver import AXResolutionResult
+from omnimac_daemon.core.focus import FocusPolicy
+from omnimac_daemon.schemas.ax import AXElementQuery
 
 NOW = datetime(2026, 7, 14, 18, tzinfo=UTC)
 
@@ -13,7 +13,7 @@ NOW = datetime(2026, 7, 14, 18, tzinfo=UTC)
 def test_diagnostics_omit_labels_values_and_raw_trees() -> None:
     store = AXDiagnosticsStore()
     query = AXElementQuery(
-        application_bundle_id="me.adityalabs.thoth.axtest",
+        application_bundle_id="me.adityalabs.omnimac.axtest",
         role="AXButton",
         label="private document title",
     )
@@ -52,7 +52,7 @@ def test_diagnostics_omit_labels_values_and_raw_trees() -> None:
 def test_diagnostics_retain_exactly_one_latest_snapshot() -> None:
     store = AXDiagnosticsStore()
     query = AXElementQuery(
-        application_bundle_id="me.adityalabs.thoth.axtest",
+        application_bundle_id="me.adityalabs.omnimac.axtest",
         identifier="ax-save-button",
     )
     for task_id in ("old-task", "current-task"):

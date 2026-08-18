@@ -1,4 +1,4 @@
-import { Mic, SendHorizontal } from "lucide-react";
+import { Ear, SendHorizontal } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { StateLadder } from "@/components/StateLadder";
@@ -23,6 +23,7 @@ export function CommandCenter() {
 
   const active = activeTaskId ? tasks[activeTaskId] : null;
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const beginPushToTalk = useCallback(() => {
     if (pushToTalkActive.current) return;
     pushToTalkActive.current = true;
@@ -73,9 +74,9 @@ export function CommandCenter() {
       )}
 
       {controlResponse && (
-        <Card aria-label="THOTH control response">
+        <Card aria-label="OmniMac control response">
           <CardContent>
-            <div className="eyebrow mb-1">THOTH</div>
+            <div className="eyebrow mb-1">OmniMac</div>
             <p className="text-sm text-ink" aria-live="polite">
               {controlResponse}
             </p>
@@ -119,7 +120,7 @@ export function CommandCenter() {
               <div className="flex h-full flex-col items-center justify-center gap-2 py-16 text-center">
                 <p className="text-sm text-muted">No task running.</p>
                 <p className="text-xs text-faint">
-                  Type a goal below — THOTH plans it, classifies every step by
+                  Type a goal below — OmniMac plans it, classifies every step by
                   risk, and asks before anything leaves this machine.
                 </p>
               </div>
@@ -144,31 +145,20 @@ export function CommandCenter() {
         <Button
           variant="outline"
           size="icon"
-          aria-label="Push to talk"
-          title="Hold to talk · Option+Space globally"
-          onPointerDown={(event) => {
-            event.currentTarget.setPointerCapture?.(event.pointerId);
-            beginPushToTalk();
-          }}
-          onPointerUp={endPushToTalk}
-          onPointerCancel={endPushToTalk}
-          onKeyDown={(event) => {
-            if (!event.repeat && (event.key === " " || event.key === "Enter")) {
-              beginPushToTalk();
-            }
-          }}
-          onKeyUp={(event) => {
-            if (event.key === " " || event.key === "Enter") {
-              endPushToTalk();
-            }
+          aria-label="Click to talk"
+          title="Click to talk"
+          type="button"
+          onClick={() => {
+            const evt = new CustomEvent("omnimac:ptt", { detail: { state: "Pressed" } });
+            window.dispatchEvent(evt);
           }}
         >
-          <Mic size={14} />
+          <Ear size={14} />
         </Button>
         <Input
           value={goal}
           onChange={(e) => setGoal(e.target.value)}
-          placeholder="State a goal, e.g. “continue the thoth project”"
+          placeholder="State a goal, e.g. “continue the omnimac project”"
           aria-label="Goal"
           className="h-10 font-mono"
         />

@@ -51,10 +51,10 @@ impl RuntimeLayout {
             return Err("desktop executable is not inside an app Contents directory".to_string());
         }
         let resources = contents_dir.join("Resources");
-        let helper_app = resources.join("THOTH Accessibility Helper.app");
+        let helper_app = resources.join("OmniMac Accessibility Helper.app");
         let assets = RuntimeAssetPaths {
-            daemon: resources.join("runtime/thoth-daemon"),
-            helper_executable: helper_app.join("Contents/MacOS/THOTHAXHelper"),
+            daemon: resources.join("runtime/omnimac-daemon"),
+            helper_executable: helper_app.join("Contents/MacOS/OmniMacAXHelper"),
             helper_app,
             whisper_executable: resources.join("runtime/whisper-cli"),
             whisper_model: resources.join("models/ggml-base.en.bin"),
@@ -62,7 +62,7 @@ impl RuntimeLayout {
         };
         Ok(Self {
             token_path: data_dir.join("session.token"),
-            database_path: data_dir.join("thoth.db"),
+            database_path: data_dir.join("omnimac.db"),
             log_dir: data_dir.join("logs"),
             data_dir,
             assets,
@@ -107,13 +107,13 @@ impl RuntimeManifest {
         self.validate_asset(
             "daemon",
             &self.daemon,
-            "runtime/thoth-daemon",
+            "runtime/omnimac-daemon",
             &layout.assets.daemon,
         )?;
         self.validate_asset(
             "Accessibility helper",
             &self.helper,
-            "THOTH Accessibility Helper.app/Contents/MacOS/THOTHAXHelper",
+            "OmniMac Accessibility Helper.app/Contents/MacOS/OmniMacAXHelper",
             &layout.assets.helper_executable,
         )?;
         self.validate_asset(
@@ -137,35 +137,35 @@ impl RuntimeManifest {
         token: &str,
     ) -> BTreeMap<String, String> {
         BTreeMap::from([
-            ("THOTH_DB_PATH".into(), path_text(&layout.database_path)),
-            ("THOTH_LOG_DIR".into(), path_text(&layout.log_dir)),
-            ("THOTH_SESSION_TOKEN".into(), token.to_string()),
+            ("OmniMac_DB_PATH".into(), path_text(&layout.database_path)),
+            ("OmniMac_LOG_DIR".into(), path_text(&layout.log_dir)),
+            ("OmniMac_SESSION_TOKEN".into(), token.to_string()),
             (
-                "THOTH_SESSION_TOKEN_PATH".into(),
+                "OmniMac_SESSION_TOKEN_PATH".into(),
                 path_text(&layout.token_path),
             ),
-            ("THOTH_PLANNER".into(), "local".into()),
-            ("THOTH_INFERENCE_PROVIDER".into(), "llama.cpp".into()),
-            ("THOTH_INFERENCE_MODEL".into(), "qwen3:4b".into()),
+            ("OmniMac_PLANNER".into(), "local".into()),
+            ("OmniMac_INFERENCE_PROVIDER".into(), "llama.cpp".into()),
+            ("OmniMac_INFERENCE_MODEL".into(), "qwen3:4b".into()),
             (
-                "THOTH_INFERENCE_ENDPOINT".into(),
+                "OmniMac_INFERENCE_ENDPOINT".into(),
                 "http://127.0.0.1:11434".into(),
             ),
-            ("THOTH_NETWORK_ISOLATION".into(), "true".into()),
+            ("OmniMac_NETWORK_ISOLATION".into(), "true".into()),
             (
-                "THOTH_WHISPER_EXECUTABLE".into(),
+                "OmniMac_WHISPER_EXECUTABLE".into(),
                 path_text(&layout.assets.whisper_executable),
             ),
             (
-                "THOTH_WHISPER_MODEL_PATH".into(),
+                "OmniMac_WHISPER_MODEL_PATH".into(),
                 path_text(&layout.assets.whisper_model),
             ),
             (
-                "THOTH_WHISPER_EXECUTABLE_SHA256".into(),
+                "OmniMac_WHISPER_EXECUTABLE_SHA256".into(),
                 self.whisper_executable.sha256.clone(),
             ),
             (
-                "THOTH_WHISPER_MODEL_SHA256".into(),
+                "OmniMac_WHISPER_MODEL_SHA256".into(),
                 self.whisper_model.sha256.clone(),
             ),
         ])
@@ -206,10 +206,10 @@ impl RuntimeManifest {
         }
         Ok(Self {
             schema_version: 1,
-            daemon: asset(&layout.assets.daemon, "runtime/thoth-daemon")?,
+            daemon: asset(&layout.assets.daemon, "runtime/omnimac-daemon")?,
             helper: asset(
                 &layout.assets.helper_executable,
-                "THOTH Accessibility Helper.app/Contents/MacOS/THOTHAXHelper",
+                "OmniMac Accessibility Helper.app/Contents/MacOS/OmniMacAXHelper",
             )?,
             whisper_executable: asset(&layout.assets.whisper_executable, "runtime/whisper-cli")?,
             whisper_model: asset(&layout.assets.whisper_model, "models/ggml-base.en.bin")?,
@@ -286,7 +286,7 @@ impl ManagedRuntime {
         let mut helper_command = Command::new(&layout.assets.helper_executable);
         helper_command
             .env_clear()
-            .env("THOTH_DESKTOP_PARENT_PID", &parent_pid)
+            .env("OmniMac_DESKTOP_PARENT_PID", &parent_pid)
             .env("PATH", "/usr/bin:/bin:/usr/sbin:/sbin")
             .stdin(Stdio::null())
             .stdout(Stdio::from(
@@ -310,7 +310,7 @@ impl ManagedRuntime {
         command
             .env_clear()
             .envs(environment)
-            .env("THOTH_DESKTOP_PARENT_PID", &parent_pid)
+            .env("OmniMac_DESKTOP_PARENT_PID", &parent_pid)
             .env("PATH", "/usr/bin:/bin:/usr/sbin:/sbin")
             .stdin(Stdio::null())
             .stdout(Stdio::from(
@@ -460,8 +460,8 @@ mod tests {
 
     #[test]
     fn packaged_layout_resolves_sidecar_and_sealed_resources() {
-        let executable = PathBuf::from("/Applications/THOTH.app/Contents/MacOS/thoth-desktop");
-        let data_dir = PathBuf::from("/Users/test/Library/Application Support/THOTH");
+        let executable = PathBuf::from("/Applications/OmniMac.app/Contents/MacOS/omnimac-desktop");
+        let data_dir = PathBuf::from("/Users/test/Library/Application Support/OmniMac");
 
         let layout = RuntimeLayout::from_packaged_executable(&executable, data_dir.clone())
             .expect("valid app bundle layout");
@@ -470,35 +470,35 @@ mod tests {
             layout.assets,
             RuntimeAssetPaths {
                 daemon: PathBuf::from(
-                    "/Applications/THOTH.app/Contents/Resources/runtime/thoth-daemon"
+                    "/Applications/OmniMac.app/Contents/Resources/runtime/omnimac-daemon"
                 ),
                 helper_app: PathBuf::from(
-                    "/Applications/THOTH.app/Contents/Resources/THOTH Accessibility Helper.app"
+                    "/Applications/OmniMac.app/Contents/Resources/OmniMac Accessibility Helper.app"
                 ),
                 helper_executable: PathBuf::from(
-                    "/Applications/THOTH.app/Contents/Resources/THOTH Accessibility Helper.app/Contents/MacOS/THOTHAXHelper"
+                    "/Applications/OmniMac.app/Contents/Resources/OmniMac Accessibility Helper.app/Contents/MacOS/OmniMacAXHelper"
                 ),
                 whisper_executable: PathBuf::from(
-                    "/Applications/THOTH.app/Contents/Resources/runtime/whisper-cli"
+                    "/Applications/OmniMac.app/Contents/Resources/runtime/whisper-cli"
                 ),
                 whisper_model: PathBuf::from(
-                    "/Applications/THOTH.app/Contents/Resources/models/ggml-base.en.bin"
+                    "/Applications/OmniMac.app/Contents/Resources/models/ggml-base.en.bin"
                 ),
                 manifest: PathBuf::from(
-                    "/Applications/THOTH.app/Contents/Resources/runtime-manifest.json"
+                    "/Applications/OmniMac.app/Contents/Resources/runtime-manifest.json"
                 ),
             }
         );
         assert_eq!(layout.data_dir, data_dir);
         assert_eq!(layout.token_path, layout.data_dir.join("session.token"));
-        assert_eq!(layout.database_path, layout.data_dir.join("thoth.db"));
+        assert_eq!(layout.database_path, layout.data_dir.join("omnimac.db"));
         assert_eq!(layout.log_dir, layout.data_dir.join("logs"));
     }
 
     #[test]
     fn non_bundle_executable_fails_closed() {
         let result = RuntimeLayout::from_packaged_executable(
-            &PathBuf::from("/tmp/thoth-desktop"),
+            &PathBuf::from("/tmp/omnimac-desktop"),
             PathBuf::from("/tmp/data"),
         );
         assert!(result.is_err());
@@ -507,10 +507,10 @@ mod tests {
     #[test]
     fn manifest_validation_detects_asset_mutation_and_builds_local_only_environment() {
         let root = std::env::temp_dir().join(format!(
-            "thoth-runtime-manifest-test-{}",
+            "omnimac-runtime-manifest-test-{}",
             std::process::id()
         ));
-        let executable = root.join("THOTH.app/Contents/MacOS/thoth-desktop");
+        let executable = root.join("OmniMac.app/Contents/MacOS/omnimac-desktop");
         let data_dir = root.join("data");
         fs::create_dir_all(executable.parent().expect("executable parent"))
             .expect("create macOS directory");
@@ -542,11 +542,11 @@ mod tests {
         let manifest = RuntimeManifest::for_test_layout(&layout).expect("create manifest");
         manifest.validate(&layout).expect("assets match manifest");
         let environment = manifest.daemon_environment(&layout, "private-token");
-        assert_eq!(environment["THOTH_NETWORK_ISOLATION"], "true");
-        assert_eq!(environment["THOTH_PLANNER"], "local");
-        assert_eq!(environment["THOTH_SESSION_TOKEN"], "private-token");
+        assert_eq!(environment["OmniMac_NETWORK_ISOLATION"], "true");
+        assert_eq!(environment["OmniMac_PLANNER"], "local");
+        assert_eq!(environment["OmniMac_SESSION_TOKEN"], "private-token");
         assert_eq!(
-            environment["THOTH_WHISPER_MODEL_SHA256"],
+            environment["OmniMac_WHISPER_MODEL_SHA256"],
             manifest.whisper_model.sha256
         );
 
@@ -561,7 +561,7 @@ mod tests {
     #[test]
     fn session_token_file_is_private_and_replaced_atomically() {
         let root =
-            std::env::temp_dir().join(format!("thoth-runtime-token-test-{}", std::process::id()));
+            std::env::temp_dir().join(format!("omnimac-runtime-token-test-{}", std::process::id()));
         let token_path = root.join("session.token");
         write_private_token(&token_path, "first-token").expect("write first token");
         write_private_token(&token_path, "second-token").expect("replace token");

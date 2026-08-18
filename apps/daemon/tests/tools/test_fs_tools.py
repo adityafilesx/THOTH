@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from thoth_daemon.tools.fs_tools import FsListDir, FsReadFile, FsStat
+from omnimac_daemon.tools.fs_tools import FsListDir, FsReadFile, FsStat
 
 
 async def test_fs_read_file_reads_real_content(tmp_path: Path) -> None:
@@ -56,7 +56,7 @@ def test_read_tools_declare_scope_and_redaction() -> None:
 
 
 async def test_fs_write_creates_file(tmp_path: Path) -> None:
-    from thoth_daemon.tools.fs_tools import FsWriteFile
+    from omnimac_daemon.tools.fs_tools import FsWriteFile
 
     p = tmp_path / "w.txt"
     tool = FsWriteFile()
@@ -66,7 +66,7 @@ async def test_fs_write_creates_file(tmp_path: Path) -> None:
 
 
 async def test_fs_write_dry_run_writes_nothing(tmp_path: Path) -> None:
-    from thoth_daemon.tools.fs_tools import FsWriteFile
+    from omnimac_daemon.tools.fs_tools import FsWriteFile
 
     p = tmp_path / "w.txt"
     tool = FsWriteFile()
@@ -76,7 +76,7 @@ async def test_fs_write_dry_run_writes_nothing(tmp_path: Path) -> None:
 
 
 async def test_fs_write_overwrites(tmp_path: Path) -> None:
-    from thoth_daemon.tools.fs_tools import FsWriteFile
+    from omnimac_daemon.tools.fs_tools import FsWriteFile
 
     p = tmp_path / "w.txt"
     p.write_text("old")
@@ -86,17 +86,15 @@ async def test_fs_write_overwrites(tmp_path: Path) -> None:
 
 
 async def test_fs_write_missing_parent_fails(tmp_path: Path) -> None:
-    from thoth_daemon.tools.fs_tools import FsWriteFile
+    from omnimac_daemon.tools.fs_tools import FsWriteFile
 
     tool = FsWriteFile()
     with pytest.raises(FileNotFoundError):
-        await tool.run(
-            tool.input_model(path=str(tmp_path / "no" / "w.txt"), content="x"), dry_run=False
-        )
+        await tool.run(tool.input_model(path=str(tmp_path / "no" / "w.txt"), content="x"), dry_run=False)
 
 
 def test_fs_write_declares_dry_run_and_scope() -> None:
-    from thoth_daemon.tools.fs_tools import FsWriteFile
+    from omnimac_daemon.tools.fs_tools import FsWriteFile
 
     tool = FsWriteFile()
     assert tool.supports_dry_run is True

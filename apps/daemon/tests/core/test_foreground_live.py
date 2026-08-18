@@ -8,8 +8,8 @@ from datetime import UTC, datetime
 
 import pytest
 
-from thoth_daemon.core.foreground import ForegroundContextBroker
-from thoth_daemon.macos.app_control import default_app_control
+from omnimac_daemon.core.foreground import ForegroundContextBroker
+from omnimac_daemon.macos.app_control import default_app_control
 
 
 def _appkit_available() -> bool:

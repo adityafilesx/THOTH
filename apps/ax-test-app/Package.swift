@@ -3,12 +3,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "THOTHAXTestApp",
+    name: "OmniMacAXTestApp",
     platforms: [.macOS(.v13)],
     products: [
-        .executable(name: "THOTHAXTestApp", targets: ["THOTHAXTestApp"]),
+        .executable(name: "OmniMacAXTestApp", targets: ["OmniMacAXTestApp"]),
     ],
     targets: [
-        .executableTarget(name: "THOTHAXTestApp"),
+        .executableTarget(name: "OmniMacAXTestApp"),
     ]
 )

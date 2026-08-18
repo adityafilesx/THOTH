@@ -25,7 +25,7 @@ let routes: Record<string, unknown>;
 let calls: { url: string; method: string; body?: string }[];
 
 beforeEach(() => {
-  vi.stubEnv("VITE_THOTH_TOKEN", "t");
+  vi.stubEnv("VITE_OmniMac_TOKEN", "t");
   __resetTokenCache();
   calls = [];
   routes = {
@@ -34,7 +34,7 @@ beforeEach(() => {
         {
           id: "w1",
           name: "default",
-          root_path: "~/projects/thoth",
+          root_path: "~/projects/omnimac",
           trusted: true,
         },
       ],
@@ -54,7 +54,7 @@ beforeEach(() => {
       approval_ttl_seconds: 120,
       max_retries_per_step: 2,
       max_retries_per_task: 5,
-      trusted_workspaces: ["~/projects/thoth"],
+      trusted_workspaces: ["~/projects/omnimac"],
       inference_provider: "deterministic",
       inference_model: "qwen3:4b",
       network_isolation: false,
@@ -101,7 +101,7 @@ describe("Permissions (live)", () => {
   it("renders real workspaces and grants, no mock badge", async () => {
     renderWithQuery(<Permissions />);
     expect(await screen.findByText("docs.python.org")).toBeInTheDocument();
-    expect(screen.getByText("~/projects/thoth")).toBeInTheDocument();
+    expect(screen.getByText("~/projects/omnimac")).toBeInTheDocument();
     expect(screen.queryByText(/mock data/i)).not.toBeInTheDocument();
   });
 

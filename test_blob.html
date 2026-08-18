@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script>
+try {
+  new BlobEvent("test", { data: new Blob([]) });
+  console.log("BlobEvent OK");
+} catch(e) {
+  console.log("BlobEvent Error:", e.message);
+}
+</script>
+</body>
+</html>
